@@ -1,0 +1,18 @@
+https://github.com/AliveToolkit/alive2
+
+## Why is this interesting?
+
+Does exactly what we wanted to do (sort-a)! You feed it pre-opt LLVM-IR and post-opt LLVM-IR and then it emits whether optimization is correct, i.e. (i presume) are they semantically equivalent?
+## Gist
+- Automatic verification of LLVM optimizations
+- Only finds bugs, reports model 
+- Zero false-positives claimed
+- Takes before and after and checks:
+![[Pasted image 20250927200044.png]]
+- Also there is direct inclusion in llvm-infra via opt:
+![[Pasted image 20250927200150.png]]
+![[Pasted image 20250927200215.png]]
+## Example
+- https://alive2.llvm.org/ce/z/zA5SbP
+![[Pasted image 20250927195412.png]]
+![[Pasted image 20250927200901.png]]
