@@ -29,7 +29,7 @@ Their pipeline:
 2. We then apply various compiler optimization transformations (e.g. loop optimization, data-flow optimization) to the generated programs in the previous step, creating semantically equivalent test programs
 3. By comparing the outputs of pre- and post-transformation programs, our approach systematically identifies incorrect optimization bugs. 
 
-![[Pasted image 20250927154940.png]]
+![[Img/Pasted image 20250927154940.png]]
 # Do i get it?
 
 As I understand it the main shtick of their approach is:

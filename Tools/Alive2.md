@@ -8,11 +8,12 @@ Does exactly what we wanted to do (sort-a)! You feed it pre-opt LLVM-IR and post
 - Only finds bugs, reports model 
 - Zero false-positives claimed
 - Takes before and after and checks:
-![[Pasted image 20250927200044.png]]
+![[Img/Pasted image 20250927200044.png]]
 - Also there is direct inclusion in llvm-infra via opt:
-![[Pasted image 20250927200150.png]]
+![[Img/Pasted image 20250927200150.png]]
 ![[Pasted image 20250927200215.png]]
 ## Example
 - https://alive2.llvm.org/ce/z/zA5SbP
-![[Pasted image 20250927195412.png]]
-![[Pasted image 20250927200901.png]]
+![[Img/Pasted image 20250927195412.png]]
+Integration with `opt` from llvm:
+![[Img/Pasted image 20250927200901.png]]

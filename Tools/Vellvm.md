@@ -11,6 +11,6 @@ Doesn't use SMT solvers, instead models the semantic of LLVM-IR
 - Essentially an interpreter of LLVM-IR in Coq with proofs
 
 ## Framework
-![[Pasted image 20250927194350.png]]
+![[Img/Pasted image 20250927194350.png]]
 
-![[Pasted image 20250927194453.png]]
+![[Img/Pasted image 20250927194453.png]]
