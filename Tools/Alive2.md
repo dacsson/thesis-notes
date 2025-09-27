@@ -12,6 +12,7 @@ Does exactly what we wanted to do (sort-a)! You feed it pre-opt LLVM-IR and post
 - Also there is direct inclusion in llvm-infra via opt:
 ![[Img/Pasted image 20250927200150.png]]
 ![[Pasted image 20250927200215.png]]
+- Using obj-to-ir disasm to check backends
 ## Example
 - https://alive2.llvm.org/ce/z/zA5SbP
 ![[Img/Pasted image 20250927195412.png]]
