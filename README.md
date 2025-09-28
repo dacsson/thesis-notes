@@ -15,13 +15,15 @@ But first I need to understand the state of the art for this kind of proves.
 4. [[Finding and Understanding Bugs in C Compilers]]
 5. [[Alive2 Bounded Translation Validation for LLVM]]
 	- [Alive2: Verifying Existing Optimizations | youtube](https://www.youtube.com/watch?v=paJhdBp_iA4)
-6.  [[Formal-Methods-Based Bugfinding for LLVM’s AArch64 Backend]]
+6.  [[Translation Validation for LLVM’s AArch64 Backend]]
+	- [Formal-Methods-Based Bugfinding for LLVM’s AArch64 Backend](https://blog.regehr.org/archives/2265)
 ## Tools to review 
 - [[Vellvm]]
 - YARPGen
 - MopFuzzer
 - [[CompCert]]
 - [[Alive2]]
+- [[ARM-TV]]
 ## Ideas
 - Translation of RISC-V asm to \*.smt2 with proof afterwords
 - Vellvm, but semantics is RISC-V (using riscv-sail-model) instead of LLVM-IR 
