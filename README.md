@@ -27,3 +27,4 @@ But first I need to understand the state of the art for this kind of proves.
 ## Ideas
 - Translation of RISC-V asm to \*.smt2 with proof afterwords
 - Vellvm, but semantics is RISC-V (using riscv-sail-model) instead of LLVM-IR 
+- Something like [[ARM-TV]] but for RISC-V
