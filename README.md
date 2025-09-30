@@ -28,3 +28,22 @@ But first I need to understand the state of the art for this kind of proves.
 - Translation of RISC-V asm to \*.smt2 with proof afterwords
 - Vellvm, but semantics is RISC-V (using riscv-sail-model) instead of LLVM-IR 
 - Something like [[ARM-TV]] but for RISC-V
+
+## Existing configurations
+
+| Target   | Approach                                                         | Semantic modeling     | Host                        | Used in | Cons                                                                                                                                                                                            |
+| -------- | ---------------------------------------------------------------- | --------------------- | --------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLVM-IR  | Formal semantics + proving, modeling semantics, interpreter-like | Formal, full modeling | Theorem Prover (i.e. Coq)   | Vellvm  | - Uses inline assertions (pasted into \*.ll file as comments) for testing<br>- Libs cannot be used<br>- Cannot straight up run llvm test suite in it (presumably)<br>- No concurrency analyzing |
+| LLVM-IR  | Eq. checking via SMT                                             | Symbolic, partial     | SMT (+ Symbolic execution?) | Alive2  | - Provides model (counter-example) but no fix proposal<br>- Some problems with memory model                                                                                                     |
+| Assembly | Lift (AArch64) ASM to LLVM-IR                                    | Partial               | LLVM-IR (Alive2)            | arm-tv  | - Relies on Alive2<br>- Performance and result is tied to how well the lifting goes<br>- Reuses LLVM-IR instead of focusing on asm                                                              |
+| Assembly |                                                                  | Formal                | ThProver                    | x       |                                                                                                                                                                                                 |
+| Assembly |                                                                  | Partial               | SMT                         | x       |                                                                                                                                                                                                 |
+
+## Possible configurations
+
+| Target     | Approach | Semantic modeling              | Host                  | Comment                                                                                                                                                             |
+| ---------- | -------- | ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLVM-IR    |          | Formal, Full semantic modeling | Coq/Lean4/Idris2 etc. | - Huge ammount of work (full LLVM interpreter?)<br>- Maybe instead of inline assertions (tests in Vellvm) do post-pre conditions and then translate to Why3 or smth |
+| LLVM-IR    |          | Partial, symbolic              | SMT (i.e. z3)         | - no idea what can be done different from Alive2                                                                                                                    |
+| RISC-V asm |          | Formal                         | Coq/Lean4/Idris2 etc. | - RISC-V interpreter is not that hard to implement, if not going into some extensions<br>- Semantics are here: riscv-isa-manual (SAIL model)                        |
+| RISC-V asm |          | Perial, symbolic               | SMT (i.e. z3)         | - Maybe focus on a single extension (i.e. Vector)<br>- Can empower auto-vec compiler testing?                                                                       |
