@@ -47,3 +47,15 @@ But first I need to understand the state of the art for this kind of proves.
 | LLVM-IR    |          | Partial, symbolic              | SMT (i.e. z3)         | - no idea what can be done different from Alive2                                                                                                                    |
 | RISC-V asm |          | Formal                         | Coq/Lean4/Idris2 etc. | - RISC-V interpreter is not that hard to implement, if not going into some extensions<br>- Semantics are here: riscv-isa-manual (SAIL model)                        |
 | RISC-V asm |          | Perial, symbolic               | SMT (i.e. z3)         | - Maybe focus on a single extension (i.e. Vector)<br>- Can empower auto-vec compiler testing?                                                                       |
+
+## Thesis name
+
+For now: "Ве"
+
+## Days 
+
+- First story point: here is addi give me CHC 
+- Fuzzing when cycles are herer like first arictle 
+- Модель памяти, weak memory model
+- Неразрешимость - маленькие сниппеты натсавить что есть эффективная процедура + есть такая задача: Синхронизция хорн клозов не решена но изучена есть эфф подходы возьмём академ решеня если не хватит качества решателей. 
+
