@@ -24,11 +24,18 @@ But first I need to understand the state of the art for this kind of proves.
 - [[CompCert]]
 - [[Alive2]]
 - [[ARM-TV]]
-## Ideas
-- Translation of RISC-V asm to \*.smt2 with proof afterwords
-- Vellvm, but semantics is RISC-V (using riscv-sail-model) instead of LLVM-IR 
-- Something like [[ARM-TV]] but for RISC-V
-
+## Reading list
+- [ ] [H. B. Enderton. A Mathematical Introduction to Logic. Undergraduate Texts in Mathematics. Academic Press, second edition edition, 2000.](https://sistemas.fciencias.unam.mx/~lokylog/images/Notas/la_aldea_de_la_logica/Libros_notas_varios/L_03_ENDERTON_A%20Mathematical%20Introduction%20to%20Logic,%20Second%202Ed.pdf)
+- [ ] Bjorner et al. [Horn Clause Solvers for Program Verification](https://link.springer.com/chapter/10.1007%2F978-3-319-23534-9_2)
+	- [ ] [paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-yurifest.pdf)
+- [ ] A. Komuravelli, N. Bjørner, A. Gurfinkel, K. L. McMillan:Compositional Verification of Procedural Programs using Horn Clauses over Integers and Arrays. FMCAD 2015
+- [ ] A. Gurfinkel and J. Navas. [Automatic Program Verification with Seahorn](https://arieg.bitbucket.io/pdf/seahorn_marktoberdorf_2018.pdf)
+- [ ] A. Gurfinkel. [IC3, PDR, and Friends](https://arieg.bitbucket.io/pdf/gurfinkel_ssft15.pdf)
+- [ ] [Understanding IC3, Aaron R. Bradley](https://theory.stanford.edu/~arbrad/papers/Understanding_IC3.pdf)
+- [ ] Handbook of SAT
+- [x] Verifying Optimizations using SMTSolvers
+- [ ] Formal Verification of SSA-Based Optimizations for LLVM
+- [ ] Compiler Optimization Testing Based on Optimization-Guided Equivalence Transformations
 ## Existing configurations
 
 | Target   | Approach                                                         | Semantic modeling     | Host                        | Used in | Cons                                                                                                                                                                                            |
@@ -39,23 +46,6 @@ But first I need to understand the state of the art for this kind of proves.
 | Assembly |                                                                  | Formal                | ThProver                    | x       |                                                                                                                                                                                                 |
 | Assembly |                                                                  | Partial               | SMT                         | x       |                                                                                                                                                                                                 |
 
-## Possible configurations
-
-| Target     | Approach | Semantic modeling              | Host                  | Comment                                                                                                                                                             |
-| ---------- | -------- | ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| LLVM-IR    |          | Formal, Full semantic modeling | Coq/Lean4/Idris2 etc. | - Huge ammount of work (full LLVM interpreter?)<br>- Maybe instead of inline assertions (tests in Vellvm) do post-pre conditions and then translate to Why3 or smth |
-| LLVM-IR    |          | Partial, symbolic              | SMT (i.e. z3)         | - no idea what can be done different from Alive2                                                                                                                    |
-| RISC-V asm |          | Formal                         | Coq/Lean4/Idris2 etc. | - RISC-V interpreter is not that hard to implement, if not going into some extensions<br>- Semantics are here: riscv-isa-manual (SAIL model)                        |
-| RISC-V asm |          | Perial, symbolic               | SMT (i.e. z3)         | - Maybe focus on a single extension (i.e. Vector)<br>- Can empower auto-vec compiler testing?                                                                       |
-
 ## Thesis name
 
-For now: "Ве"
-
-## Days 
-
-- First story point: here is addi give me CHC 
-- Fuzzing when cycles are herer like first arictle 
-- Модель памяти, weak memory model
-- Неразрешимость - маленькие сниппеты натсавить что есть эффективная процедура + есть такая задача: Синхронизция хорн клозов не решена но изучена есть эфф подходы возьмём академ решеня если не хватит качества решателей. 
-
+For now: "Формальная проверка корректности оптимизаций RISC-V программ"

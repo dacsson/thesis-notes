@@ -1,0 +1,4 @@
+- Too much text
+- There is no word "optimization" in goals nor in tasks (maybe add to tasks not sure)
+- Too much english non formal words
+- add CompCert to review
