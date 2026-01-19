@@ -56,3 +56,53 @@ presence of the fixed-point operator.
 4. Definite descriptions: "The king of France is bald".
 #### 8. Second order logic
 ==TBD: [read this](https://plato.stanford.edu/entries/logic-higher-order/)==
+
+#### 9. Constraint Logic Programming
+**CLP** - Typical objective in constraint logic programming is to use logic as a declarative program- ming language. It relies on an execution engine that finds *a set of answers*, that is a set of substitutions that are *solutions to a query*. In an top-down evaluation engine, each such substitution is extracted from a *refutation proof*.
+
+#### 10. Horn Clause Fact 
+body -> head
+#### 11. Horn Clause Query
+> 1 штука на всю систему
+
+body -> false
+
+#### 12. Convex Theory
+A formula $F$ is **non-convex** if there exist variables $x_1, y_1,. . . , x_n, y_n$, , such
+that $F \implies x1 = y1 \lor ... \lor x_n = y_n$, but for no $i$ between 1 and $y_1$ does $F \implies x_i = y_i$.
+Otherwise, $F$ is **convex**. That is, a formula is **non-convex** if it entails a disjunction of
+equalities between variables without entailing any of the equalities alone; otherwise
+it is **convex**. For instance, the formula $1 \leq x \leq 2 \land y = 1 \land z = 2$ is **non-convex** over the
+integers because it entails the disjunction $x = y \land x = z$ without entailing either
+equality alone.
+
+#### 13. Universal Horn Clauses
+Universal Horn clauses extend Horn clauses by admit- ting universally quantifiers in bodies. Thus, the body of a universal Horn clause is given by: 
+$$
+body ::= \top | body \land  body | pred | \forall var . body | \exists var . body
+$$
+*Universal Horn clauses are convex.*
+
+#### 14. Existential Horn Clauses
+Existential Horn clauses extend Horn clauses by admit- ting existential quantifications in the head:
+$$
+head ::= \exists var . head | pred
+$$
+#### 15. Formal proof or derivation
+Given some rules, i.e. 
+*To prove an “and” statement, it suffices to prove both sides individually.*
+starting with a complex formula $\phi$ and repeatedly applying these derivation rules until no goals remain we get a sequence. This sequence (or really, this tree) of rule applications is a **formal proof**. [from](https://robertylewis.com/files/mathhorizons.pdf)
+
+#### 16. SLD Proof
+TBD: [read here](https://cs.uwaterloo.ca/~david/cl/sld-gallier.pdf)
+
+#### 17. Operational semantics
+A concrete **operational semantics** is given to a language by mapping language constructs to operations on a virtual machine, a machine whose operation is “obvious.” [from](https://cs.lmu.edu/~ray/notes/opsem/)
+
+#### 18. Regression verification
+During software development it is often the case that one
+may want to modify the program text and then prove that its semantics has not
+been changed - this kind of proofs is sometimes called *regression verification*.
+
+#### 19. Semantic equivalence
+It is a specific kind if program equivalence under chosen semantics (operational, denotational, big-step, small-step, etc.)

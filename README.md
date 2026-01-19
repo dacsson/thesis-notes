@@ -25,9 +25,11 @@ But first I need to understand the state of the art for this kind of proves.
 - [[Alive2]]
 - [[ARM-TV]]
 ## Reading list
+- [ ] Islaris: Verification of Machine Code Against Authoritative ISA Semantics
 - [ ] [H. B. Enderton. A Mathematical Introduction to Logic. Undergraduate Texts in Mathematics. Academic Press, second edition edition, 2000.](https://sistemas.fciencias.unam.mx/~lokylog/images/Notas/la_aldea_de_la_logica/Libros_notas_varios/L_03_ENDERTON_A%20Mathematical%20Introduction%20to%20Logic,%20Second%202Ed.pdf)
 - [ ] Bjorner et al. [Horn Clause Solvers for Program Verification](https://link.springer.com/chapter/10.1007%2F978-3-319-23534-9_2)
 	- [ ] [paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-yurifest.pdf)
+- [ ] [Analysis and Transformation of CHC for Verification, De Angelis et al. ](https://arxiv.org/pdf/2108.00739)
 - [ ] A. Komuravelli, N. Bjørner, A. Gurfinkel, K. L. McMillan:Compositional Verification of Procedural Programs using Horn Clauses over Integers and Arrays. FMCAD 2015
 - [ ] A. Gurfinkel and J. Navas. [Automatic Program Verification with Seahorn](https://arieg.bitbucket.io/pdf/seahorn_marktoberdorf_2018.pdf)
 - [ ] A. Gurfinkel. [IC3, PDR, and Friends](https://arieg.bitbucket.io/pdf/gurfinkel_ssft15.pdf)
