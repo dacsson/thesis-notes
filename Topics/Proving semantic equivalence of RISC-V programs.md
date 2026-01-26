@@ -16,6 +16,7 @@ executed in state $\sigma_1$; this is represented by the relation $step(S0,St0,S
 $S0, St0, S1, St1 \equiv s_0, \sigma_0, s_1, \sigma_1$. 
 
 **Definition 1.** The chain of steps, or *run*, is defined by the recursively defined relation $run(S0,St0,S1,St1)$, which specifies the reflexive, transitive closure $\Rightarrow^\star$, encompassing many transitions specified by $\Rightarrow$. 
+
 $$
 Run(P, \sigma_0): \langle s_o, \sigma_0 \rangle \Rightarrow^* \langle halt, \sigma_n \rangle
 $$
