@@ -51,3 +51,9 @@ But first I need to understand the state of the art for this kind of proves.
 ## Thesis name
 
 For now: "Формальная проверка корректности оптимизаций RISC-V программ"
+
+---
+
+Contacts: 
+- @artjom_safonoff at Telegram
+- sda20036@gmail.com for e-mail
