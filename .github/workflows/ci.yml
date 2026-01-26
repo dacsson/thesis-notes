@@ -14,9 +14,6 @@ jobs:
           python-version: 3.x
       - name: Prepare docs directory
         run: |
-          rm -rf docs
-          mkdir docs
-
           # Copy everything except .git, .github, docs itself
           rsync -av \
             --exclude='.git' \
