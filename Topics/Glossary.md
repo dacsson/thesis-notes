@@ -106,3 +106,6 @@ been changed - this kind of proofs is sometimes called *regression verification*
 
 #### 19. Semantic equivalence
 It is a specific kind if program equivalence under chosen semantics (operational, denotational, big-step, small-step, etc.)
+
+#### 20. Partial equivalence
+Equivalence relation where we don't care about termination proof of programs. 

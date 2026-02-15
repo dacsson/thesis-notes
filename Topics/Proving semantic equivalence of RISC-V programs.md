@@ -5,8 +5,8 @@
 - [Reference](https://arxiv.org/pdf/2108.00739)
 
 An imperative program defines a relation $\langle s, \sigma_0 \rangle \implies \sigma_1$, which means that if statement $s$
-is executed in initial state $\sigma_0$, then $\sigma_1$ is the state after execution of $s$, assuming that
-the execution halts.  The relation $\implies$ can be specified by *Horn clauses*, using
+is executed in initial state $\sigma_0$, then $\sigma_1$ is the state after execution of $s$, **assuming that**
+**the execution halts**.  The relation $\implies$ can be specified by *Horn clauses*, using
 the operational semantics of the language of $s$, in two main styles: *small-step* (structural
 operational semantics) or *big-step* (natural semantics). Let the predicate $exec(S,St_0,St_1)$ represent the relation, where $S$, $St_0$ and $St_1$ are first-order terms representing $s$, $\sigma_0$ and $\sigma_1$, respectively.
 
@@ -21,17 +21,22 @@ $$
 Run(P, \sigma_0): \langle s_o, \sigma_0 \rangle \Rightarrow^* \langle halt, \sigma_n \rangle
 $$
 
+A $halt$ is not a real statement/instruction, if, let's say, we are defined operational semantics for each instruction in RISC-V assembly language. Instead, we add this statement to our language to define program execution stop. For example, a *"halt instruction"* does not update the instruction pointer in operational semantics rules. As a result, the next instruction we will read upon ever encountering $halt$ is the same $halt$ instruction. This mechanism of representing normal program termination by trivially looping forever is standard in small-step operational semantics
+
 A complete execution is therefore:  $\langle s, \sigma_0 \rangle \implies \sigma_1 \iff \langle s, \sigma_0 \rangle \Rightarrow^\star \langle halt, \sigma_n \rangle$, meaning that after $n$ transition we reach $halt$ statement.
 
 $$
 exec(S,St0,St1) \leftarrow run(S,St0,halt,St1) 
 $$
+
 $$
 run(S,St,S,St) \leftarrow \top 
 $$
+
 $$
 run(S0,St0,S2,St2) \leftarrow step(S0,St0,S1,St1), run(S1,St1,S2,St2).
 $$
+
 Instead of defining $step$ for each construct in RISC-V assembly, we can instead take it from architectural specification.
 
 ### Architectural specification
@@ -77,9 +82,15 @@ function clause execute ITYPE(imm, rs1, rd, op) = {
 This RISC-V model description gives us information on registers, program counter, memory state, etc. during execution of each statement. 
 
 **Definition 2.**  A final state of execution is expressed as a tuple of program counter, current register assignments (a mapping from register name to value) and a memory state (a mapping from address to value).
+
 $$
 \langle pc, regs, memory \rangle
 $$
+
+> TODO: mention that we need to translate this to CHC to create a transition to CHC chapter
+
+> PUT IN INTRODUCTION: In order to translate a relational program property into CHCs, first we need to specify the operational semantics of our imperative language by a set of CHCs. [3.2](https://www.sci.unich.it/~deangelis/papers/DeAngelisFPP_SAS-16.pdf)
+
 ### Equivalence relation
 - [Reference](http://profs.sci.univr.it/~merro/files/equality.pdf)
 
@@ -93,15 +104,22 @@ A semantic equivalence relation should have the following properties:
 	- if the equality $\simeq$ is a congruence then it suffices to prove that the two sub-programs are equivalent., the equality of the whole systems, follows for free!
 5. $\simeq$ should relate as many programs as possible
 
-**Definition 3.** Two programs are said to be *semantically equivalent* iff they either both diverge or they both terminate and then the final states that they reach are similar, where final state is a final architectural configuration after executing $n$ statements and reaching a $halt$ statement.
+We, however, define *partial equivalence* of programs, meaning we don't require proof of termination under the same input, nor do we uphold that *"Programs that terminates must not be equivalent to programs that don’t"*.
+
+**Definition 3.** Two programs are said to be *semantically equivalent* iff they either both terminate and then the final states that they reach are similar, where final state is a final architectural configuration after executing $n$ statements and reaching a $halt$ statement.
+
 $$
 P \simeq Q \iff \forall \sigma_0.(Run(P) \land Run(Q)) \implies \langle pc_P, regs_P, mem_P \rangle = \langle pc_Q, regs_Q, mem_Q \rangle
 $$
 ## Constrained Horn Clauses
 
-*Constrained Horn Clauses* (CHC) provide a suitable basis for automatic program verification [[Horn Clause Solvers for Program Verification | ref]].  
+Constrained Horn clauses are a class of first-order logic formulas where the Horn clause format is extended by the use of formulas of an arbitrary, possibly non-Horn, constraint theory [[TransformationOfCHC.pdf | posted verbatim]].  CHCs provide a suitable intermediate form for expressing the semantics of a variety
+of programming languages (imperative, functional, concurrent, etc.) and computational
+models (state machines, transition systems, big- and small-step operational semantics,
+Petri nets, etc.). As a result it has been used as a target language for software verification [[Analysis and Transformation Tools for CHC.pdf|ref]].
 
 A CHC is a formula in first order logic in the form:
+
 $$
 \phi \land p_1(V) \space \land \space ... \space \land \space p_k(V) \implies H
 $$
@@ -111,13 +129,13 @@ Where:
 - $p_1...p_k$ are **uninterpreted relation symbols**
 - each $p_i(V)$ is an **application of the predicate to variables** 
 - $H$ is either some application $p_i(V)$ or $false$
+
+*Constrained Horn Clauses*  provide a suitable basis for automatic program verification [[Horn Clause Solvers for Program Verification | ref]].  Horn clauses naturally encode the set of reachable states of sequential programs, so satisfiable Horn clauses are program properties that hold. In contrast, unsatisfiable Horn clauses correspond to violated program properties [[Horn Clause Solvers for Program Verification | verbatim]]. 
+
+> TODO: maybe put a default "sum_up_to" example?
 ## Example
 
-We want to prove that the following property holds:
-$$
-SemEq: 
-$$
-For the following programs, generated from C source file, applying a *constant propagation* optimization in program (2) and disabling such optimization in program (1):
+Here, let's try to prove partial equivalence of the following programs, generated from C source code, applying a *constant propagation* optimization in program (2) and disabling such optimization in program (1):
 ```c  
 int foo() {  
     int x = 1;  
@@ -128,21 +146,114 @@ int foo() {
 
 Programs:
 ```
-<foo>:                                  <foo>:
-addi   sp,sp,-32                        addi    a0,zero,3
-sd ra,24(sp)                            jalr    zero,0(ra)
-sd s0,16(sp) 
-addi   s0,sp,32 
-addi   a0,zero,1 ; x = 1 
-sw a0,-20(s0) ; x = 1 
-lw a0,-20(s0) ; y = x + 2
-addiw  a0,a0,2 ; y = x + 2 
-sw a0,-24(s0) ; y = x + 2 
-lw a0,-24(s0) ; return y 
-ld ra,24(sp) ; return y 
-ld s0,16(sp) ; return y 
-addi   sp,sp,32 ; return y 
-jalr   zero,0(ra) ; return y
+   <foo1>:                                 <foo2>:
+1  addi   sp,sp,-32                        addi    a0,zero,3
+2  sd ra,24(sp)                            jalr    zero,0(ra)
+3  sd s0,16(sp) 
+4  addi   s0,sp,32 
+5  addi   a0,zero,1 ; x = 1 
+6  sw a0,-20(s0) ; x = 1 
+7  lw a0,-20(s0) ; y = x + 2
+8  addiw  a0,a0,2 ; y = x + 2 
+9  sw a0,-24(s0) ; y = x + 2 
+10 lw a0,-24(s0) ; return y 
+11 ld ra,24(sp) ; return y 
+12 ld s0,16(sp) ; return y 
+13 addi   sp,sp,32 ; return y 
+14 jalr   zero,0(ra) ; return y
 ```
 
-==IN PROGRESS==
+
+For each function we need to translate `execute` functions from Sail to CHC/CLP and then the function itself is just a sequence of executing each instruction function:
+
+Take `foo2()` since a tit bit easier, we have `addi` and `jalr`:
+
+```
+function clause execute ITYPE(imm, rs1, rd, op) = {
+  let immext : xlenbits = sign_extend(imm);
+  X(rd) = match op {
+    ADDI  => X(rs1) + immext,
+    SLTI  => zero_extend(bool_to_bit(X(rs1) <_s immext)),
+    SLTIU => zero_extend(bool_to_bit(X(rs1) <_u immext)),
+    ANDI  => X(rs1) & immext,
+    ORI   => X(rs1) | immext,
+    XORI  => X(rs1) ^ immext
+  };
+  RETIRE_SUCCESS
+}
+
+=>
+
+addi(state(PC0,REGS0,MEMORY0), state(PC1,REGS1,MEMORY1), imm, rs1, rd) :-
+	; X(rs1)
+	get_reg_value(REGS0, Rs1, Rs1val),
+	; X(rs1) + immext
+	Res is Rs1val + Imm,
+	; X(rd) = ...
+	write_reg_value(REGS0, REGS1, Rd, Res),
+	PC1 is PC + 4.
+```
+
+```
+
+// Jump execution to a specified target address. This can fail
+// due to the target not being 4-byte aligned, or due to extension checks.
+// Callers must ensure that the target address is 2-byte aligned.
+function jump_to(target : xlenbits) -> ExecutionResult = {
+  // Extensions get the first checks on the prospective target address.
+  match ext_control_check_pc(target) {
+    Some(e) => return Ext_ControlAddr_Check_Failure(e),
+    None()  => (),
+  };
+
+  // Perform standard alignment check.
+  // Check target is at least 2-byte aligned (callers must ensure
+  // this so it can be an assertion).
+  assert(target[0] == 0b0);
+  // If it is not 4-byte aligned and compressed instructions are
+  // not enabled then raise an alignment exception.
+  if bit_to_bool(target[1]) & not(currentlyEnabled(Ext_Zca))
+  then return Memory_Exception(Virtaddr(target), E_Fetch_Addr_Align());
+
+  set_next_pc(target);
+  RETIRE_SUCCESS
+}
+
+function clause execute JALR(imm, rs1, rd) = {
+  // For the sequential model, the memory-model definition doesn't work directly
+  // if rs1 = rd. We would effectively have to keep a regfile for reads and another for
+  // writes, and swap on instruction completion. This could perhaps be optimized in
+  // some manner, but for now, we just keep a reordered definition to improve simulator
+  // performance.
+
+  update_elp_state(rs1);
+
+  let link_address = get_next_pc();
+  let target = X(rs1) + sign_extend(imm);
+  match jump_to([target with 0 = 0b0]) {
+    Retire_Success() => { X(rd) = link_address; Retire_Success() },
+    failure => failure,
+  }
+}
+
+=>
+
+jalr(state(PC0,REGS0,MEMORY0), state(PC1,REGS1,MEMORY1), imm, rs1, rd) :-
+	; X(rs1)
+	get_reg_value(REGS0, Rs1, Rs1val),
+	; link_address = get_next_pc()
+	ReturnAddr is PC0 + 4,
+	; X(rs1) + sign_extend(imm)
+	Target is Rs1val + Imm,
+	; jump_to()
+	PC1 is Target,
+	; X(rd) = link_address
+	write_reg_value(REGS0, REGS1, Rd, ReturnAddr),
+```
+
+```
+foo2(StateIn, StateOut) .
+foo2(StateIn, StateOut) :-
+	addi(StateIn, StateOut, 3, A0, 0),
+	jalr(StateIn, StateOut, 0, Ra)
+```

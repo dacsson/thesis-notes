@@ -24,6 +24,7 @@ But first I need to understand the state of the art for this kind of proves.
 - [[CompCert]]
 - [[Alive2]]
 - [[ARM-TV]]
+- [Example of CLP semantic interpreters](https://github.com/jpgallagher/Semantics4PE)
 ## Reading list
 - [ ] Islaris: Verification of Machine Code Against Authoritative ISA Semantics
 - [ ] [H. B. Enderton. A Mathematical Introduction to Logic. Undergraduate Texts in Mathematics. Academic Press, second edition edition, 2000.](https://sistemas.fciencias.unam.mx/~lokylog/images/Notas/la_aldea_de_la_logica/Libros_notas_varios/L_03_ENDERTON_A%20Mathematical%20Introduction%20to%20Logic,%20Second%202Ed.pdf)
@@ -38,6 +39,7 @@ But first I need to understand the state of the art for this kind of proves.
 - [x] Verifying Optimizations using SMTSolvers
 - [ ] Formal Verification of SSA-Based Optimizations for LLVM
 - [ ] Compiler Optimization Testing Based on Optimization-Guided Equivalence Transformations
+- [ ] Analysis of Imperative Programs through Analysis of Constraint Logic Programs
 ## Existing configurations
 
 | Target   | Approach                                                         | Semantic modeling     | Host                        | Used in | Cons                                                                                                                                                                                            |

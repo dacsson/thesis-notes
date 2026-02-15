@@ -97,6 +97,7 @@ Methods surveyed here bypass the interpreter and produce Horn clauses directly.
 
 ### State machine
 A state machine starts with an initial configuration of state variables $v$ and transform these by a sequence of steps. When the initial states and steps are expressed as formulas $init(v)$ and $step(v, v′)$, respectively, then we can check safety of a state machine relatively to a formula $safe(v)$ by finding an inductive invariant $inv(v)$ such that:
+
 $$
 inv(u) \leftarrow init(v)
 \qquad
