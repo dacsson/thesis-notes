@@ -1,0 +1,65 @@
+use anyhow::Result;
+use clap::Parser;
+use std::path::PathBuf;
+
+/// RICOVER — RISC-V Compiler Optimization Verification via CHC
+#[derive(Parser)]
+#[command(name = "ricover")]
+enum Cli {
+    /// Translate Isla IR instruction definitions to CHC
+    TranslateIR {
+        /// Path to .ir file (e.g., riscv64.ir)
+        #[arg(short, long)]
+        ir_file: PathBuf,
+
+        /// Output .smt2 file with CHC instruction definitions
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Instruction names to translate (e.g., "execute")
+        #[arg(short, long)]
+        functions: Vec<String>,
+    },
+
+    /// Emit CHC equivalence query from two RISC-V assembly functions
+    CheckEquiv {
+        /// Path to first .s file (unoptimized)
+        #[arg(long)]
+        before: PathBuf,
+
+        /// Path to second .s file (optimized)
+        #[arg(long)]
+        after: PathBuf,
+
+        /// Function name to compare
+        #[arg(short, long)]
+        function: String,
+
+        /// Output .smt2 file with equivalence query
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    match cli {
+        Cli::TranslateIR { ir_file, output, functions } => {
+            let contents = ricover::isla_ir::read_ir_file(&ir_file)?;
+            let model = ricover::isla_ir::parse_ir(&contents)?;
+            let chc = ricover::chc_emit::emit_instruction_chc(&model, &functions)?;
+            std::fs::write(&output, chc)?;
+            println!("Wrote CHC instruction definitions to {}", output.display());
+        }
+        Cli::CheckEquiv { before, after, function, output } => {
+            let prog1 = ricover::asm_parse::parse_asm_file(&before, &function)?;
+            let prog2 = ricover::asm_parse::parse_asm_file(&after, &function)?;
+            let query = ricover::chc_emit::emit_equivalence_query(&prog1, &prog2, &function)?;
+            std::fs::write(&output, query)?;
+            println!("Wrote equivalence query to {}", output.display());
+        }
+    }
+
+    Ok(())
+}

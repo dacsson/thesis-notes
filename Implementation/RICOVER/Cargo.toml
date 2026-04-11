@@ -1,0 +1,10 @@
+[package]
+name = "ricover"
+version = "0.1.0"
+edition = "2024"
+description = "RISC-V Compiler Optimization Verification via CHC"
+
+[dependencies]
+isla-lib = { path = "/home/safonoff/Uni/Thesis/isla/isla-lib" }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"

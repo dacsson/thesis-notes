@@ -257,3 +257,173 @@ foo2(StateIn, StateOut) :-
 	addi(StateIn, StateOut, 3, A0, 0),
 	jalr(StateIn, StateOut, 0, Ra)
 ```
+
+### Why one query is `unsat` and the other is `sat`
+
+The important subtlety in this example is that the answer depends on what we mean by "equivalent".
+
+If we encode equivalence as **observable function-boundary equivalence**, then `foo1` and `foo2` should be equivalent:
+
+- both return `3` in `a0`
+- both preserve the relevant boundary registers after return
+- from the caller's perspective, they have the same result
+
+In CHC form we can express a **bad state** saying:
+
+> There exists an initial state such that both functions terminate, but their observable outcomes differ.
+
+Schematically:
+
+$$
+bad_{obs} \leftarrow foo1(S_0, S_1), foo2(S_0, S_2), obs(S_1) \neq obs(S_2)
+$$
+
+If the solver answers:
+
+$$
+query(bad_{obs}) = unsat
+$$
+
+then no such counterexample exists, so the two functions are equivalent under the chosen observable semantics.
+
+However, if we encode equivalence as **full final-state equality**, then the answer changes.  
+The unoptimized `foo1` writes temporary values to stack memory:
+
+- it stores `x = 1`
+- it stores `y = 3`
+
+The optimized `foo2` computes the same return value without performing those stack writes.
+
+So if we ask for:
+
+$$
+\langle regs_1, mem_1 \rangle = \langle regs_2, mem_2 \rangle
+$$
+
+then the memory components may differ even though the returned result is the same.
+
+The corresponding bad state is:
+
+$$
+bad_{full} \leftarrow foo1(S_0, S_1), foo2(S_0, S_2), S_1 \neq S_2
+$$
+
+and this query can be:
+
+$$
+query(bad_{full}) = sat
+$$
+
+because the solver can exhibit a model in which the final memories differ.
+
+This is exactly why a formula that requires equality of the **entire final machine state** is too strong for optimization validation. It rejects optimizations that preserve externally visible behavior but change internal artifacts such as:
+
+- stack layout
+- temporary stores
+- scratch-register usage
+- precise control-flow shape
+
+For this reason, the right notion for the thesis is not raw full-state equality, but equality of a carefully defined **observable projection** of the final state.
+
+### Mapping the theory to CHC bad-state queries
+
+The runnable examples in:
+
+- `Implementation/RICOVER/examples/foo_constant_folding.smt2`
+- `Implementation/RICOVER/examples/foo_equiv_notions.smt2`
+
+use the standard CHC verification pattern:
+
+> define a relation `bad` that becomes reachable exactly when the intended equivalence property is violated.
+
+Then:
+
+- `query(bad) = sat` means a counterexample exists
+- `query(bad) = unsat` means no counterexample exists
+
+For the three equivalence notions discussed above, the corresponding bad-state encodings are:
+
+#### 1. Full machine-state equality
+
+Theory:
+
+$$
+P \simeq_{\text{full}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+\sigma_1=\sigma_2
+$$
+
+CHC bad state:
+
+$$
+bad_{\text{full}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), \sigma_1 \neq \sigma_2
+$$
+
+In the `foo1` / `foo2` example this query is `sat`, because the final memories differ.
+
+#### 2. ABI-level equivalence
+
+Theory:
+
+$$
+P \simeq_{\text{abi}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+Obs_{\text{abi}}(\sigma_1)=Obs_{\text{abi}}(\sigma_2)
+$$
+
+where `Obs_abi` includes only caller-visible outputs such as:
+
+- return PC
+- return registers
+- callee-saved registers
+
+CHC bad state:
+
+$$
+bad_{\text{abi}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), Obs_{\text{abi}}(\sigma_1) \neq Obs_{\text{abi}}(\sigma_2)
+$$
+
+In the `foo1` / `foo2` example this query is `unsat`, because the functions agree on the caller-visible boundary state.
+
+#### 3. Projected-memory equivalence
+
+Theory:
+
+$$
+P \simeq_{\text{proj}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+\Bigl(
+Obs_{\text{abi}}(\sigma_1)=Obs_{\text{abi}}(\sigma_2)
+\land
+\forall a \in ObsMem(\sigma_0).\ mem_1[a]=mem_2[a]
+\Bigr)
+$$
+
+Here `ObsMem(σ0)` is the set of addresses considered semantically observable.  
+In the example file we exclude the callee's private stack frame `[sp_0 - 32, sp_0)`.
+
+CHC bad state:
+
+$$
+bad_{\text{proj}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), a \in ObsMem(\sigma_0), mem_1[a] \neq mem_2[a]
+$$
+
+In the `foo1` / `foo2` example this query is `unsat`, because the memory differences are confined to the private frame that is intentionally projected away.
