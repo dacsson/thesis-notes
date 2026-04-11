@@ -21,69 +21,84 @@ fn smt_var(model: &IslaIRModel, name: Name) -> String {
 
 /// Translate an expression to SMT-LIB2.
 /// `bindings` maps IR variable names to their SMT expressions (for inlining copies).
-fn exp_to_smt(model: &IslaIRModel, exp: &Exp<Name>, bindings: &HashMap<Name, String>) -> String {
+///
+/// Returns Err on unsupported expressions — a verification tool must never
+/// silently emit placeholder comments instead of real semantics.
+fn exp_to_smt(model: &IslaIRModel, exp: &Exp<Name>, bindings: &HashMap<Name, String>) -> Result<String> {
     match exp {
         Exp::Id(id) => {
             if let Some(bound) = bindings.get(id) {
-                bound.clone()
+                Ok(bound.clone())
             } else {
-                smt_var(model, *id)
+                Ok(smt_var(model, *id))
             }
         }
         Exp::Bits(bv) => {
             let len = bv.len();
-            // BV value as unsigned integer
-            if len <= 64 {
-                format!("(_ bv{} {})", bv.lower_u64(), len)
+            // BV literals wider than 64 bits cannot be represented via lower_u64().
+            // Fail explicitly rather than silently truncating upper bits.
+            if len > 64 {
+                Err(anyhow!(
+                    "bitvector literal wider than 64 bits (width {}): cannot represent with lower_u64()",
+                    len
+                ))
             } else {
-                format!("(_ bv{} {})", bv.lower_u64(), len)
+                Ok(format!("(_ bv{} {})", bv.lower_u64(), len))
             }
         }
-        Exp::I64(n) => format!("{}", n),
-        Exp::I128(n) => format!("{}", n),
-        Exp::Bool(b) => if *b { "true" } else { "false" }.to_string(),
-        Exp::Unit => "(_ unit)".to_string(),
+        Exp::I64(n) => Ok(format!("{}", n)),
+        Exp::I128(n) => Ok(format!("{}", n)),
+        Exp::Bool(b) => Ok(if *b { "true" } else { "false" }.to_string()),
+        Exp::Unit => Ok("(_ unit)".to_string()),
         Exp::Call(op, args) => {
-            let smt_args: Vec<String> = args.iter().map(|a| exp_to_smt(model, a, bindings)).collect();
+            let smt_args: Vec<String> = args.iter()
+                .map(|a| exp_to_smt(model, a, bindings))
+                .collect::<Result<_>>()?;
             match op {
-                Op::Not => format!("(not {})", smt_args[0]),
-                Op::And => format!("(and {})", smt_args.join(" ")),
-                Op::Or => format!("(or {})", smt_args.join(" ")),
-                Op::Eq => format!("(= {} {})", smt_args[0], smt_args[1]),
-                Op::Neq => format!("(not (= {} {}))", smt_args[0], smt_args[1]),
-                Op::Bvadd => format!("(bvadd {} {})", smt_args[0], smt_args[1]),
-                Op::Bvsub => format!("(bvsub {} {})", smt_args[0], smt_args[1]),
-                Op::Bvand => format!("(bvand {} {})", smt_args[0], smt_args[1]),
-                Op::Bvor => format!("(bvor {} {})", smt_args[0], smt_args[1]),
-                Op::Bvxor => format!("(bvxor {} {})", smt_args[0], smt_args[1]),
-                Op::Bvnot => format!("(bvnot {})", smt_args[0]),
-                Op::Concat => format!("(concat {} {})", smt_args[0], smt_args[1]),
-                Op::Slice(n) => format!("((_ extract {} 0) {})", n - 1, smt_args[0]),
-                Op::ZeroExtend(n) => format!("((_ zero_extend {}) {})", n, smt_args[0]),
-                Op::Signed(n) => format!("((_ sign_extend {}) {})", n, smt_args[0]),
-                Op::Unsigned(_) => format!("(bv2nat {})", smt_args[0]),
-                Op::Lt => format!("(bvslt {} {})", smt_args[0], smt_args[1]),
-                Op::Lteq => format!("(bvsle {} {})", smt_args[0], smt_args[1]),
-                Op::Gt => format!("(bvsgt {} {})", smt_args[0], smt_args[1]),
-                Op::Gteq => format!("(bvsge {} {})", smt_args[0], smt_args[1]),
-                _ => format!(";; TODO: op {:?}", op),
+                Op::Not => Ok(format!("(not {})", smt_args[0])),
+                Op::And => Ok(format!("(and {})", smt_args.join(" "))),
+                Op::Or => Ok(format!("(or {})", smt_args.join(" "))),
+                Op::Eq => Ok(format!("(= {} {})", smt_args[0], smt_args[1])),
+                Op::Neq => Ok(format!("(not (= {} {}))", smt_args[0], smt_args[1])),
+                Op::Bvadd => Ok(format!("(bvadd {} {})", smt_args[0], smt_args[1])),
+                Op::Bvsub => Ok(format!("(bvsub {} {})", smt_args[0], smt_args[1])),
+                Op::Bvand => Ok(format!("(bvand {} {})", smt_args[0], smt_args[1])),
+                Op::Bvor => Ok(format!("(bvor {} {})", smt_args[0], smt_args[1])),
+                Op::Bvxor => Ok(format!("(bvxor {} {})", smt_args[0], smt_args[1])),
+                Op::Bvnot => Ok(format!("(bvnot {})", smt_args[0])),
+                Op::Concat => Ok(format!("(concat {} {})", smt_args[0], smt_args[1])),
+                Op::Slice(n) => Ok(format!("((_ extract {} 0) {})", n - 1, smt_args[0])),
+                Op::ZeroExtend(n) => Ok(format!("((_ zero_extend {}) {})", n, smt_args[0])),
+                Op::Signed(n) => Ok(format!("((_ sign_extend {}) {})", n, smt_args[0])),
+                Op::Unsigned(_) => Ok(format!("(bv2nat {})", smt_args[0])),
+                Op::Lt => Ok(format!("(bvslt {} {})", smt_args[0], smt_args[1])),
+                Op::Lteq => Ok(format!("(bvsle {} {})", smt_args[0], smt_args[1])),
+                Op::Gt => Ok(format!("(bvsgt {} {})", smt_args[0], smt_args[1])),
+                Op::Gteq => Ok(format!("(bvsge {} {})", smt_args[0], smt_args[1])),
+                _ => Err(anyhow!("unsupported IR operator: {:?}", op)),
             }
         }
         Exp::Field(inner, field) => {
             // Struct field access — inline as variable reference
-            let inner_smt = exp_to_smt(model, inner, bindings);
+            let inner_smt = exp_to_smt(model, inner, bindings)?;
             let field_name = model.resolve_name(*field);
-            format!("{}_{}", inner_smt, field_name)
+            Ok(format!("{}_{}", inner_smt, field_name))
         }
-        Exp::Unwrap(ctor, inner) => {
+        Exp::Unwrap(_ctor, inner) => {
             // Union unwrap — for our purposes, same as the inner expression
             // since we've already dispatched on the variant via jump
             exp_to_smt(model, inner, bindings)
         }
-        Exp::Kind(ctor, inner) => {
-            format!(";; kind check: {} is {}", exp_to_smt(model, inner, bindings), model.resolve_name(*ctor))
+        Exp::Kind(_ctor, inner) => {
+            // Kind checks should be handled by jump dispatch in discover_variants,
+            // not appear in expression context during translation.
+            Err(anyhow!(
+                "unexpected Kind check in expression context: {} is {}",
+                format_exp(model, inner),
+                model.resolve_name(*_ctor)
+            ))
         }
-        _ => format!(";; TODO: {:?}", exp),
+        _ => Err(anyhow!("unsupported IR expression: {:?}", exp)),
     }
 }
 
@@ -95,7 +110,7 @@ fn ty_to_smt(ty: &Ty<Name>) -> String {
         Ty::I64 => "Int".to_string(),
         Ty::I128 => "Int".to_string(),
         Ty::Unit => "Bool".to_string(), // dummy
-        _ => format!(";; TODO type: {:?}", ty),
+        _ => panic!("unsupported IR type in SMT translation: {:?}", ty),
     }
 }
 
@@ -108,6 +123,7 @@ enum KnownCall {
     ZeroExtend,   // EXTZ(width, val) → zero_extend
     AddBits,       // add_bits(a, b) → bvadd
     ReadMem,       // read_mem(addr, width)
+    WriteMem,      // write_mem(addr, width, val)
     EqBits,        // eq_bits(a, b) → =
     NeqBits,       // neq_bits(a, b) → not =
     SubrangeBits,  // subrange_bits(bv, hi, lo) → extract
@@ -126,6 +142,7 @@ fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "EXTZ" => KnownCall::ZeroExtend,
         "add_bits" => KnownCall::AddBits,
         "read_mem" => KnownCall::ReadMem,
+        "write_mem" | "__write_mem" | "MEMw" => KnownCall::WriteMem,
         "eq_bits" => KnownCall::EqBits,
         "neq_bits" => KnownCall::NeqBits,
         "subrange_bits" => KnownCall::SubrangeBits,
@@ -136,70 +153,99 @@ fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
 }
 
 /// Translate a Call instruction to an SMT expression string.
+///
+/// EXTS/EXTZ and WriteMem are NOT handled here — they require type-width
+/// information that is only available in translate_path, which handles
+/// them directly. ReadMem/WriteReg are also handled specially in translate_path
+/// but fall through here for non-translate_path contexts.
+///
+/// Returns Err on unsupported/unknown calls — a verification tool must never
+/// silently emit placeholder comments.
 fn call_to_smt(
     model: &IslaIRModel,
     func_id: Name,
     args: &[Exp<Name>],
     bindings: &HashMap<Name, String>,
-) -> String {
-    let smt_args: Vec<String> = args.iter().map(|a| exp_to_smt(model, a, bindings)).collect();
+) -> Result<String> {
+    let smt_args: Vec<String> = args.iter()
+        .map(|a| exp_to_smt(model, a, bindings))
+        .collect::<Result<_>>()?;
 
     match classify_call(model, func_id) {
         KnownCall::ReadReg => {
             // rX(rs) → (get_reg regs rs)
-            format!("(get_reg regs0 {})", smt_args[0])
+            Ok(format!("(get_reg regs0 {})", smt_args[0]))
         }
         KnownCall::WriteReg => {
             // wX(rd, val) → (set_reg regs0 rd val)
             // This is a state mutation — handled specially in the CHC rule
-            format!("(set_reg regs0 {} {})", smt_args[0], smt_args[1])
+            Ok(format!("(set_reg regs0 {} {})", smt_args[0], smt_args[1]))
         }
-        KnownCall::SignExtend => {
-            // EXTS(target_width, val)
-            // target_width is an integer literal — we need it to compute padding
-            let width_str = &smt_args[0];
-            if let Ok(target_width) = width_str.parse::<u32>() {
-                // We don't statically know the source width in all cases,
-                // so emit sign_extend with a placeholder comment
-                format!("((_ sign_extend {}) {})", target_width.saturating_sub(12), smt_args[1])
-            } else {
-                format!(";; EXTS({}, {})", smt_args[0], smt_args[1])
-            }
-        }
-        KnownCall::ZeroExtend => {
-            let width_str = &smt_args[0];
-            if let Ok(target_width) = width_str.parse::<u32>() {
-                format!("((_ zero_extend {}) {})", target_width.saturating_sub(12), smt_args[1])
-            } else {
-                format!(";; EXTZ({}, {})", smt_args[0], smt_args[1])
-            }
+        KnownCall::SignExtend | KnownCall::ZeroExtend => {
+            // EXTS/EXTZ require source-width inference from the type environment.
+            // They are handled directly in translate_path; reaching here means
+            // call_to_smt was invoked outside that context.
+            Err(anyhow!(
+                "EXTS/EXTZ must be handled in translate_path with type-width tracking, \
+                 not via call_to_smt (target_width={}, val={})",
+                smt_args[0], smt_args[1]
+            ))
         }
         KnownCall::AddBits => {
-            format!("(bvadd {} {})", smt_args[0], smt_args[1])
+            Ok(format!("(bvadd {} {})", smt_args[0], smt_args[1]))
         }
         KnownCall::ReadMem => {
-            // read_mem(addr, width) — width is byte count
-            format!("(read_mem_dword mem0 {})", smt_args[0])
+            // read_mem(addr, width) — dispatch by byte count
+            let addr = &smt_args[0];
+            let width_smt = &smt_args[1];
+            let width = width_smt.parse::<u64>().map_err(|_| {
+                anyhow!("read_mem: non-literal width '{}', cannot dispatch to stdlib", width_smt)
+            })?;
+            let mem_fn = match width {
+                1 => "read_mem_byte",
+                2 => "read_mem_half",
+                4 => "read_mem_word",
+                8 => "read_mem_dword",
+                _ => return Err(anyhow!("read_mem: unsupported width {} bytes", width)),
+            };
+            Ok(format!("({} mem0 {})", mem_fn, addr))
+        }
+        KnownCall::WriteMem => {
+            // write_mem(addr, width, val) — dispatch by byte count
+            let addr = &smt_args[0];
+            let width_smt = &smt_args[1];
+            let val = &smt_args[2];
+            let width = width_smt.parse::<u64>().map_err(|_| {
+                anyhow!("write_mem: non-literal width '{}', cannot dispatch to stdlib", width_smt)
+            })?;
+            let mem_fn = match width {
+                1 => "write_mem_byte",
+                2 => "write_mem_half",
+                4 => "write_mem_word",
+                8 => "write_mem_dword",
+                _ => return Err(anyhow!("write_mem: unsupported width {} bytes", width)),
+            };
+            Ok(format!("({} mem0 {} {})", mem_fn, addr, val))
         }
         KnownCall::EqBits => {
-            format!("(= {} {})", smt_args[0], smt_args[1])
+            Ok(format!("(= {} {})", smt_args[0], smt_args[1]))
         }
         KnownCall::NeqBits => {
-            format!("(not (= {} {}))", smt_args[0], smt_args[1])
+            Ok(format!("(not (= {} {}))", smt_args[0], smt_args[1]))
         }
         KnownCall::SubrangeBits => {
             // subrange_bits(bv, hi, lo) → ((_ extract hi lo) bv)
-            format!("((_ extract {} {}) {})", smt_args[1], smt_args[2], smt_args[0])
+            Ok(format!("((_ extract {} {}) {})", smt_args[1], smt_args[2], smt_args[0]))
         }
         KnownCall::Unsigned => {
-            format!("(bv2nat {})", smt_args[0])
+            Ok(format!("(bv2nat {})", smt_args[0]))
         }
         KnownCall::IntToI64 | KnownCall::I64ToInt => {
             // Type cast — passthrough in SMT
-            smt_args[0].clone()
+            Ok(smt_args[0].clone())
         }
         KnownCall::Unknown(name) => {
-            format!(";; unknown call: {}({})", name, smt_args.join(", "))
+            Err(anyhow!("unsupported Sail function call: {}({})", name, smt_args.join(", ")))
         }
     }
 }
@@ -324,6 +370,9 @@ struct PathTranslation {
     params: Vec<(Name, Ty<Name>)>,
     /// Register write: wX(rd_expr, val_expr) → (rd_smt, val_smt)
     reg_write: Option<(String, String)>,
+    /// Memory write: write_mem(addr, val) → (addr_smt, val_smt, byte_width)
+    /// Used to emit (= mem1 (write_mem_X mem0 addr val)) instead of (= mem1 mem0)
+    mem_write: Option<(String, String, u64)>,
     /// Memory read detected — stores the read width for stdlib dispatch
     mem_read_width: Option<u64>,
     /// All bindings accumulated during the walk (variable → SMT expression)
@@ -333,32 +382,63 @@ struct PathTranslation {
 /// Walk a linear path of IR instructions and produce a PathTranslation.
 ///
 /// The path is a straight-line sequence from field extraction through computation
-/// to the final wX (register write). We process each instruction:
-///   - Decl: record the type (used to identify parameters)
+/// to the final wX (register write) or write_mem (memory store). We process each instruction:
+///   - Decl: record the type and bitvector width (for EXTS/EXTZ source-width inference)
 ///   - Copy from Unwrap: extract tuple field → becomes a CHC parameter
 ///   - Copy (simple): inline the expression into bindings
 ///   - Call(rX): register read → (get_reg regs0 param)
-///   - Call(EXTS): sign extension → ((_ sign_extend N) val)
+///   - Call(EXTS): sign extension → ((_ sign_extend N) val), N = target - source width
+///   - Call(EXTZ): zero extension → ((_ zero_extend N) val), same width logic
 ///   - Call(add_bits): addition → (bvadd a b)
-///   - Call(read_mem): memory load → (read_mem_word/dword mem0 addr)
+///   - Call(read_mem): memory load → (read_mem_byte/half/word/dword mem0 addr)
+///   - Call(write_mem): memory store → recorded for mem1 constraint
 ///   - Call(wX): register write → recorded as the path's output
+/// Pre-collect bitvector widths from all Decl instructions in a function body.
+///
+/// Variable declarations live at the top of the function (before variant dispatch),
+/// so they must be scanned from the full body, not just a variant's path slice.
+fn collect_type_widths(body: &[Instr<Name, B129>]) -> HashMap<Name, u32> {
+    let mut widths = HashMap::new();
+    for instr in body {
+        match instr {
+            Instr::Decl(id, ty, _) => {
+                if let Ty::Bits(n) = ty {
+                    widths.insert(*id, *n);
+                }
+            }
+            // Init with a bitvector literal reveals the width even without a Bits type
+            Instr::Init(id, _, Exp::Bits(bv), _) => { widths.insert(*id, bv.len()); }
+            _ => {}
+        }
+    }
+    widths
+}
+
 fn translate_path(
     model: &IslaIRModel,
     path: &[Instr<Name, B129>],
-) -> PathTranslation {
+    body: &[Instr<Name, B129>],
+    type_widths: &mut HashMap<Name, u32>,
+) -> Result<PathTranslation> {
     let mut bindings: HashMap<Name, String> = HashMap::new();
     let mut params: Vec<(Name, Ty<Name>)> = Vec::new();
     let mut reg_write = None;
+    let mut mem_write = None;
     let mut mem_read_width = None;
 
     for instr in path {
         match instr {
             Instr::Decl(_, _, _) => {
-                // Declarations don't produce constraints — variables are introduced on use
+                // Declarations don't produce constraints — variables are introduced on use.
+                // Type widths were already collected above.
             }
 
             Instr::Init(id, _ty, exp, _) => {
-                let smt = exp_to_smt(model, exp, &bindings);
+                // Propagate bitvector width through the assignment
+                if let Some(w) = infer_bv_width(exp, type_widths) {
+                    type_widths.insert(*id, w);
+                }
+                let smt = exp_to_smt(model, exp, &bindings)?;
                 bindings.insert(*id, smt);
             }
 
@@ -368,12 +448,23 @@ fn translate_path(
                 // Isla represents this as Exp::Field(Exp::Unwrap(...), field_name)
                 // These become the instruction's forall-bound CHC parameters.
                 if is_field_of_unwrap(exp) {
-                    let ty = find_decl_type(path, *id);
+                    // Search the full body for the type, not just the path slice,
+                    // because Decls live at the top of the function before dispatch.
+                    let ty = find_decl_type(body, *id);
+                    // Register the parameter's bitvector width so downstream
+                    // EXTS/EXTZ can infer the source width correctly.
+                    if let Ty::Bits(n) = ty {
+                        type_widths.insert(*id, *n);
+                    }
                     params.push((*id, ty.clone()));
                     let param_name = format!("p{}", params.len() - 1);
                     bindings.insert(*id, param_name);
                 } else {
-                    let smt = exp_to_smt(model, exp, &bindings);
+                    // Propagate bitvector width through the copy
+                    if let Some(w) = infer_bv_width(exp, type_widths) {
+                        type_widths.insert(*id, w);
+                    }
+                    let smt = exp_to_smt(model, exp, &bindings)?;
                     bindings.insert(*id, smt);
                 }
             }
@@ -387,24 +478,73 @@ fn translate_path(
                 let call_kind = classify_call(model, *func_id);
                 match call_kind {
                     KnownCall::WriteReg => {
-                        // wX(rd, val) — this is the instruction's output
-                        let rd = exp_to_smt(model, &args[0], &bindings);
-                        let val = exp_to_smt(model, &args[1], &bindings);
+                        // wX(rd, val) — this is the instruction's register output
+                        let rd = exp_to_smt(model, &args[0], &bindings)?;
+                        let val = exp_to_smt(model, &args[1], &bindings)?;
                         reg_write = Some((rd, val));
                         bindings.insert(*id, "(_ unit)".to_string());
                     }
+                    KnownCall::SignExtend | KnownCall::ZeroExtend => {
+                        // EXTS(target_width, val) / EXTZ(target_width, val)
+                        //
+                        // The extension amount = target_width - source_width.
+                        // Source width is inferred from the type of the value argument
+                        // (tracked in type_widths from Decl instructions).
+                        let target_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let target_width = target_smt.parse::<u32>().map_err(|_| {
+                            anyhow!("EXTS/EXTZ: non-literal target width '{}'", target_smt)
+                        })?;
+                        let val_smt = exp_to_smt(model, &args[1], &bindings)?;
+
+                        // Infer source width from the value expression
+                        let source_width = infer_bv_width(&args[1], &type_widths)
+                            .ok_or_else(|| anyhow!(
+                                "EXTS/EXTZ: cannot infer source width for '{}' (val_smt={})",
+                                format_exp(model, &args[1]), val_smt
+                            ))?;
+
+                        let extend_amount = target_width.saturating_sub(source_width);
+                        let op = match call_kind {
+                            KnownCall::SignExtend => "sign_extend",
+                            _ => "zero_extend",
+                        };
+                        bindings.insert(*id, format!("((_ {} {}) {})", op, extend_amount, val_smt));
+                        // Record the result width so downstream EXTS/EXTZ can use it
+                        type_widths.insert(*id, target_width);
+                    }
                     KnownCall::ReadMem => {
-                        // read_mem(addr, width) — record width for stdlib dispatch
-                        let addr_smt = exp_to_smt(model, &args[0], &bindings);
-                        let width_smt = exp_to_smt(model, &args[1], &bindings);
-                        // Width is typically an integer literal (8 for dword, 4 for word)
-                        let width = width_smt.parse::<u64>().unwrap_or(8);
+                        // read_mem(addr, width) — dispatch by byte count to stdlib
+                        let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("read_mem: non-literal width '{}'", width_smt)
+                        })?;
                         mem_read_width = Some(width);
-                        let mem_fn = if width == 4 { "read_mem_word" } else { "read_mem_dword" };
+                        let mem_fn = match width {
+                            1 => "read_mem_byte",
+                            2 => "read_mem_half",
+                            4 => "read_mem_word",
+                            8 => "read_mem_dword",
+                            _ => return Err(anyhow!("read_mem: unsupported width {} bytes", width)),
+                        };
                         bindings.insert(*id, format!("({} mem0 {})", mem_fn, addr_smt));
+                        // Result is always 64-bit (sign/zero-extended by stdlib)
+                        type_widths.insert(*id, 64);
+                    }
+                    KnownCall::WriteMem => {
+                        // write_mem(addr, width, val) — memory store
+                        // Record for emit_variant_chc to emit (= mem1 (write_mem_X mem0 addr val))
+                        let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let val_smt = exp_to_smt(model, &args[2], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("write_mem: non-literal width '{}'", width_smt)
+                        })?;
+                        mem_write = Some((addr_smt, val_smt, width));
+                        bindings.insert(*id, "(_ unit)".to_string());
                     }
                     _ => {
-                        let smt = call_to_smt(model, *func_id, args, &bindings);
+                        let smt = call_to_smt(model, *func_id, args, &bindings)?;
                         bindings.insert(*id, smt);
                     }
                 }
@@ -415,12 +555,13 @@ fn translate_path(
         }
     }
 
-    PathTranslation {
+    Ok(PathTranslation {
         params,
         reg_write,
+        mem_write,
         mem_read_width,
         bindings,
-    }
+    })
 }
 
 /// Check if an expression is a field access on a union unwrap.
@@ -430,6 +571,25 @@ fn translate_path(
 /// which is how Isla represents `merge#var as ITYPE.tuple#...0`
 fn is_field_of_unwrap(exp: &Exp<Name>) -> bool {
     matches!(exp, Exp::Field(inner, _) if matches!(inner.as_ref(), Exp::Unwrap(_, _)))
+}
+
+/// Infer the bitvector width of an expression from the type environment.
+///
+/// Used by EXTS/EXTZ to compute extension amount = target_width - source_width.
+/// Returns None if the width cannot be determined statically.
+fn infer_bv_width(exp: &Exp<Name>, type_widths: &HashMap<Name, u32>) -> Option<u32> {
+    match exp {
+        Exp::Id(id) => type_widths.get(id).copied(),
+        Exp::Bits(bv) => Some(bv.len()),
+        Exp::Call(Op::Slice(n), _) => Some(*n),
+        Exp::Call(Op::Concat, args) => {
+            // concat(a, b) has width = width(a) + width(b)
+            let w1 = infer_bv_width(&args[0], type_widths)?;
+            let w2 = infer_bv_width(&args[1], type_widths)?;
+            Some(w1 + w2)
+        }
+        _ => None,
+    }
 }
 
 /// Find the declared type for a variable in the path (from a preceding Decl instruction).
@@ -455,7 +615,7 @@ fn find_decl_type<'a>(path: &'a [Instr<Name, B129>], target: Name) -> &'a Ty<Nam
 ///              (= pc1 (bvadd pc0 (_ bv4 64))))
 ///         (addi regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))
 fn emit_variant_chc(
-    model: &IslaIRModel,
+    _model: &IslaIRModel,
     variant: &InstrVariant,
     translation: &PathTranslation,
     out: &mut String,
@@ -471,7 +631,7 @@ fn emit_variant_chc(
     write!(out, "   {STATE_TYPES}")?;
 
     // Add parameter types
-    for (param_id, param_ty) in &translation.params {
+    for (_param_id, param_ty) in &translation.params {
         let smt_ty = ty_to_smt(param_ty);
         write!(out, "\n   {}", smt_ty)?;
     }
@@ -488,7 +648,7 @@ fn emit_variant_chc(
     write!(out, "\n           (pc1 (_ BitVec 64))")?;
 
     // Parameter bindings in the forall
-    for (i, (param_id, param_ty)) in translation.params.iter().enumerate() {
+    for (i, (_param_id, param_ty)) in translation.params.iter().enumerate() {
         let smt_ty = ty_to_smt(param_ty);
         write!(out, "\n           (p{} {})", i, smt_ty)?;
     }
@@ -503,8 +663,19 @@ fn emit_variant_chc(
         writeln!(out, "    (=> (and (= regs1 regs0)")?;
     }
 
-    // Memory constraint: unchanged unless we detect a write (TODO: handle store instructions)
-    writeln!(out, "             (= mem1 mem0)")?;
+    // Memory constraint: either a write_mem_X call, or memory unchanged
+    if let Some((addr_smt, val_smt, width)) = &translation.mem_write {
+        let mem_fn = match width {
+            1 => "write_mem_byte",
+            2 => "write_mem_half",
+            4 => "write_mem_word",
+            8 => "write_mem_dword",
+            _ => return Err(anyhow!("emit_variant_chc: unsupported write width {} bytes", width)),
+        };
+        writeln!(out, "             (= mem1 ({} mem0 {} {}))", mem_fn, addr_smt, val_smt)?;
+    } else {
+        writeln!(out, "             (= mem1 mem0)")?;
+    }
     // PC always advances by 4
     writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
 
@@ -536,12 +707,16 @@ fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<()> {
     writeln!(out, ";; Found {} instruction variant(s) in execute function", variants.len())?;
     writeln!(out)?;
 
+    // Pre-collect bitvector widths from the full body (Decls live at the top,
+    // before variant dispatch, so they aren't inside any variant's path slice).
+    let mut type_widths = collect_type_widths(body);
+
     for variant in &variants {
         // Extract the linear path for this variant
         let path = &body[variant.body_start..variant.body_end];
 
         // Translate the IR path to SMT bindings
-        let translation = translate_path(model, path);
+        let translation = translate_path(model, path, body, &mut type_widths)?;
 
         // Emit the CHC rule
         emit_variant_chc(model, variant, &translation, out)?;
