@@ -71,3 +71,17 @@ I also generated the current `execute` output and checked that the present toy s
 ## Summary
 
 The current transpiler is viable as a prototype for a very small subset, but it is not yet semantically robust as a general Isla IR to CHC translation pipeline. The most important issues are the hardcoded extension width, truncation of wide bitvector literals, and the complete absence of memory-write modeling.
+
+---
+
+• Findings
+
+1. High: read_mem is still lowered with the wrong semantics for the IR helper it is matching. In Sail IR, zread_mem returns a generic %bv and forwards to zMEMr(..., zwidth, ...) without sign-extending the loaded value, as shown in /
+   home/safonoff/Documents/Obsidian%20Vault/Thesis/Optimization%20equivalence/Tools/Sail/Data/riscv.ir:172. The new lowering in /home/safonoff/Documents/Obsidian%20Vault/Thesis/Optimization%20equivalence/Implementation/RICOVER/src/
+   chc_emit.rs:515 maps widths 1/2/4/8 to read_mem_byte/half/word/dword, and those stdlib helpers for 1/2/4 already sign-extend to 64 bits. It then unconditionally records the result width as 64 bits at /home/safonoff/Documents/
+   Obsidian%20Vault/Thesis/Optimization%20equivalence/Implementation/RICOVER/src/chc_emit.rs:531. That is fine for the current 8-byte load example, but it is not semantically faithful for the generic IR helper and will miscompile any
+   path that expects the raw width-sized memory value and extends it later.
+2. High: memory writes are only reflected in the final mem1 constraint, so the translator still gets the wrong semantics for any variant with a store followed by another memory operation. translate_path records a single mem_write at /
+   home/safonoff/Documents/Obsidian%20Vault/Thesis/Optimization%20equivalence/Implementation/RICOVER/src/chc_emit.rs:534, but every read_mem in the same path still reads from mem0 at /home/safonoff/Documents/Obsidian%20Vault/Thesis/
+   Optimization%20equivalence/Implementation/RICOVER/src/chc_emit.rs:530, and the emitted rule applies the write only once at the end in /home/safonoff/Documents/Obsidian%20Vault/Thesis/Optimization%20equivalence/Implementation/RICOVER/
+   src/chc_emit.rs:666. So a path with write_mem(...); read_mem(...) or multiple writes will not see sequential memory effects.

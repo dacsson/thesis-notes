@@ -370,11 +370,13 @@ struct PathTranslation {
     params: Vec<(Name, Ty<Name>)>,
     /// Register write: wX(rd_expr, val_expr) → (rd_smt, val_smt)
     reg_write: Option<(String, String)>,
-    /// Memory write: write_mem(addr, val) → (addr_smt, val_smt, byte_width)
-    /// Used to emit (= mem1 (write_mem_X mem0 addr val)) instead of (= mem1 mem0)
-    mem_write: Option<(String, String, u64)>,
-    /// Memory read detected — stores the read width for stdlib dispatch
-    mem_read_width: Option<u64>,
+    /// Final memory expression after all memory operations in the path.
+    /// Starts as "mem0"; each write_mem wraps it functionally:
+    ///   "(write_mem_dword mem0 addr val)" after one write,
+    ///   "(write_mem_word (write_mem_dword mem0 a1 v1) a2 v2)" after two, etc.
+    /// Reads use the current expression, so a write-then-read sees the updated memory.
+    /// Emitted as (= mem1 <mem_expr>) in the CHC rule.
+    mem_expr: String,
     /// All bindings accumulated during the walk (variable → SMT expression)
     bindings: HashMap<Name, String>,
 }
@@ -423,8 +425,11 @@ fn translate_path(
     let mut bindings: HashMap<Name, String> = HashMap::new();
     let mut params: Vec<(Name, Ty<Name>)> = Vec::new();
     let mut reg_write = None;
-    let mut mem_write = None;
-    let mut mem_read_width = None;
+
+    // Current memory expression, threaded through all memory operations.
+    // Starts as "mem0"; writes wrap it: "(write_mem_dword mem0 addr val)".
+    // Reads reference it so a write-then-read sees the updated state.
+    let mut current_mem = "mem0".to_string();
 
     for instr in path {
         match instr {
@@ -513,34 +518,44 @@ fn translate_path(
                         type_widths.insert(*id, target_width);
                     }
                     KnownCall::ReadMem => {
-                        // read_mem(addr, width) — dispatch by byte count to stdlib
+                        // read_mem(addr, width) — use raw-width stdlib functions
+                        // (mem_read_1/2/4/8) that return the actual BV width.
+                        // The IR path's EXTS/EXTZ will handle sign/zero extension.
+                        // Reads reference current_mem so they see prior writes.
                         let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
                         let width_smt = exp_to_smt(model, &args[1], &bindings)?;
                         let width = width_smt.parse::<u64>().map_err(|_| {
                             anyhow!("read_mem: non-literal width '{}'", width_smt)
                         })?;
-                        mem_read_width = Some(width);
-                        let mem_fn = match width {
-                            1 => "read_mem_byte",
-                            2 => "read_mem_half",
-                            4 => "read_mem_word",
-                            8 => "read_mem_dword",
+                        let (mem_fn, result_bits) = match width {
+                            1 => ("mem_read_1", 8u32),
+                            2 => ("mem_read_2", 16),
+                            4 => ("mem_read_4", 32),
+                            8 => ("mem_read_8", 64),
                             _ => return Err(anyhow!("read_mem: unsupported width {} bytes", width)),
                         };
-                        bindings.insert(*id, format!("({} mem0 {})", mem_fn, addr_smt));
-                        // Result is always 64-bit (sign/zero-extended by stdlib)
-                        type_widths.insert(*id, 64);
+                        bindings.insert(*id, format!("({} {} {})", mem_fn, current_mem, addr_smt));
+                        // Record actual result width so EXTS/EXTZ computes correct extension
+                        type_widths.insert(*id, result_bits);
                     }
                     KnownCall::WriteMem => {
-                        // write_mem(addr, width, val) — memory store
-                        // Record for emit_variant_chc to emit (= mem1 (write_mem_X mem0 addr val))
+                        // write_mem(addr, width, val) — wrap current_mem functionally.
+                        // After this, current_mem = "(write_mem_X <old_mem> addr val)".
+                        // Subsequent reads will see the updated memory.
                         let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
                         let width_smt = exp_to_smt(model, &args[1], &bindings)?;
                         let val_smt = exp_to_smt(model, &args[2], &bindings)?;
                         let width = width_smt.parse::<u64>().map_err(|_| {
                             anyhow!("write_mem: non-literal width '{}'", width_smt)
                         })?;
-                        mem_write = Some((addr_smt, val_smt, width));
+                        let mem_fn = match width {
+                            1 => "write_mem_byte",
+                            2 => "write_mem_half",
+                            4 => "write_mem_word",
+                            8 => "write_mem_dword",
+                            _ => return Err(anyhow!("write_mem: unsupported width {} bytes", width)),
+                        };
+                        current_mem = format!("({} {} {} {})", mem_fn, current_mem, addr_smt, val_smt);
                         bindings.insert(*id, "(_ unit)".to_string());
                     }
                     _ => {
@@ -558,8 +573,7 @@ fn translate_path(
     Ok(PathTranslation {
         params,
         reg_write,
-        mem_write,
-        mem_read_width,
+        mem_expr: current_mem,
         bindings,
     })
 }
@@ -663,19 +677,11 @@ fn emit_variant_chc(
         writeln!(out, "    (=> (and (= regs1 regs0)")?;
     }
 
-    // Memory constraint: either a write_mem_X call, or memory unchanged
-    if let Some((addr_smt, val_smt, width)) = &translation.mem_write {
-        let mem_fn = match width {
-            1 => "write_mem_byte",
-            2 => "write_mem_half",
-            4 => "write_mem_word",
-            8 => "write_mem_dword",
-            _ => return Err(anyhow!("emit_variant_chc: unsupported write width {} bytes", width)),
-        };
-        writeln!(out, "             (= mem1 ({} mem0 {} {}))", mem_fn, addr_smt, val_smt)?;
-    } else {
-        writeln!(out, "             (= mem1 mem0)")?;
-    }
+    // Memory constraint: mem_expr is the final memory state after all operations.
+    // If no writes occurred, mem_expr == "mem0" and this emits (= mem1 mem0).
+    // If writes occurred, mem_expr is a nested write expression like
+    //   (write_mem_dword mem0 addr val)
+    writeln!(out, "             (= mem1 {})", translation.mem_expr)?;
     // PC always advances by 4
     writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
 
