@@ -1,4 +1,4 @@
-foo1:
+foo:
 	addi sp, sp, -32
 	sd ra, 24(sp)
 	sd s0, 16(sp)

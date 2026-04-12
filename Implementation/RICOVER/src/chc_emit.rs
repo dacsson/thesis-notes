@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use anyhow::{anyhow, Result};
@@ -102,26 +102,30 @@ fn exp_to_smt(model: &IslaIRModel, exp: &Exp<Name>, bindings: &HashMap<Name, Str
     }
 }
 
-fn ty_to_smt(ty: &Ty<Name>) -> String {
+fn ty_to_smt(ty: &Ty<Name>) -> Result<String> {
     match ty {
-        Ty::Bits(n) => format!("(_ BitVec {})", n),
-        Ty::AnyBits => "(_ BitVec 64)".to_string(), // default width
-        Ty::Bool => "Bool".to_string(),
-        Ty::I64 => "Int".to_string(),
-        Ty::I128 => "Int".to_string(),
-        Ty::Unit => "Bool".to_string(), // dummy
-        _ => panic!("unsupported IR type in SMT translation: {:?}", ty),
+        Ty::Bits(n) => Ok(format!("(_ BitVec {})", n)),
+        Ty::AnyBits => Ok("(_ BitVec 64)".to_string()), // default width
+        Ty::Bool => Ok("Bool".to_string()),
+        Ty::I64 => Ok("Int".to_string()),
+        Ty::I128 => Ok("Int".to_string()),
+        Ty::Unit => Ok("Bool".to_string()), // dummy
+        _ => Err(anyhow!("unsupported IR type in SMT translation: {:?}", ty)),
     }
 }
 
 /// Identifies which known Sail function a call corresponds to,
 /// so we can emit the right CHC/SMT instead of an opaque call.
 enum KnownCall {
-    ReadReg,       // rX(rs) → get_reg(regs, rs)
-    WriteReg,      // wX(rd, val) → set_reg(regs, rd, val)
-    SignExtend,    // EXTS(width, val) → sign_extend
-    ZeroExtend,   // EXTZ(width, val) → zero_extend
+    ReadReg,       // rX(rs) / rX_bits(rs) → get_reg(regs, rs)
+    WriteReg,      // wX(rd, val) / wX_bits(rd, val) → set_reg(regs, rd, val)
+    SignExtend,    // EXTS(width, val) / sign_extend(width, val) → SMT sign_extend
+    ZeroExtend,    // EXTZ(width, val) / zero_extend(width, val) → SMT zero_extend
     AddBits,       // add_bits(a, b) → bvadd
+    SubBits,       // sub_bits(a, b) → bvsub
+    Concat,        // bitvector_concat(a, b) → (concat a b)
+    Zeros,         // zeros(N) → (_ bv0 N)
+    Ones,          // ones(N) → (_ bv<2^N-1> N)
     ReadMem,       // read_mem(addr, width)
     WriteMem,      // write_mem(addr, width, val)
     EqBits,        // eq_bits(a, b) → =
@@ -136,11 +140,19 @@ enum KnownCall {
 fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
     let name = model.resolve_name(func_id);
     match name.as_str() {
-        "rX" => KnownCall::ReadReg,
-        "wX" => KnownCall::WriteReg,
-        "EXTS" => KnownCall::SignExtend,
-        "EXTZ" => KnownCall::ZeroExtend,
+        // Register reads: minimal IR uses rX; full IR uses rX_bits (same semantics —
+        // returns a BV64 register value).
+        "rX" | "rX_bits" => KnownCall::ReadReg,
+        "wX" | "wX_bits" => KnownCall::WriteReg,
+        // Sign/zero extension: minimal IR uses EXTS/EXTZ (Sail primitives); full IR
+        // exposes them as the generic sign_extend/zero_extend Sail library functions.
+        "EXTS" | "sign_extend" => KnownCall::SignExtend,
+        "EXTZ" | "zero_extend" => KnownCall::ZeroExtend,
         "add_bits" => KnownCall::AddBits,
+        "sub_bits" => KnownCall::SubBits,
+        "bitvector_concat" => KnownCall::Concat,
+        "zeros" => KnownCall::Zeros,
+        "ones" => KnownCall::Ones,
         "read_mem" => KnownCall::ReadMem,
         "write_mem" | "__write_mem" | "MEMw" => KnownCall::WriteMem,
         "eq_bits" => KnownCall::EqBits,
@@ -193,6 +205,28 @@ fn call_to_smt(
         }
         KnownCall::AddBits => {
             Ok(format!("(bvadd {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::SubBits => {
+            Ok(format!("(bvsub {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::Concat => {
+            Ok(format!("(concat {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::Zeros => {
+            // zeros(N) — N is an integer literal in the IR. We accept either a
+            // raw integer (passed from Exp::I64/I128) or an SMT Int literal.
+            let n = smt_args[0].parse::<u32>().map_err(|_| {
+                anyhow!("zeros: non-literal width '{}'", smt_args[0])
+            })?;
+            Ok(format!("(_ bv0 {})", n))
+        }
+        KnownCall::Ones => {
+            let n = smt_args[0].parse::<u32>().map_err(|_| {
+                anyhow!("ones: non-literal width '{}'", smt_args[0])
+            })?;
+            // (_ bv<2^n-1> n) is the all-ones bitvector of width n
+            let mask = if n >= 128 { u128::MAX } else { (1u128 << n) - 1 };
+            Ok(format!("(_ bv{} {})", mask, n))
         }
         KnownCall::ReadMem => {
             // read_mem(addr, width) — dispatch by byte count
@@ -312,21 +346,8 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
             let mut body_start = i + 1;
             let mut variant_name = outer_name.clone();
 
-            // Check if next instruction is a sub-opcode guard jump.
-            // Pattern: jump @neq(RISCV_ADDI, ...) goto skip
-            // The first argument to @neq is the opcode constant.
-            if body_start < body.len() {
-                if let Instr::Jump(Exp::Call(Op::Neq, args), _, _) = &body[body_start] {
-                    // Extract sub-opcode name from the first arg (e.g. RISCV_ADDI)
-                    if let Some(Exp::Id(opcode_id)) = args.first() {
-                        let sub_name = model.resolve_name(*opcode_id);
-                        // Strip "RISCV_" prefix if present
-                        variant_name = sub_name.strip_prefix("RISCV_")
-                            .unwrap_or(&sub_name)
-                            .to_string();
-                    }
-                    body_start += 1;
-                }
+            if variant_name == "ADDIW" {
+                println!("found ADDIW: {:?}", &body[i]);
             }
 
             // Find the end of the variant body: scan until goto
@@ -341,11 +362,52 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
                 }
             }
 
-            variants.push(InstrVariant {
-                name: variant_name,
-                body_start,
-                body_end,
-            });
+            let mut found_sub_opcodes = false;
+
+            // Check if next instruction is a sub-opcode guard jump.
+            // Pattern: jump @neq(RISCV_ADDI, ...) goto skip
+            // The first argument to @neq is the opcode constant.
+            for subinstr in body[body_start..body_end].iter() {
+                if let Instr::Jump(Exp::Call(Op::Neq, args), target, _) = subinstr {
+                    // Extract sub-opcode name from the first arg (e.g. RISCV_ADDI)
+                    if let Some(Exp::Id(opcode_id)) = args.first() {
+                        let sub_name = model.resolve_name(*opcode_id);
+                        // Strip "RISCV_" prefix if present
+                        variant_name = sub_name.strip_prefix("RISCV_")
+                            .unwrap_or(&sub_name)
+                            .to_string();
+                    }
+                    body_start = *target;
+
+                    // Find the end of the variant body: scan until goto
+                    let mut body_end = body_start;
+                    while body_end < body.len() {
+                        match &body[body_end] {
+                            Instr::Goto(_) => {
+                                body_end += 1; // include the goto itself in the range
+                                break;
+                            }
+                            _ => body_end += 1,
+                        }
+                    }
+
+                    variants.push(InstrVariant {
+                        name: variant_name.clone(),
+                        body_start,
+                        body_end,
+                    });
+
+                    found_sub_opcodes = true;
+                }
+            }
+
+            if !found_sub_opcodes {
+                variants.push(InstrVariant {
+                    name: variant_name,
+                    body_start,
+                    body_end,
+                });
+            }
 
             // Skip to the skip_target to look for the next variant
             i = *skip_target;
@@ -646,7 +708,7 @@ fn emit_variant_chc(
 
     // Add parameter types
     for (_param_id, param_ty) in &translation.params {
-        let smt_ty = ty_to_smt(param_ty);
+        let smt_ty = ty_to_smt(param_ty)?;
         write!(out, "\n   {}", smt_ty)?;
     }
     writeln!(out, "))")?;
@@ -663,7 +725,7 @@ fn emit_variant_chc(
 
     // Parameter bindings in the forall
     for (i, (_param_id, param_ty)) in translation.params.iter().enumerate() {
-        let smt_ty = ty_to_smt(param_ty);
+        let smt_ty = ty_to_smt(param_ty)?;
         write!(out, "\n           (p{} {})", i, smt_ty)?;
     }
     writeln!(out, ")")?;
@@ -701,7 +763,10 @@ fn emit_variant_chc(
 /// This is the main entry point for the Isla IR → CHC transpiler.
 /// It discovers all instruction variant paths in the execute function,
 /// translates each path's IR to SMT, and emits a CHC rule per variant.
-fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<()> {
+///
+/// Returns the set of lowercased variant names that were emitted (e.g. {"addi", "load"}).
+/// This is used by emit_equivalence_query to decide which opcodes need hand-written fallbacks.
+fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<HashSet<String>> {
     let func = model
         .get_function("execute")
         .ok_or_else(|| anyhow!("'execute' function not found"))?;
@@ -717,24 +782,60 @@ fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<()> {
     // before variant dispatch, so they aren't inside any variant's path slice).
     let mut type_widths = collect_type_widths(body);
 
+    let mut ir_names = HashSet::new();
+    let mut skipped: Vec<(String, String)> = Vec::new();
+
     for variant in &variants {
         // Extract the linear path for this variant
         let path = &body[variant.body_start..variant.body_end];
 
-        // Translate the IR path to SMT bindings
-        let translation = translate_path(model, path, body, &mut type_widths)?;
+        // Translate the IR path to SMT bindings. If translation or emission fails
+        // (unsupported type, unsupported op, etc.), skip this variant and keep going —
+        // a hand-written fallback will cover it. The transpiler is best-effort:
+        // variants we can't handle yet don't block the ones we can.
+        let result = translate_path(model, path, body, &mut type_widths)
+            .and_then(|t| {
+                // Emit into a staging buffer so a later-stage failure doesn't leave
+                // a half-written rule in `out`.
+                let mut staging = String::new();
+                emit_variant_chc(model, variant, &t, &mut staging)?;
+                out.push_str(&staging);
+                Ok(())
+            });
 
-        // Emit the CHC rule
-        emit_variant_chc(model, variant, &translation, out)?;
+        match result {
+            Ok(()) => { ir_names.insert(variant.name.to_lowercase()); }
+            Err(e) => {
+                let reason = format!("{e}").lines().next().unwrap_or("").to_string();
+                writeln!(out, ";; SKIPPED variant {} — {}", variant.name, reason)?;
+                writeln!(out)?;
+                skipped.push((variant.name.clone(), reason));
+            }
+        }
     }
 
-    // Also emit the IR dump as comments for debugging
-    writeln!(out, ";; --- IR dump for reference ---")?;
-    for (i, instr) in body.iter().enumerate() {
-        writeln!(out, ";; [{}] {}", i, format_instr(model, instr))?;
+    if !skipped.is_empty() {
+        eprintln!(
+            "warning: IR transpiler skipped {} of {} variant(s); they will need hand-written fallbacks:",
+            skipped.len(),
+            variants.len()
+        );
+        for (name, reason) in &skipped {
+            eprintln!("  - {name}: {reason}");
+        }
     }
 
-    Ok(())
+    // Emit the IR dump as comments for debugging — only for small bodies.
+    // The full rv64d.ir has hundreds of thousands of instructions; dumping them
+    // bloats the output without adding value.
+    if body.len() < 1000 {
+        writeln!(out, ";; --- IR dump for reference ---")?;
+        for (i, instr) in body.iter().enumerate() {
+            writeln!(out, ";; [{}] {}", i, format_instr(model, instr))?;
+        }
+    }
+
+    Ok(ir_names)
 }
 
 /// Translate IR functions into CHC definitions in SMT-LIB2 HORN format.
@@ -745,7 +846,7 @@ pub fn emit_instruction_chc(model: &IslaIRModel, functions: &[String]) -> Result
 
     for func_name in functions {
         if func_name == "execute" {
-            emit_execute_chc(model, &mut out)?;
+            let _ir_names = emit_execute_chc(model, &mut out)?;
         } else {
             let func = model
                 .get_function(func_name)
@@ -863,9 +964,46 @@ fn format_op(op: &Op) -> &'static str {
 //   (query bad)
 //
 // The pipeline:
-//   1. emit_instruction_rules()     — CHC rules for each opcode (addi, lw, sd, ret, ...)
+//   1. IR-derived instruction rules (from emit_execute_chc, preferred)
+//      + fallback hand-written rules for opcodes not yet in the IR
 //   2. emit_program_rule()          — chain instruction relations for one function
 //   3. emit_equivalence_query()     — full .smt2 file: stdlib + instructions + programs + query
+
+/// Map an assembly opcode to the IR-derived rule name, if the IR covers it.
+///
+/// The IR transpiler produces rules named after Sail variants (e.g. "addi", "load").
+/// Assembly opcodes may differ (e.g. "ld" maps to IR "load" when only one LOAD variant exists).
+/// Returns None when the opcode has no IR coverage and needs a hand-written fallback.
+fn ir_rule_for_opcode<'a>(asm_opcode: &str, ir_names: &'a HashSet<String>) -> Option<&'a str> {
+    // Direct match: asm opcode == IR variant name (most common with full IR)
+    if let Some(name) = ir_names.get(asm_opcode) {
+        return Some(name.as_str());
+    }
+
+    // Known mappings for the minimal IR where names don't align.
+    // With the full riscv64.ir these become unnecessary (each instruction
+    // gets its own variant: ld, lw, lb, sd, sw, sb, ...).
+    let mapped = match asm_opcode {
+        "ld" => "load",
+        _ => return None,
+    };
+    if ir_names.contains(mapped) {
+        Some(mapped)
+    } else {
+        None
+    }
+}
+
+/// Collect the set of distinct opcodes used across assembly functions.
+fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> {
+    let mut opcodes = HashSet::new();
+    for prog in progs {
+        for instr in &prog.instructions {
+            opcodes.insert(instr.opcode.clone());
+        }
+    }
+    opcodes
+}
 
 /// State type signature used in declare-rel and forall bindings.
 /// State = (Regs: Array(BV5→BV64), Mem: Array(BV64→BV8), PC: BV64)
@@ -909,18 +1047,34 @@ fn reg_to_smt(name: &str) -> Result<String> {
     })
 }
 
-/// Emit CHC rules for all supported instruction opcodes.
+/// Emit hand-written CHC rules for opcodes not covered by IR-derived rules.
+///
+/// These are fallback definitions — when the Isla IR covers an opcode, the
+/// IR-derived rule takes precedence and the fallback is not emitted.
+/// As the IR subset grows, fewer fallbacks are needed.
 ///
 /// Each instruction is a relation with signature:
 ///   (declare-rel opcode (Regs_in Mem_in PC_in  Regs_out Mem_out PC_out  operands...))
 ///   (rule (forall (...) (=> (and constraints...) (opcode ...))))
-///
-/// Instruction-specific operands by class:
-///   - addi/addiw:  imm:BV12, rs1:BV5, rd:BV5
-///   - sw/sd:       imm:BV12, base:BV5, rs2:BV5
-///   - lw/ld:       imm:BV12, base:BV5, rd:BV5
-///   - ret:         (no extra operands)
-fn emit_instruction_rules(out: &mut String) -> Result<()> {
+fn emit_fallback_rules(needed: &HashSet<String>, out: &mut String) -> Result<()> {
+    if needed.is_empty() {
+        return Ok(());
+    }
+    writeln!(out, ";; Hand-written fallback rules for opcodes not yet in the IR:")?;
+    writeln!(out, ";; {:?}", needed)?;
+    writeln!(out)?;
+
+    for opcode in needed {
+        emit_one_fallback_rule(opcode, out)?;
+    }
+
+    Ok(())
+}
+
+/// Emit a single hand-written fallback rule.
+fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
+    match opcode {
+    "addi" => {
     // --- ADDI: rd = rs1 + sign_extend(imm) ---
     writeln!(out, "(declare-rel addi")?;
     writeln!(out, "  ({STATE_TYPES}")?;
@@ -942,7 +1096,9 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (addi regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))")?;
     writeln!(out)?;
+    }
 
+    "addiw" => {
     // --- ADDIW: rd = sign_extend_32(truncate_32(rs1 + sign_extend(imm))) ---
     // Word-width add: compute in 64 bits, truncate to low 32, sign-extend back to 64
     writeln!(out, "(declare-rel addiw")?;
@@ -969,7 +1125,9 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (addiw regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))")?;
     writeln!(out)?;
+    }
 
+    "sw" => {
     // --- SW: store word (4 bytes, little-endian) ---
     writeln!(out, "(declare-rel sw")?;
     writeln!(out, "  ({STATE_TYPES}")?;
@@ -993,7 +1151,9 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (sw regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))")?;
     writeln!(out)?;
+    }
 
+    "lw" => {
     // --- LW: load word (4 bytes, sign-extended to 64 bits) ---
     writeln!(out, "(declare-rel lw")?;
     writeln!(out, "  ({STATE_TYPES}")?;
@@ -1017,7 +1177,9 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (lw regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))")?;
     writeln!(out)?;
+    }
 
+    "sd" => {
     // --- SD: store doubleword (8 bytes, little-endian) ---
     writeln!(out, "(declare-rel sd")?;
     writeln!(out, "  ({STATE_TYPES}")?;
@@ -1041,7 +1203,9 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (sd regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))")?;
     writeln!(out)?;
+    }
 
+    "ld" => {
     // --- LD: load doubleword (8 bytes) ---
     writeln!(out, "(declare-rel ld")?;
     writeln!(out, "  ({STATE_TYPES}")?;
@@ -1065,9 +1229,10 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
     writeln!(out, "        (ld regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))")?;
     writeln!(out)?;
+    }
 
+    "ret" => {
     // --- RET: pseudo-instruction (jalr zero, 0(ra)) ---
-    // PC becomes the return address from ra; registers and memory unchanged
     writeln!(out, "(declare-rel ret")?;
     writeln!(out, "  ({STATE_TYPES}")?;
     writeln!(out, "   {STATE_TYPES}))")?;
@@ -1084,6 +1249,10 @@ fn emit_instruction_rules(out: &mut String) -> Result<()> {
     writeln!(out, "             (= pc1 (get_reg regs0 reg_ra)))")?;
     writeln!(out, "        (ret regs0 mem0 pc0 regs1 mem1 pc1))))")?;
     writeln!(out)?;
+    }
+
+    _ => return Err(anyhow!("no fallback rule for opcode: {}", opcode)),
+    }
 
     Ok(())
 }
@@ -1162,7 +1331,11 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
 ///              ...
 ///              (instrN regsN-1 ... regsN ...))
 ///         (funcname regs0 mem0 pc0 regsN memN pcN))))
-fn emit_program_rule(func: &AsmFunction, out: &mut String) -> Result<()> {
+fn emit_program_rule(
+    func: &AsmFunction,
+    ir_names: &HashSet<String>,
+    out: &mut String,
+) -> Result<()> {
     let n = func.instructions.len();
 
     // Declare the function relation: (state_in, state_out)
@@ -1187,13 +1360,17 @@ fn emit_program_rule(func: &AsmFunction, out: &mut String) -> Result<()> {
     writeln!(out, "    (=> (and")?;
     for (i, instr) in func.instructions.iter().enumerate() {
         let (opcode, operands) = instruction_to_chc(instr)?;
+        // Prefer an IR-derived rule name when the IR covers this opcode.
+        let rule_name = ir_rule_for_opcode(&opcode, ir_names)
+            .map(|s| s.to_string())
+            .unwrap_or(opcode);
         let state_args = format!("regs{i} mem{i} pc{i} regs{} mem{} pc{}", i+1, i+1, i+1);
         // Comment with original assembly for readability
         writeln!(out, "          ; {}", format_asm_instr(instr))?;
         if operands.is_empty() {
-            writeln!(out, "          ({opcode} {state_args})")?;
+            writeln!(out, "          ({rule_name} {state_args})")?;
         } else {
-            writeln!(out, "          ({opcode} {state_args} {})", operands.join(" "))?;
+            writeln!(out, "          ({rule_name} {state_args} {})", operands.join(" "))?;
         }
     }
 
@@ -1253,6 +1430,7 @@ pub fn emit_equivalence_query(
     prog1: &AsmFunction,
     prog2: &AsmFunction,
     _name: &str,
+    model: Option<&IslaIRModel>,
 ) -> Result<String> {
     let mut out = String::new();
 
@@ -1260,20 +1438,45 @@ pub fn emit_equivalence_query(
     writeln!(out, "{}", STDLIB)?;
     writeln!(out)?;
 
-    // 2. Instruction relation rules
+    // 2a. IR-derived instruction rules (if a model was provided)
+    let ir_names: HashSet<String> = if let Some(m) = model {
+        writeln!(out, "; {}", "=".repeat(70))?;
+        writeln!(out, "; IR-derived instruction rules (from Sail spec via Isla)")?;
+        writeln!(out, "; {}", "=".repeat(70))?;
+        writeln!(out)?;
+        emit_execute_chc(m, &mut out)?
+    } else {
+        HashSet::new()
+    };
+
+    // 2b. Hand-written fallback rules for opcodes not covered by the IR
+    let needed = collect_needed_opcodes(&[prog1, prog2]);
+    let fallback_needed: HashSet<String> = needed
+        .iter()
+        .filter(|op| ir_rule_for_opcode(op, &ir_names).is_none())
+        .cloned()
+        .collect();
+    if !fallback_needed.is_empty() {
+        let mut sorted: Vec<&String> = fallback_needed.iter().collect();
+        sorted.sort();
+        eprintln!(
+            "warning: falling back to hand-written CHC rules for opcodes not covered by the IR: {}",
+            sorted.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+        );
+    }
     writeln!(out, "; {}", "=".repeat(70))?;
-    writeln!(out, "; Instruction relations")?;
+    writeln!(out, "; Hand-written fallback instruction rules")?;
     writeln!(out, "; {}", "=".repeat(70))?;
     writeln!(out)?;
-    emit_instruction_rules(&mut out)?;
+    emit_fallback_rules(&fallback_needed, &mut out)?;
 
     // 3. Program relation rules
     writeln!(out, "; {}", "=".repeat(70))?;
     writeln!(out, "; Programs")?;
     writeln!(out, "; {}", "=".repeat(70))?;
     writeln!(out)?;
-    emit_program_rule(prog1, &mut out)?;
-    emit_program_rule(prog2, &mut out)?;
+    emit_program_rule(prog1, &ir_names, &mut out)?;
+    emit_program_rule(prog2, &ir_names, &mut out)?;
 
     // 4. Observable-address predicate
     //
@@ -1383,9 +1586,13 @@ mod tests {
 
     #[test]
     fn emit_foo_equivalence_query() {
-        let foo1 = asm_parse::parse_asm(FOO1_ASM, "foo1").expect("parse foo1");
-        let foo2 = asm_parse::parse_asm(FOO2_ASM, "foo2").expect("parse foo2");
-        let query = emit_equivalence_query(&foo1, &foo2, "foo").expect("emit query");
+        let mut foo1 = asm_parse::parse_asm(FOO1_ASM, "foo").expect("parse foo (before)");
+        let mut foo2 = asm_parse::parse_asm(FOO2_ASM, "foo").expect("parse foo (after)");
+        // The CLI auto-suffixes the two sides so the emitted rules don't collide.
+        foo1.name = "foo1".to_string();
+        foo2.name = "foo2".to_string();
+        let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse");
+        let query = emit_equivalence_query(&foo1, &foo2, "foo", Some(&model)).expect("emit query");
         println!("{}", query);
 
         // Check structure
@@ -1396,13 +1603,17 @@ mod tests {
         assert!(query.contains("obs_addr"));
         assert!(query.contains("query bad"));
 
-        // Check that instruction rules are present
-        assert!(query.contains("declare-rel addi"));
+        // IR-derived rules (from the minimal riscv.ir): addi and load
+        assert!(query.contains("declare-rel addi"), "addi should come from IR");
+        assert!(query.contains("declare-rel load"), "load should come from IR (ld maps to it)");
+        // Foo uses `ld`; the program rule must call the IR `load` rule, not emit `ld`
+        assert!(!query.contains("declare-rel ld\n"), "ld should not be a fallback rule — it maps to IR load");
+
+        // Fallback rules for opcodes not in the minimal IR
         assert!(query.contains("declare-rel addiw"));
         assert!(query.contains("declare-rel sw"));
         assert!(query.contains("declare-rel lw"));
         assert!(query.contains("declare-rel sd"));
-        assert!(query.contains("declare-rel ld"));
         assert!(query.contains("declare-rel ret"));
 
         // Check frame size computation (foo1 allocates 32 bytes)

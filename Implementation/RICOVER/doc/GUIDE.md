@@ -45,14 +45,16 @@ Parses two RISC-V assembly files and emits a CHC equivalence query.
 # a CHC equivalence query.
 cargo run -- check-equiv \
   --before foo_O0.s \
-  --after foo_O2.s \
+  --after  foo_O2.s \
   -f foo \
+  --ir path/to/riscv.ir \
   -o query.smt2
 ```
 
 - `--before` — assembly file with unoptimized code
 - `--after` — assembly file with optimized code
-- `-f` — function name to compare
+- `-f` — function label to look up in *both* files. The two sides are renamed to `<function>1` (before) and `<function>2` (after) in the emitted query so their relations don't collide.
+- `--ir` — path to the `.ir` file; IR-derived rules are used for every opcode the IR covers, and a warning lists opcodes that fall back to hand-written rules
 - `-o` — output `.smt2` file
 
 ### Solving
@@ -101,6 +103,136 @@ The standard library (`chc_stdlib/stdlib.smt2`) defines:
 - `read_mem_word` / `read_mem_dword` — little-endian loads (4/8 bytes)
 - `write_mem_word` / `write_mem_dword` — little-endian stores (4/8 bytes)
 - Register ABI constants — `reg_zero`, `reg_ra`, `reg_sp`, `reg_s0`, `reg_a0`
+
+## Worked example: unoptimized vs optimized `foo`
+
+This walks through the full pipeline end-to-end on `Examples/foo1.s` (unoptimized) and `Examples/foo2.s` (the same function after constant folding). Both files use the label `foo:` — that's the label `check-equiv` looks up; it then renames the two sides to `foo1`/`foo2` internally so their relations don't collide in the query.
+
+### Inputs
+
+`Examples/foo1.s` (14 instructions, allocates a 32-byte frame):
+
+```asm
+foo:
+    addi sp, sp, -32
+    sd   ra, 24(sp)
+    sd   s0, 16(sp)
+    addi s0, sp, 32
+    addi a0, zero, 1
+    sw   a0, -20(s0)
+    lw   a0, -20(s0)
+    addiw a0, a0, 2
+    sw   a0, -24(s0)
+    lw   a0, -24(s0)
+    ld   ra, 24(sp)
+    ld   s0, 16(sp)
+    addi sp, sp, 32
+    ret
+```
+
+`Examples/foo2.s`:
+
+```asm
+foo:
+    addi a0, zero, 3
+    ret
+```
+
+### Step 1 — inspect the instruction semantics translated from the IR
+
+Before running the equivalence check, you can look at what `translate-ir` produces on its own. This is the transpiler output, independent of any assembly program:
+
+```bash
+cargo run -- translate-ir \
+  -i ../../Tools/Sail/Data/riscv.ir \
+  -o /tmp/ricover_instr.smt2 \
+  -f execute
+```
+
+The minimal `riscv.ir` in `Tools/Sail/Data/` covers two execute-clause variants: `ADDI` and `LOAD`. The output file contains the CHC stdlib followed by one `declare-rel` + `rule` per variant. Example — the `addi` rule:
+
+```smt2
+;; --- ADDI instruction (from Isla IR [3..29]) ---
+(declare-rel addi
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))
+
+(rule
+  (forall (... (p0 (_ BitVec 12)) (p1 (_ BitVec 5)) (p2 (_ BitVec 5)))
+    (=> (and (= regs1 (set_reg regs0 p2
+                               (bvadd (get_reg regs0 p1)
+                                      ((_ sign_extend 52) p0))))
+             (= mem1 mem0)
+             (= pc1 (bvadd pc0 (_ bv4 64))))
+        (addi regs0 mem0 pc0 regs1 mem1 pc1 p0 p1 p2))))
+```
+
+Read this as: "starting from state `(regs0, mem0, pc0)`, executing `addi` with operands `(p0=imm, p1=rs1, p2=rd)` yields state `(regs1, mem1, pc1)` where the destination register is `rs1 + sign_extend(imm)`, memory is unchanged, and PC advances by 4". The body was mechanically derived from the Sail `execute(ITYPE)` clause via Isla IR — not hand-written.
+
+### Step 2 — emit the equivalence query
+
+```bash
+cargo run -- check-equiv \
+  --before ../../Examples/foo1.s \
+  --after  ../../Examples/foo2.s \
+  -f foo \
+  --ir ../../Tools/Sail/Data/riscv.ir \
+  -o /tmp/foo_query.smt2
+```
+
+- `-f foo` — the label to look up in both files. The two sides are renamed to `foo1` (before) and `foo2` (after) in the query so their relations don't collide.
+- `--ir …/riscv.ir` — required: IR-derived rules are emitted for every opcode covered by the `.ir` file. For opcodes not covered, hand-written rules are used as fallback, and a warning is printed:
+
+  ```
+  warning: falling back to hand-written CHC rules for opcodes not covered by the IR: addiw, lw, ret, sd, sw
+  Wrote equivalence query to /tmp/foo_query.smt2
+  ```
+
+  With the minimal `riscv.ir`, only `addi` and `load` come from the IR; everything else is a fallback. A fuller `riscv64.ir` shrinks this list toward zero.
+
+### Step 3 — what the query contains
+
+The output `.smt2` file has five sections:
+
+1. **Stdlib** — `(set-logic HORN)`, register ops (`get_reg`, `set_reg`), memory ops (`mem_read_N`, `read_mem_*`, `write_mem_*`), ABI register constants.
+2. **IR-derived instruction rules** — one `declare-rel` + `rule` per Sail variant found in the execute function (here: `addi`, `load`).
+3. **Hand-written fallback rules** — one per opcode used in the programs but not covered by the IR (here: `addiw`, `sw`, `lw`, `sd`, `ret`).
+4. **Program rules** — `foo1` and `foo2` as relations over `(state_in, state_out)`, chaining per-instruction relation calls through intermediate state variables `regs0…regsN`, `mem0…memN`, `pc0…pcN`. Each call uses the IR rule when available (so `ld` invokes `load`, not a fallback `ld` rule). Excerpt from `foo1`:
+
+   ```smt2
+   (=> (and
+         ; addi sp, sp, -32
+         (addi regs0 mem0 pc0 regs1 mem1 pc1 (_ bv4064 12) reg_sp reg_sp)
+         ; sd ra, 24(sp)
+         (sd   regs1 mem1 pc1 regs2 mem2 pc2 (_ bv24 12)   reg_sp reg_ra)
+         ; ... ...
+         ; ld ra, 24(sp)
+         (load regs10 mem10 pc10 regs11 mem11 pc11 (_ bv24 12) reg_sp reg_ra)
+         ; ld s0, 16(sp)
+         (load regs11 mem11 pc11 regs12 mem12 pc12 (_ bv16 12) reg_sp reg_s0)
+         ; addi sp, sp, 32
+         (addi regs12 mem12 pc12 regs13 mem13 pc13 (_ bv32 12) reg_sp reg_sp)
+         ; ret
+         (ret  regs13 mem13 pc13 regs14 mem14 pc14)
+       )
+       (foo1 regs0 mem0 pc0 regs14 mem14 pc14))
+   ```
+
+   Note: `bv4064` is the 12-bit two's-complement of `-32` (`4096 - 32`), and the `ld` instructions dispatch to the IR-derived `load` rule.
+
+5. **Equivalence query** — the `bad` relation, derivable iff there exists some initial state where `foo1` and `foo2`, run from the same `(regs0, mem0, pc0)`, disagree on any ABI-visible register (`a0`, `ra`, `sp`, `s0`), on the PC, or on any byte of memory outside `foo1`'s private stack frame `[sp0 - 32, sp0)`. The frame size is inferred from the opening `addi sp, sp, -N`.
+
+### Step 4 — solve
+
+```bash
+z3 /tmp/foo_query.smt2
+```
+
+- `unsat` ⟹ the two programs are semantically equivalent under the projected notion (ABI registers + observable memory).
+- `sat` ⟹ the solver found a counterexample: an initial state where the two programs diverge on an observable.
+
+Note on solver behavior: whether a given query terminates quickly depends on the CHC engine (Z3/Spacer, Eldarica) and how much of the semantics is IR-derived vs. hand-written. As the IR coverage grows, the hand-written fallbacks disappear and the query becomes a cleaner test of the Sail-derived semantics.
 
 ## Generating the .ir file
 

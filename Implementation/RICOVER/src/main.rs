@@ -31,13 +31,20 @@ enum Cli {
         #[arg(long)]
         after: PathBuf,
 
-        /// Function name to compare
+        /// Function name to look up in both files. The two sides are
+        /// renamed to `<function>1` (before) and `<function>2` (after) in
+        /// the emitted query so they don't collide.
         #[arg(short, long)]
         function: String,
 
         /// Output .smt2 file with equivalence query
         #[arg(short, long)]
         output: PathBuf,
+
+        /// Path to .ir file — IR-derived rules are used for covered opcodes,
+        /// hand-written fallback rules are emitted (with a warning) for the rest.
+        #[arg(long)]
+        ir: PathBuf,
     },
 }
 
@@ -52,10 +59,14 @@ fn main() -> Result<()> {
             std::fs::write(&output, chc)?;
             println!("Wrote CHC instruction definitions to {}", output.display());
         }
-        Cli::CheckEquiv { before, after, function, output } => {
-            let prog1 = ricover::asm_parse::parse_asm_file(&before, &function)?;
-            let prog2 = ricover::asm_parse::parse_asm_file(&after, &function)?;
-            let query = ricover::chc_emit::emit_equivalence_query(&prog1, &prog2, &function)?;
+        Cli::CheckEquiv { before, after, function, output, ir } => {
+            let mut prog1 = ricover::asm_parse::parse_asm_file(&before, &function)?;
+            let mut prog2 = ricover::asm_parse::parse_asm_file(&after, &function)?;
+            prog1.name = format!("{function}1");
+            prog2.name = format!("{function}2");
+            let ir_contents = ricover::isla_ir::read_ir_file(&ir)?;
+            let model = ricover::isla_ir::parse_ir(&ir_contents)?;
+            let query = ricover::chc_emit::emit_equivalence_query(&prog1, &prog2, &function, Some(&model))?;
             std::fs::write(&output, query)?;
             println!("Wrote equivalence query to {}", output.display());
         }

@@ -212,8 +212,8 @@ mod tests {
 
     #[test]
     fn parse_foo1() {
-        let func = parse_asm(FOO1, "foo1").unwrap();
-        assert_eq!(func.name, "foo1");
+        let func = parse_asm(FOO1, "foo").unwrap();
+        assert_eq!(func.name, "foo");
         // 14 instructions: addi, sd, sd, addi, addi, sw, lw, addiw, sw, lw, ld, ld, addi, ret
         assert_eq!(func.instructions.len(), 14);
         assert_eq!(func.instructions[0].opcode, "addi");
@@ -222,8 +222,8 @@ mod tests {
 
     #[test]
     fn parse_foo2() {
-        let func = parse_asm(FOO2, "foo2").unwrap();
-        assert_eq!(func.name, "foo2");
+        let func = parse_asm(FOO2, "foo").unwrap();
+        assert_eq!(func.name, "foo");
         // 2 instructions: addi, ret
         assert_eq!(func.instructions.len(), 2);
     }
