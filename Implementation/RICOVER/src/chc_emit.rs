@@ -134,6 +134,7 @@ enum KnownCall {
     Unsigned,      // unsigned(bv) → bv2nat
     IntToI64,      // %i->%i64 — type cast, passthrough
     I64ToInt,      // %i64->%i — type cast, passthrough
+    LTEqInt,       // int <= int
     Unknown(String),
 }
 
@@ -281,6 +282,9 @@ fn call_to_smt(
         KnownCall::Unknown(name) => {
             Err(anyhow!("unsupported Sail function call: {}({})", name, smt_args.join(", ")))
         }
+        KnownCall::LTEqInt => {
+            Ok(format!("(<= {} {})", smt_args[0], smt_args[1]))
+        }
     }
 }
 
@@ -315,102 +319,105 @@ struct InstrVariant {
     /// the sub-opcode name with the "RISCV_" prefix stripped (→ "ADDI").
     /// For variants without a sub-check (e.g. LOAD), this is the variant name.
     name: String,
-    /// Index of the first instruction in the variant body
-    /// (after the jump guards, starting at the field extractions)
-    body_start: usize,
-    /// Index of the last instruction (exclusive) — typically a `goto exit`
-    body_end: usize,
+    /// Instruction ranges (half-open [start, end) into the execute body) that
+    /// together make up this variant's semantics. A variant with no inner
+    /// enum dispatch has a single segment. A sub-dispatched variant (e.g. ADDI
+    /// extracted from ITYPE's `@neq(zADDI, iop)` arm) has three segments:
+    /// shared prologue, arm-specific body, shared post-amble.
+    segments: Vec<(usize, usize)>,
 }
 
 /// Discover instruction variant paths in the execute function body.
 ///
-/// Scans for `jump (Kind check) goto target` instructions and extracts
-/// the linear path between the guard and the goto-exit for each variant.
+/// Scans for outer `jump (merge#var is VARIANT) goto skip` instructions. Each
+/// match gives a region `[i+1 .. skip)` covering the whole variant. Inside
+/// that region we look for inner `jump @neq(RISCV_OPCODE, iop) goto T`
+/// sub-opcode guards used to partition enum-dispatched variants like ITYPE:
 ///
-/// For dispatch structures like:
-///   jump (merge#var is ITYPE) goto 29
-///   jump @neq(RISCV_ADDI, ...) goto 29    ← sub-opcode check
-///   [body...]
+///     jump merge#var is ITYPE goto 383         ; outer
+///     <prologue: extract imm, rs1, rd, iop>
+///     jump @neq(RISCV_ADDI, iop) goto 309      ; arm 1 guard
+///       <ADDI body>
+///       goto 378                               ; to post-amble
+///     jump @neq(RISCV_SLTI, iop) goto 328      ; arm 2 guard
+///       ...
+///     378: <shared post-amble: wX_bits(rd, result)>
 ///
-/// The variant name is extracted from the sub-opcode constant (e.g. "RISCV_ADDI" → "ADDI").
+/// For each sub-guard `@neq(OP, iop) goto T`, the OP-specific body is
+/// `[jump_idx+1 .. T)` (fall-through when iop == OP), bracketed by the shared
+/// prologue `[i+1 .. first_guard_idx)` and a shared post-amble that starts at
+/// the common `goto` target the arms converge on. We emit one synthetic
+/// variant per sub-guard with three segments (prologue, arm, post-amble).
+///
+/// Variants without sub-guards (LOAD, ADDIW, etc.) get a single segment
+/// `[i+1 .. skip)`.
 fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<InstrVariant> {
     let mut variants = Vec::new();
     let mut i = 0;
 
     while i < body.len() {
-        // Look for a Kind check jump: jump (merge#var is VARIANT) goto skip
         if let Instr::Jump(Exp::Kind(ctor, _), skip_target, _) = &body[i] {
             let outer_name = model.resolve_name(*ctor);
+            let outer_skip = *skip_target;
+            let variant_start = i + 1;
 
-            // The body starts after this jump
-            let mut body_start = i + 1;
-            let mut variant_name = outer_name.clone();
-
-            if variant_name == "ADDIW" {
-                println!("found ADDIW: {:?}", &body[i]);
+            // Safety: malformed IR could have skip_target pointing backwards.
+            if outer_skip <= variant_start || outer_skip > body.len() {
+                i += 1;
+                continue;
             }
 
-            // Find the end of the variant body: scan until goto
-            let mut body_end = body_start;
-            while body_end < body.len() {
-                match &body[body_end] {
-                    Instr::Goto(_) => {
-                        body_end += 1; // include the goto itself in the range
-                        break;
+            // Collect all @neq sub-opcode guards inside the variant region.
+            // Each entry: (short_opcode_name, jump_index, goto_target).
+            let mut sub_guards: Vec<(String, usize, usize)> = Vec::new();
+            for (offset, instr) in body[variant_start..outer_skip].iter().enumerate() {
+                if let Instr::Jump(Exp::Call(Op::Neq, args), target, _) = instr {
+                    if let Some(Exp::Id(opcode_id)) = args.first() {
+                        let full = model.resolve_name(*opcode_id);
+                        let short = full.strip_prefix("RISCV_").unwrap_or(&full).to_string();
+                        sub_guards.push((short, variant_start + offset, *target));
                     }
-                    _ => body_end += 1,
                 }
             }
 
-            let mut found_sub_opcodes = false;
+            if sub_guards.is_empty() {
+                variants.push(InstrVariant {
+                    name: outer_name,
+                    segments: vec![(variant_start, outer_skip)],
+                });
+            } else {
+                let prologue = (variant_start, sub_guards[0].1);
 
-            // Check if next instruction is a sub-opcode guard jump.
-            // Pattern: jump @neq(RISCV_ADDI, ...) goto skip
-            // The first argument to @neq is the opcode constant.
-            for subinstr in body[body_start..body_end].iter() {
-                if let Instr::Jump(Exp::Call(Op::Neq, args), target, _) = subinstr {
-                    // Extract sub-opcode name from the first arg (e.g. RISCV_ADDI)
-                    if let Some(Exp::Id(opcode_id)) = args.first() {
-                        let sub_name = model.resolve_name(*opcode_id);
-                        // Strip "RISCV_" prefix if present
-                        variant_name = sub_name.strip_prefix("RISCV_")
-                            .unwrap_or(&sub_name)
-                            .to_string();
-                    }
-                    body_start = *target;
-
-                    // Find the end of the variant body: scan until goto
-                    let mut body_end = body_start;
-                    while body_end < body.len() {
-                        match &body[body_end] {
-                            Instr::Goto(_) => {
-                                body_end += 1; // include the goto itself in the range
-                                break;
-                            }
-                            _ => body_end += 1,
+                // Find the shared post-amble start. Each arm body typically ends
+                // with `goto POST` where POST is the common writeback label.
+                // Collect all goto targets from inside arm bodies and pick the
+                // smallest one that sits after every arm's end and before the
+                // outer variant end.
+                let max_arm_end = sub_guards.iter().map(|(_, _, t)| *t).max().unwrap();
+                let mut candidates: HashSet<usize> = HashSet::new();
+                for (_, jump_idx, target) in &sub_guards {
+                    for instr in &body[*jump_idx + 1..*target] {
+                        if let Instr::Goto(t) = instr {
+                            candidates.insert(*t);
                         }
                     }
+                }
+                let postamble_start = candidates
+                    .into_iter()
+                    .filter(|k| *k >= max_arm_end && *k < outer_skip)
+                    .min()
+                    .unwrap_or(outer_skip);
+                let postamble = (postamble_start, outer_skip);
 
+                for (op_name, jump_idx, target) in &sub_guards {
                     variants.push(InstrVariant {
-                        name: variant_name.clone(),
-                        body_start,
-                        body_end,
+                        name: op_name.clone(),
+                        segments: vec![prologue, (*jump_idx + 1, *target), postamble],
                     });
-
-                    found_sub_opcodes = true;
                 }
             }
 
-            if !found_sub_opcodes {
-                variants.push(InstrVariant {
-                    name: variant_name,
-                    body_start,
-                    body_end,
-                });
-            }
-
-            // Skip to the skip_target to look for the next variant
-            i = *skip_target;
+            i = outer_skip;
         } else {
             i += 1;
         }
@@ -478,9 +485,9 @@ fn collect_type_widths(body: &[Instr<Name, B129>]) -> HashMap<Name, u32> {
     widths
 }
 
-fn translate_path(
+fn translate_variant(
     model: &IslaIRModel,
-    path: &[Instr<Name, B129>],
+    segments: &[(usize, usize)],
     body: &[Instr<Name, B129>],
     type_widths: &mut HashMap<Name, u32>,
 ) -> Result<PathTranslation> {
@@ -493,7 +500,11 @@ fn translate_path(
     // Reads reference it so a write-then-read sees the updated state.
     let mut current_mem = "mem0".to_string();
 
-    for instr in path {
+    // Walk each segment in order. Bindings, params, reg_write, and current_mem
+    // accumulate across segments so a sub-dispatched variant's prologue,
+    // arm body, and shared post-amble all contribute to the same translation.
+    for &(start, end) in segments {
+        for instr in &body[start..end] {
         match instr {
             Instr::Decl(_, _, _) => {
                 // Declarations don't produce constraints — variables are introduced on use.
@@ -518,14 +529,24 @@ fn translate_path(
                     // Search the full body for the type, not just the path slice,
                     // because Decls live at the top of the function before dispatch.
                     let ty = find_decl_type(body, *id);
-                    // Register the parameter's bitvector width so downstream
-                    // EXTS/EXTZ can infer the source width correctly.
-                    if let Ty::Bits(n) = ty {
-                        type_widths.insert(*id, *n);
+                    // Enum-typed fields (e.g. the `iop` tag on ITYPE) are inner
+                    // dispatch keys consumed by the `@neq(OPCODE, iop)` guards
+                    // at variant discovery. By the time we're translating a
+                    // sub-variant, the enum value is already fixed by the arm
+                    // selection, so it must not become a CHC parameter — and
+                    // nothing else in the arm body references it.
+                    if matches!(ty, Ty::Enum(_)) {
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    } else {
+                        // Register the parameter's bitvector width so downstream
+                        // EXTS/EXTZ can infer the source width correctly.
+                        if let Ty::Bits(n) = ty {
+                            type_widths.insert(*id, *n);
+                        }
+                        params.push((*id, ty.clone()));
+                        let param_name = format!("p{}", params.len() - 1);
+                        bindings.insert(*id, param_name);
                     }
-                    params.push((*id, ty.clone()));
-                    let param_name = format!("p{}", params.len() - 1);
-                    bindings.insert(*id, param_name);
                 } else {
                     // Propagate bitvector width through the copy
                     if let Some(w) = infer_bv_width(exp, type_widths) {
@@ -627,8 +648,12 @@ fn translate_path(
                 }
             }
 
-            Instr::Goto(_) | Instr::End | Instr::Jump(_, _, _) => break,
+            // Segment boundaries are controlled by the caller. Internal
+            // control-flow instructions (gotos, inner jumps, function end)
+            // are skipped — they don't contribute to the translation.
+            Instr::Goto(_) | Instr::End | Instr::Jump(_, _, _) => {}
             _ => {}
+        }
         }
     }
 
@@ -701,7 +726,13 @@ fn emit_variant_chc(
     // Build parameter type list for declare-rel
     // State signature: (Regs_in Mem_in PC_in  Regs_out Mem_out PC_out)
     // Plus instruction-specific parameters (imm, rs1, rd, etc.)
-    write!(out, ";; --- {} instruction (from Isla IR [{}..{}]) ---\n", variant.name, variant.body_start, variant.body_end)?;
+    let seg_desc = variant
+        .segments
+        .iter()
+        .map(|(s, e)| format!("[{}..{})", s, e))
+        .collect::<Vec<_>>()
+        .join("+");
+    write!(out, ";; --- {} instruction (from Isla IR {}) ---\n", variant.name, seg_desc)?;
     write!(out, "(declare-rel {}\n", name)?;
     write!(out, "  ({STATE_TYPES}\n")?;
     write!(out, "   {STATE_TYPES}")?;
@@ -786,14 +817,11 @@ fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<HashSet<Str
     let mut skipped: Vec<(String, String)> = Vec::new();
 
     for variant in &variants {
-        // Extract the linear path for this variant
-        let path = &body[variant.body_start..variant.body_end];
-
-        // Translate the IR path to SMT bindings. If translation or emission fails
+        // Translate the IR segments to SMT bindings. If translation or emission fails
         // (unsupported type, unsupported op, etc.), skip this variant and keep going —
         // a hand-written fallback will cover it. The transpiler is best-effort:
         // variants we can't handle yet don't block the ones we can.
-        let result = translate_path(model, path, body, &mut type_widths)
+        let result = translate_variant(model, &variant.segments, body, &mut type_widths)
             .and_then(|t| {
                 // Emit into a staging buffer so a later-stage failure doesn't leave
                 // a half-written rule in `out`.
