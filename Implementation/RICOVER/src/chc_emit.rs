@@ -135,6 +135,12 @@ enum KnownCall {
     IntToI64,      // %i->%i64 — type cast, passthrough
     I64ToInt,      // %i64->%i — type cast, passthrough
     LTEqInt,       // int <= int
+    MultAtom,      // mult_atom(a, b) — integer mul, eagerly evaluated on literals
+    SubAtom,       // sub_atom(a, b) — integer sub, eagerly evaluated on literals
+    SailAssert,    // sail_assert(cond, msg) — dropped (assertions are elided)
+    VMemRead,      // vmem_read(rs1, off, width, ...) — load from reg+offset
+    VMemWrite,     // vmem_write(rs1, off, width, val, ...) — store at reg+offset
+    ExtendValue,   // extend_value(is_unsigned, data) — dispatches to sign/zero extend
     Unknown(String),
 }
 
@@ -161,6 +167,13 @@ fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "subrange_bits" => KnownCall::SubrangeBits,
         "unsigned" => KnownCall::Unsigned,
         "%i64->%i" | "%i->%i64" => KnownCall::IntToI64,
+        "lteq_int" => KnownCall::LTEqInt,
+        "mult_atom" => KnownCall::MultAtom,
+        "sub_atom" => KnownCall::SubAtom,
+        "sail_assert" => KnownCall::SailAssert,
+        "vmem_read" => KnownCall::VMemRead,
+        "vmem_write" => KnownCall::VMemWrite,
+        "extend_value" => KnownCall::ExtendValue,
         _ => KnownCall::Unknown(name),
     }
 }
@@ -285,6 +298,37 @@ fn call_to_smt(
         KnownCall::LTEqInt => {
             Ok(format!("(<= {} {})", smt_args[0], smt_args[1]))
         }
+        KnownCall::MultAtom => {
+            // Strictly eager: we only accept integer literals because the
+            // result typically feeds subrange_bits' hi/lo indices, which
+            // must be SMT literals. Non-literal args indicate an instruction
+            // we can't specialize, so fail cleanly and let the variant be skipped.
+            match (smt_args[0].parse::<i128>(), smt_args[1].parse::<i128>()) {
+                (Ok(a), Ok(b)) => Ok((a * b).to_string()),
+                _ => Err(anyhow!(
+                    "mult_atom: non-literal args '{}', '{}'", smt_args[0], smt_args[1]
+                )),
+            }
+        }
+        KnownCall::SubAtom => {
+            match (smt_args[0].parse::<i128>(), smt_args[1].parse::<i128>()) {
+                (Ok(a), Ok(b)) => Ok((a - b).to_string()),
+                _ => Err(anyhow!(
+                    "sub_atom: non-literal args '{}', '{}'", smt_args[0], smt_args[1]
+                )),
+            }
+        }
+        KnownCall::SailAssert => {
+            // Assertions are dropped — we elide them from the CHC semantics.
+            Ok("(_ unit)".to_string())
+        }
+        KnownCall::VMemRead | KnownCall::VMemWrite | KnownCall::ExtendValue => {
+            // Handled directly in translate_variant where current_mem and
+            // type_widths are accessible.
+            Err(anyhow!(
+                "vmem_read/vmem_write/extend_value must be handled in translate_variant"
+            ))
+        }
     }
 }
 
@@ -325,6 +369,10 @@ struct InstrVariant {
     /// extracted from ITYPE's `@neq(zADDI, iop)` arm) has three segments:
     /// shared prologue, arm-specific body, shared post-amble.
     segments: Vec<(usize, usize)>,
+    /// Pre-bound tuple-field values for specialization (e.g. LOAD per width/sign).
+    /// Keys are the IR Names of the extracted fields; values are SMT literal strings.
+    /// Pre-bound fields are skipped from the CHC parameter list.
+    initial_bindings: HashMap<Name, String>,
 }
 
 /// Discover instruction variant paths in the execute function body.
@@ -334,6 +382,7 @@ struct InstrVariant {
 /// that region we look for inner `jump @neq(RISCV_OPCODE, iop) goto T`
 /// sub-opcode guards used to partition enum-dispatched variants like ITYPE:
 ///
+/// ```text
 ///     jump merge#var is ITYPE goto 383         ; outer
 ///     <prologue: extract imm, rs1, rd, iop>
 ///     jump @neq(RISCV_ADDI, iop) goto 309      ; arm 1 guard
@@ -342,6 +391,7 @@ struct InstrVariant {
 ///     jump @neq(RISCV_SLTI, iop) goto 328      ; arm 2 guard
 ///       ...
 ///     378: <shared post-amble: wX_bits(rd, result)>
+/// ```
 ///
 /// For each sub-guard `@neq(OP, iop) goto T`, the OP-specific body is
 /// `[jump_idx+1 .. T)` (fall-through when iop == OP), bracketed by the shared
@@ -381,10 +431,17 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
             }
 
             if sub_guards.is_empty() {
-                variants.push(InstrVariant {
-                    name: outer_name,
-                    segments: vec![(variant_start, outer_skip)],
-                });
+                if let Some(specialized) = try_specialize_result_variant(
+                    model, body, variant_start, outer_skip, &outer_name,
+                ) {
+                    variants.extend(specialized);
+                } else {
+                    variants.push(InstrVariant {
+                        name: outer_name,
+                        segments: vec![(variant_start, outer_skip)],
+                        initial_bindings: HashMap::new(),
+                    });
+                }
             } else {
                 let prologue = (variant_start, sub_guards[0].1);
 
@@ -413,6 +470,7 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
                     variants.push(InstrVariant {
                         name: op_name.clone(),
                         segments: vec![prologue, (*jump_idx + 1, *target), postamble],
+                        initial_bindings: HashMap::new(),
                     });
                 }
             }
@@ -424,6 +482,102 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
     }
 
     variants
+}
+
+/// If this variant is a LOAD or STORE, expand it into per-width (and per-sign
+/// for LOAD) specialized variants. Returns None for other variants.
+///
+/// LOAD/STORE share one IR body across all byte widths because the Sail
+/// definition is polymorphic in `width: i64`. Our stdlib exposes distinct
+/// mem_read_N / write_mem_N functions (one per width), so we cannot emit a
+/// single rule with a symbolic width. Instead we pre-bind the tuple-field
+/// variables for width (and is_unsigned, for LOAD) to concrete SMT literals
+/// and generate one rule per combination. LOAD also has a result-union
+/// dispatch (`is Ok goto <err_arm>`); the success arm is fall-through, so we
+/// split the body into pre-dispatch and Ok-arm segments and drop the Err arm.
+fn try_specialize_result_variant(
+    model: &IslaIRModel,
+    body: &[Instr<Name, B129>],
+    variant_start: usize,
+    outer_skip: usize,
+    outer_name: &str,
+) -> Option<Vec<InstrVariant>> {
+    if outer_name != "LOAD" && outer_name != "STORE" {
+        return None;
+    }
+
+    // Collect tuple field extractions in source order. The Sail frontend emits
+    // them as a sequential block of `zzN = mergez3var as <VAR>.tuple...K` copies,
+    // so the K-th field in the tuple is the K-th such copy in this region.
+    // We can't reliably parse K from the field name: for a field of type `i64`
+    // the encoded suffix is `...i64<K>`, which would let a trailing-digits parser
+    // consume `64K` as one number.
+    let mut field_ids: Vec<Name> = Vec::new();
+    for instr in &body[variant_start..outer_skip] {
+        if let Instr::Copy(Loc::Id(id), Exp::Field(inner, _), _) = instr {
+            if matches!(inner.as_ref(), Exp::Unwrap(_, _)) {
+                field_ids.push(*id);
+            }
+        }
+    }
+
+    // Find the inner `jump X is Ok... goto <err_arm>` dispatch.
+    // Fall-through is the success arm; the Err arm starts at the jump's target.
+    let mut ok_jump: Option<(usize, usize)> = None;
+    for (offset, instr) in body[variant_start..outer_skip].iter().enumerate() {
+        if let Instr::Jump(Exp::Kind(ctor, _), target, _) = instr {
+            if model.resolve_name(*ctor).starts_with("Ok") {
+                ok_jump = Some((variant_start + offset, *target));
+                break;
+            }
+        }
+    }
+    let segments: Vec<(usize, usize)> = match ok_jump {
+        Some((jump_idx, err_arm_start)) => vec![
+            (variant_start, jump_idx),
+            (jump_idx + 1, err_arm_start),
+        ],
+        None => vec![(variant_start, outer_skip)],
+    };
+
+    let mut variants = Vec::new();
+    let widths = [1u32, 2, 4, 8];
+
+    if outer_name == "LOAD" {
+        // Tuple layout (imm:bv12, rs1:bv5, rd:bv5, is_unsigned:bool, width:i64)
+        if field_ids.len() < 5 { return None; }
+        let is_unsigned_id = field_ids[3];
+        let width_id = field_ids[4];
+        for &w in &widths {
+            for (sign_suffix, is_u) in [("s", "false"), ("u", "true")] {
+                let mut initial = HashMap::new();
+                initial.insert(width_id, w.to_string());
+                initial.insert(is_unsigned_id, is_u.to_string());
+                variants.push(InstrVariant {
+                    name: format!("load_{}_{}", w, sign_suffix),
+                    segments: segments.clone(),
+                    initial_bindings: initial,
+                });
+            }
+        }
+    } else {
+        // STORE tuple layout (imm:bv12, rs2:bv5, rs1:bv5, width:i64)
+        // Note the order: the Sail definition is `STORE(imm, rs2, rs1, width)`,
+        // so field 1 is the source register and field 2 is the base register.
+        if field_ids.len() < 4 { return None; }
+        let width_id = field_ids[3];
+        for &w in &widths {
+            let mut initial = HashMap::new();
+            initial.insert(width_id, w.to_string());
+            variants.push(InstrVariant {
+                name: format!("store_{}", w),
+                segments: segments.clone(),
+                initial_bindings: initial,
+            });
+        }
+    }
+
+    Some(variants)
 }
 
 /// Result of translating a variant's IR path to SMT expressions.
@@ -490,8 +644,9 @@ fn translate_variant(
     segments: &[(usize, usize)],
     body: &[Instr<Name, B129>],
     type_widths: &mut HashMap<Name, u32>,
+    initial_bindings: &HashMap<Name, String>,
 ) -> Result<PathTranslation> {
-    let mut bindings: HashMap<Name, String> = HashMap::new();
+    let mut bindings: HashMap<Name, String> = initial_bindings.clone();
     let mut params: Vec<(Name, Ty<Name>)> = Vec::new();
     let mut reg_write = None;
 
@@ -526,6 +681,12 @@ fn translate_variant(
                 // Isla represents this as Exp::Field(Exp::Unwrap(...), field_name)
                 // These become the instruction's forall-bound CHC parameters.
                 if is_field_of_unwrap(exp) {
+                    // Pre-bound via specialization (e.g. LOAD/STORE width & sign).
+                    // Already in the bindings map; skip param creation.
+                    if bindings.contains_key(id) {
+                        // nothing to do — the pre-bound literal will be substituted
+                        // on every Exp::Id reference via exp_to_smt's bindings lookup.
+                    } else {
                     // Search the full body for the type, not just the path slice,
                     // because Decls live at the top of the function before dispatch.
                     let ty = find_decl_type(body, *id);
@@ -546,6 +707,7 @@ fn translate_variant(
                         params.push((*id, ty.clone()));
                         let param_name = format!("p{}", params.len() - 1);
                         bindings.insert(*id, param_name);
+                    }
                     }
                 } else {
                     // Propagate bitvector width through the copy
@@ -641,9 +803,124 @@ fn translate_variant(
                         current_mem = format!("({} {} {} {})", mem_fn, current_mem, addr_smt, val_smt);
                         bindings.insert(*id, "(_ unit)".to_string());
                     }
+                    KnownCall::VMemRead => {
+                        // vmem_read(rs1:bv5, offset:bv64, width:i64, access_type, aq, rl, res)
+                        // width must be a concrete literal — achieved via LOAD specialization.
+                        let rs1_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let offset_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[2], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("vmem_read: width not concrete literal '{}' — LOAD must be specialized", width_smt)
+                        })?;
+                        let (mem_fn, result_bits) = match width {
+                            1 => ("mem_read_1", 8u32),
+                            2 => ("mem_read_2", 16),
+                            4 => ("mem_read_4", 32),
+                            8 => ("mem_read_8", 64),
+                            _ => return Err(anyhow!("vmem_read: unsupported width {}", width)),
+                        };
+                        bindings.insert(*id, format!(
+                            "({} {} (bvadd (get_reg regs0 {}) {}))",
+                            mem_fn, current_mem, rs1_smt, offset_smt
+                        ));
+                        type_widths.insert(*id, result_bits);
+                    }
+                    KnownCall::VMemWrite => {
+                        // vmem_write(rs1:bv5, offset:bv64, width:i64, val:bv, access_type, aq, rl)
+                        let rs1_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let offset_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[2], &bindings)?;
+                        let val_smt = exp_to_smt(model, &args[3], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("vmem_write: width not concrete literal '{}' — STORE must be specialized", width_smt)
+                        })?;
+                        let mem_fn = match width {
+                            1 => "write_mem_byte",
+                            2 => "write_mem_half",
+                            4 => "write_mem_word",
+                            8 => "write_mem_dword",
+                            _ => return Err(anyhow!("vmem_write: unsupported width {}", width)),
+                        };
+                        // The stdlib write_mem_N functions all take a BV64 value
+                        // and internally extract the low bytes. Sail's subrange_bits
+                        // pre-truncates to BV(width*8), so zero-extend back to 64
+                        // before the call.
+                        let val_width = infer_bv_width(&args[3], type_widths)
+                            .ok_or_else(|| anyhow!("vmem_write: cannot infer val width"))?;
+                        let val_bv64 = if val_width == 64 {
+                            val_smt
+                        } else {
+                            format!("((_ zero_extend {}) {})", 64 - val_width, val_smt)
+                        };
+                        let addr = format!("(bvadd (get_reg regs0 {}) {})", rs1_smt, offset_smt);
+                        current_mem = format!("({} {} {} {})", mem_fn, current_mem, addr, val_bv64);
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::SailAssert => {
+                        // sail_assert(cond, msg) — elided entirely. The message
+                        // arg is a string literal that exp_to_smt cannot translate,
+                        // so we must short-circuit before generic arg translation.
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::ExtendValue => {
+                        // extend_value(is_unsigned:bool, data:bv) — pre-bound is_unsigned
+                        // (from LOAD specialization) picks sign vs zero extend.
+                        let is_u_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let val_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let is_unsigned = match is_u_smt.as_str() {
+                            "true" => true,
+                            "false" => false,
+                            _ => return Err(anyhow!(
+                                "extend_value: is_unsigned not concrete literal '{}' — LOAD must be specialized",
+                                is_u_smt
+                            )),
+                        };
+                        let source_width = infer_bv_width(&args[1], type_widths)
+                            .ok_or_else(|| anyhow!(
+                                "extend_value: cannot infer source width for '{}'",
+                                format_exp(model, &args[1])
+                            ))?;
+                        let ext_amount = 64u32.saturating_sub(source_width);
+                        let op = if is_unsigned { "zero_extend" } else { "sign_extend" };
+                        bindings.insert(*id, format!("((_ {} {}) {})", op, ext_amount, val_smt));
+                        type_widths.insert(*id, 64);
+                    }
                     _ => {
-                        let smt = call_to_smt(model, *func_id, args, &bindings)?;
-                        bindings.insert(*id, smt);
+                        // Some IR calls build union/enum values for arguments we
+                        // don't inspect (e.g. `zz = Load<u>(Data)` passed to
+                        // vmem_read as access_type). Such constructors aren't
+                        // real functions — if the destination is a union-typed
+                        // variable, bind it to a placeholder instead of failing.
+                        let ty = find_decl_type(body, *id);
+                        let is_opaque = matches!(ty, Ty::Union(_) | Ty::Enum(_));
+                        match call_to_smt(model, *func_id, args, &bindings) {
+                            Ok(smt) => {
+                                // Track the result width for calls that produce a
+                                // known bitvector width so downstream consumers
+                                // (e.g. extend_value, vmem_write zero-extend) can
+                                // infer the source width.
+                                if let KnownCall::SubrangeBits = call_kind {
+                                    // subrange_bits(_, hi, lo) → width = hi - lo + 1.
+                                    // Eager-folded literals flow through exp_to_smt,
+                                    // so parse them back out of args[1]/args[2].
+                                    let hi_smt = exp_to_smt(model, &args[1], &bindings).ok();
+                                    let lo_smt = exp_to_smt(model, &args[2], &bindings).ok();
+                                    if let (Some(h), Some(l)) = (hi_smt, lo_smt) {
+                                        if let (Ok(hi), Ok(lo)) = (h.parse::<i64>(), l.parse::<i64>()) {
+                                            if hi >= lo {
+                                                type_widths.insert(*id, (hi - lo + 1) as u32);
+                                            }
+                                        }
+                                    }
+                                }
+                                bindings.insert(*id, smt);
+                            }
+                            Err(e) if is_opaque => {
+                                let _ = e;
+                                bindings.insert(*id, "(_ unit)".to_string());
+                            }
+                            Err(e) => return Err(e),
+                        }
                     }
                 }
             }
@@ -689,6 +966,8 @@ fn infer_bv_width(exp: &Exp<Name>, type_widths: &HashMap<Name, u32>) -> Option<u
             let w2 = infer_bv_width(&args[1], type_widths)?;
             Some(w1 + w2)
         }
+        // Union unwrap (`x as Ok...`) doesn't change bit-width — look through it.
+        Exp::Unwrap(_, inner) => infer_bv_width(inner, type_widths),
         _ => None,
     }
 }
@@ -821,7 +1100,7 @@ fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<HashSet<Str
         // (unsupported type, unsupported op, etc.), skip this variant and keep going —
         // a hand-written fallback will cover it. The transpiler is best-effort:
         // variants we can't handle yet don't block the ones we can.
-        let result = translate_variant(model, &variant.segments, body, &mut type_widths)
+        let result = translate_variant(model, &variant.segments, body, &mut type_widths, &variant.initial_bindings)
             .and_then(|t| {
                 // Emit into a staging buffer so a later-stage failure doesn't leave
                 // a half-written rule in `out`.
@@ -1008,11 +1287,19 @@ fn ir_rule_for_opcode<'a>(asm_opcode: &str, ir_names: &'a HashSet<String>) -> Op
         return Some(name.as_str());
     }
 
-    // Known mappings for the minimal IR where names don't align.
-    // With the full riscv64.ir these become unnecessary (each instruction
-    // gets its own variant: ld, lw, lb, sd, sw, sb, ...).
+    // Per-width/sign specialized LOAD/STORE rules generated from the full IR.
     let mapped = match asm_opcode {
-        "ld" => "load",
+        "lb"  => "load_1_s",
+        "lbu" => "load_1_u",
+        "lh"  => "load_2_s",
+        "lhu" => "load_2_u",
+        "lw"  => "load_4_s",
+        "lwu" => "load_4_u",
+        "ld"  => "load_8_s",
+        "sb"  => "store_1",
+        "sh"  => "store_2",
+        "sw"  => "store_4",
+        "sd"  => "store_8",
         _ => return None,
     };
     if ir_names.contains(mapped) {
@@ -1315,8 +1602,10 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
             Ok((op.to_string(), vec![imm, rs1, rd]))
         }
 
-        // Store: sw/sd rs2, offset(base)
-        "sw" | "sd" => {
+        // Store: sb/sh/sw/sd rs2, offset(base)
+        // IR-derived store_N rules take parameters in the Sail tuple order
+        // (imm, rs2, rs1=base), so we must supply operands in that order.
+        "sb" | "sh" | "sw" | "sd" => {
             let rs2 = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rs2", op)),
@@ -1325,11 +1614,11 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
                 Operand::MemRef { offset, base } => (imm_to_bv12(*offset), reg_to_smt(base)?),
                 _ => return Err(anyhow!("{}: expected memref for offset(base)", op)),
             };
-            Ok((op.to_string(), vec![off, base, rs2]))
+            Ok((op.to_string(), vec![off, rs2, base]))
         }
 
-        // Load: lw/ld rd, offset(base)
-        "lw" | "ld" => {
+        // Load: lb/lbu/lh/lhu/lw/lwu/ld rd, offset(base)
+        "lb" | "lbu" | "lh" | "lhu" | "lw" | "lwu" | "ld" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -1588,7 +1877,7 @@ mod tests {
     use crate::asm_parse;
     use crate::isla_ir;
 
-    const RISCV_IR: &str = include_str!("../../../Tools/Sail/Data/riscv.ir");
+    const RISCV_IR: &str = include_str!("../snapshot/rv64d.ir");
     const FOO1_ASM: &str = include_str!("../../../Examples/foo1.s");
     const FOO2_ASM: &str = include_str!("../../../Examples/foo2.s");
 
@@ -1597,11 +1886,13 @@ mod tests {
         let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse");
         let result = emit_instruction_chc(&model, &["execute".to_string()]);
         let chc = result.expect("failed to emit CHC");
-        println!("{}", chc);
         assert!(chc.contains("set-logic HORN"));
-        // Variant discovery: ADDI (from sub-opcode RISCV_ADDI) and LOAD
         assert!(chc.contains("declare-rel addi"), "expected addi relation from ITYPE/RISCV_ADDI variant");
-        assert!(chc.contains("declare-rel load"), "expected load relation from LOAD variant");
+        // LOAD/STORE are specialized per width (and per sign, for LOAD).
+        assert!(chc.contains("declare-rel load_4_s"), "expected specialized load_4_s (lw)");
+        assert!(chc.contains("declare-rel load_8_s"), "expected specialized load_8_s (ld)");
+        assert!(chc.contains("declare-rel store_4"), "expected specialized store_4 (sw)");
+        assert!(chc.contains("declare-rel store_8"), "expected specialized store_8 (sd)");
         // CHC rule body uses stdlib functions
         assert!(chc.contains("get_reg"));
         assert!(chc.contains("set_reg"));
@@ -1609,7 +1900,14 @@ mod tests {
         assert!(chc.contains("bvadd"));
         // Parameters are forall-bound, not raw field names
         assert!(chc.contains("(p0 "), "expected forall-bound parameter p0");
-        assert!(!chc.contains("merge_var"), "raw field names should not appear in CHC rules");
+        // Raw field names may appear in `;; SKIPPED` comments (where they come
+        // from the underlying error message), but must never leak into an
+        // actual emitted rule.
+        let leaks_merge_var = chc
+            .lines()
+            .filter(|l| !l.trim_start().starts_with(";;"))
+            .any(|l| l.contains("merge_var"));
+        assert!(!leaks_merge_var, "raw field names should not appear in CHC rules");
     }
 
     #[test]
@@ -1631,17 +1929,21 @@ mod tests {
         assert!(query.contains("obs_addr"));
         assert!(query.contains("query bad"));
 
-        // IR-derived rules (from the minimal riscv.ir): addi and load
+        // IR-derived rules from the full rv64d.ir: addi, addiw, and the
+        // specialized load/store variants needed by foo (lw/sw/ld/sd).
         assert!(query.contains("declare-rel addi"), "addi should come from IR");
-        assert!(query.contains("declare-rel load"), "load should come from IR (ld maps to it)");
-        // Foo uses `ld`; the program rule must call the IR `load` rule, not emit `ld`
-        assert!(!query.contains("declare-rel ld\n"), "ld should not be a fallback rule — it maps to IR load");
-
-        // Fallback rules for opcodes not in the minimal IR
-        assert!(query.contains("declare-rel addiw"));
-        assert!(query.contains("declare-rel sw"));
-        assert!(query.contains("declare-rel lw"));
-        assert!(query.contains("declare-rel sd"));
+        assert!(query.contains("declare-rel addiw"), "addiw should come from IR");
+        assert!(query.contains("declare-rel load_4_s"), "lw should map to IR load_4_s");
+        assert!(query.contains("declare-rel load_8_s"), "ld should map to IR load_8_s");
+        assert!(query.contains("declare-rel store_4"), "sw should map to IR store_4");
+        assert!(query.contains("declare-rel store_8"), "sd should map to IR store_8");
+        // The asm-level opcode names should not appear as standalone rules —
+        // they're mapped to the IR-derived rules, not emitted as fallbacks.
+        assert!(!query.contains("declare-rel ld\n"));
+        assert!(!query.contains("declare-rel lw\n"));
+        assert!(!query.contains("declare-rel sd\n"));
+        assert!(!query.contains("declare-rel sw\n"));
+        // ret is still a fallback (JALR not yet handled).
         assert!(query.contains("declare-rel ret"));
 
         // Check frame size computation (foo1 allocates 32 bytes)
