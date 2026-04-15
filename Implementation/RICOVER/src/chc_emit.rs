@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 
 use isla_lib::bitvector::b129::B129;
 use isla_lib::bitvector::BV;
-use isla_lib::ir::{Exp, Instr, Loc, Name, Op, Ty};
+use isla_lib::ir::{Def, Exp, Instr, Loc, Name, Op, Ty};
 
 use crate::asm_parse::{AsmFunction, AsmInstruction, Operand, reg_index};
 use crate::isla_ir::IslaIRModel;
@@ -130,6 +130,9 @@ enum KnownCall {
     LtSigned,      // (operator <_s)(a, b) → bvslt (returns SMT Bool)
     LtUnsigned,    // (operator <_u)(a, b) → bvult (returns SMT Bool)
     BoolToBits,    // bool_to_bits(b) → (ite b (_ bv1 1) (_ bv0 1))
+    ShiftBitsLeft,       // shift_bits_left(val, shamt) → bvshl with width-matched shamt
+    ShiftBitsRight,      // shift_bits_right(val, shamt) → bvlshr with width-matched shamt
+    ShiftBitsRightArith, // shift_bits_right_arith(val, shamt) → bvashr with width-matched shamt
     Concat,        // bitvector_concat(a, b) → (concat a b)
     Zeros,         // zeros(N) → (_ bv0 N)
     Ones,          // ones(N) → (_ bv<2^N-1> N)
@@ -190,6 +193,9 @@ fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "(operator <_s)" => KnownCall::LtSigned,
         "(operator <_u)" => KnownCall::LtUnsigned,
         "bool_to_bits" => KnownCall::BoolToBits,
+        "shift_bits_left" => KnownCall::ShiftBitsLeft,
+        "shift_bits_right" => KnownCall::ShiftBitsRight,
+        "shift_bits_right_arith" => KnownCall::ShiftBitsRightArith,
         "bitvector_concat" => KnownCall::Concat,
         "zeros" => KnownCall::Zeros,
         "ones" => KnownCall::Ones,
@@ -384,6 +390,12 @@ fn call_to_smt(
                 "vmem_read/vmem_write/extend_value must be handled in translate_variant"
             ))
         }
+        KnownCall::ShiftBitsLeft | KnownCall::ShiftBitsRight | KnownCall::ShiftBitsRightArith => {
+            // SMT bvshl/bvlshr/bvashr require both operands at the same width.
+            // The IR shift amount is narrower (e.g. bv6) than the value (bv64),
+            // so we need type_widths to compute the zero-extend delta.
+            Err(anyhow!("shift_bits_* must be handled in translate_variant"))
+        }
     }
 }
 
@@ -528,6 +540,23 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
                         initial_bindings: HashMap::new(),
                     });
                 }
+
+                // Fall-through arm: Sail's match-to-IR lowering emits the last
+                // enum case without a @neq guard — every preceding guard jumps
+                // over its own body, so the trailing arm is reached by simple
+                // fall-through. Recover its name by taking the enum's declared
+                // constructor list (in source order) and subtracting the cases
+                // we've already seen as guards.
+                let last_target = sub_guards.last().unwrap().2;
+                if last_target < postamble_start {
+                    if let Some(name) = recover_fallthrough_arm(model, body, &sub_guards) {
+                        variants.push(InstrVariant {
+                            name,
+                            segments: vec![prologue, (last_target, postamble_start), postamble],
+                            initial_bindings: HashMap::new(),
+                        });
+                    }
+                }
             }
 
             i = outer_skip;
@@ -537,6 +566,58 @@ fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>]) -> Vec<Ins
     }
 
     variants
+}
+
+/// Recover the name of the unguarded fall-through arm for a sub-dispatched
+/// outer variant. Sail's match-to-IR lowering always lays out the trailing
+/// case as fall-through (no `@neq` guard), so the missing constructor is the
+/// one in the iop enum's source-order ctor list that doesn't appear in
+/// `sub_guards`.
+///
+/// Returns None if the iop variable's enum can't be resolved or if the
+/// guard set already covers every constructor.
+fn recover_fallthrough_arm(
+    model: &IslaIRModel,
+    body: &[Instr<Name, B129>],
+    sub_guards: &[(String, usize, usize)],
+) -> Option<String> {
+    // The dispatch variable is args[1] of any of the @neq guards
+    // (`@neq(OP_CTOR, iop)`). Re-read it from the first guard's instruction.
+    let (_, first_jump_idx, _) = sub_guards.first()?;
+    let iop_id = match &body[*first_jump_idx] {
+        Instr::Jump(Exp::Call(Op::Neq, args), _, _) => match args.get(1)? {
+            Exp::Id(id) => *id,
+            _ => return None,
+        },
+        _ => return None,
+    };
+
+    // Find the enum type via the variable's Decl.
+    let enum_name = body.iter().find_map(|instr| match instr {
+        Instr::Decl(id, Ty::Enum(name), _) if *id == iop_id => Some(*name),
+        _ => None,
+    })?;
+
+    // Look up the enum definition in source order.
+    let ctors: Vec<String> = model.defs.iter().find_map(|def| match def {
+        Def::Enum(name, ctors) if *name == enum_name => Some(
+            ctors.iter().map(|c| model.resolve_name(*c)).collect()
+        ),
+        _ => None,
+    })?;
+
+    // Subtract the constructors that already have explicit @neq guards.
+    let seen: HashSet<&str> = sub_guards.iter().map(|(n, _, _)| n.as_str()).collect();
+    let mut missing = ctors
+        .into_iter()
+        .filter(|c| !seen.contains(c.as_str()));
+    let first_missing = missing.next()?;
+    // If more than one ctor is unaccounted for, the dispatch isn't a simple
+    // fall-through chain — bail out rather than guess.
+    if missing.next().is_some() {
+        return None;
+    }
+    Some(first_missing)
 }
 
 /// If this variant is a LOAD or STORE, expand it into per-width (and per-sign
@@ -677,6 +758,58 @@ struct PathTranslation {
 ///
 /// Variable declarations live at the top of the function (before variant dispatch),
 /// so they must be scanned from the full body, not just a variant's path slice.
+/// Pre-evaluate top-level `let` bindings whose body reduces to a single
+/// integer literal. Sail emits constants like `xlen`, `xlen_bytes`, and
+/// `log2_xlen` as `Def::Let` blocks that wrap an `i64` literal in casts and
+/// dead `eq_int` branches. Without this pass, references to such constants
+/// inside `subrange_bits(... log2_xlen-1, 0)` reach `sub_atom` as opaque
+/// `Exp::Id`s and the literal-fold path fails.
+///
+/// Returns a map from the let-bound name to its SMT literal string ("6"),
+/// so it can be merged into `bindings` and resolved via `Exp::Id` lookup.
+fn collect_globals(model: &IslaIRModel) -> HashMap<Name, String> {
+    let mut globals: HashMap<Name, String> = HashMap::new();
+    for def in &model.defs {
+        let Def::Let(ids, body) = def else { continue };
+        let mut scope: HashMap<Name, i128> = HashMap::new();
+        for instr in body {
+            match instr {
+                Instr::Init(id, _, exp, _) | Instr::Copy(Loc::Id(id), exp, _) => {
+                    if let Some(v) = fold_int_exp(exp, &scope) {
+                        scope.insert(*id, v);
+                    }
+                }
+                Instr::Call(Loc::Id(id), _, func_id, args, _) => {
+                    // Cast helpers (%i64 ↔ %i) are passthroughs; everything else
+                    // (eq_int, etc.) is irrelevant to the literal we want.
+                    let kind = classify_call(model, *func_id);
+                    if matches!(kind, KnownCall::IntToI64 | KnownCall::I64ToInt) {
+                        if let Some(v) = args.first().and_then(|a| fold_int_exp(a, &scope)) {
+                            scope.insert(*id, v);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        for (id, _) in ids {
+            if let Some(v) = scope.get(id) {
+                globals.insert(*id, v.to_string());
+            }
+        }
+    }
+    globals
+}
+
+fn fold_int_exp(exp: &Exp<Name>, scope: &HashMap<Name, i128>) -> Option<i128> {
+    match exp {
+        Exp::I64(n) => Some(*n as i128),
+        Exp::I128(n) => Some(*n),
+        Exp::Id(id) => scope.get(id).copied(),
+        _ => None,
+    }
+}
+
 fn collect_type_widths(body: &[Instr<Name, B129>]) -> HashMap<Name, u32> {
     let mut widths = HashMap::new();
     for instr in body {
@@ -940,6 +1073,35 @@ fn translate_variant(
                         bindings.insert(*id, format!("((_ {} {}) {})", op, ext_amount, val_smt));
                         type_widths.insert(*id, 64);
                     }
+                    KnownCall::ShiftBitsLeft
+                    | KnownCall::ShiftBitsRight
+                    | KnownCall::ShiftBitsRightArith => {
+                        let val_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let shamt_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let val_w = infer_bv_width(&args[0], type_widths)
+                            .ok_or_else(|| anyhow!("shift: cannot infer value width"))?;
+                        let shamt_w = infer_bv_width(&args[1], type_widths)
+                            .ok_or_else(|| anyhow!("shift: cannot infer shamt width"))?;
+                        let shamt_ext = if shamt_w == val_w {
+                            shamt_smt
+                        } else if shamt_w < val_w {
+                            format!("((_ zero_extend {}) {})", val_w - shamt_w, shamt_smt)
+                        } else {
+                            return Err(anyhow!(
+                                "shift: shamt width {} exceeds value width {}",
+                                shamt_w,
+                                val_w
+                            ));
+                        };
+                        let smt_op = match call_kind {
+                            KnownCall::ShiftBitsLeft => "bvshl",
+                            KnownCall::ShiftBitsRight => "bvlshr",
+                            KnownCall::ShiftBitsRightArith => "bvashr",
+                            _ => unreachable!(),
+                        };
+                        bindings.insert(*id, format!("({} {} {})", smt_op, val_smt, shamt_ext));
+                        type_widths.insert(*id, val_w);
+                    }
                     _ => {
                         // Some IR calls build union/enum values for arguments we
                         // don't inspect (e.g. `zz = Load<u>(Data)` passed to
@@ -1146,16 +1308,19 @@ fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<HashSet<Str
     // Pre-collect bitvector widths from the full body (Decls live at the top,
     // before variant dispatch, so they aren't inside any variant's path slice).
     let mut type_widths = collect_type_widths(body);
+    let globals = collect_globals(model);
 
     let mut ir_names = HashSet::new();
     let mut skipped: Vec<(String, String)> = Vec::new();
 
     for variant in &variants {
+        let mut initial = globals.clone();
+        initial.extend(variant.initial_bindings.iter().map(|(k, v)| (*k, v.clone())));
         // Translate the IR segments to SMT bindings. If translation or emission fails
         // (unsupported type, unsupported op, etc.), skip this variant and keep going —
         // a hand-written fallback will cover it. The transpiler is best-effort:
         // variants we can't handle yet don't block the ones we can.
-        let result = translate_variant(model, &variant.segments, body, &mut type_widths, &variant.initial_bindings)
+        let result = translate_variant(model, &variant.segments, body, &mut type_widths, &initial)
             .and_then(|t| {
                 // Emit into a staging buffer so a later-stage failure doesn't leave
                 // a half-written rule in `out`.
@@ -1369,7 +1534,12 @@ fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> {
     let mut opcodes = HashSet::new();
     for prog in progs {
         for instr in &prog.instructions {
-            opcodes.insert(instr.opcode.clone());
+            // Use the post-translation opcode so pseudo-instructions
+            // (li → addi, zext.b → andi) don't register as missing.
+            let resolved = instruction_to_chc(instr)
+                .map(|(op, _)| op)
+                .unwrap_or_else(|_| instr.opcode.clone());
+            opcodes.insert(resolved);
         }
     }
     opcodes
@@ -1685,9 +1855,28 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
             Ok((op.to_string(), vec![off, base, rd]))
         }
 
+        // I-type shift-immediate: slli/srli/srai rd, rs1, shamt
+        // IR SHIFTIOP tuple is (shamt:bv6, rs1, rd, sop).
+        "slli" | "srli" | "srai" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rd", op)),
+            };
+            let rs1 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs1", op)),
+            };
+            let shamt = match &instr.operands[2] {
+                Operand::Imm(n) if (0..64).contains(n) => format!("(_ bv{} 6)", n),
+                Operand::Imm(n) => return Err(anyhow!("{}: shamt {} out of range", op, n)),
+                _ => return Err(anyhow!("{}: expected immediate for shamt", op)),
+            };
+            Ok((op.to_string(), vec![shamt, rs1, rd]))
+        }
+
         // R-type arithmetic: add rd, rs1, rs2
         // IR RTYPE tuple is (rs2, rs1, rd, op), so operands map to (rs2, rs1, rd).
-        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" => {
+        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -1701,6 +1890,35 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
                 _ => return Err(anyhow!("{}: expected register for rs2", op)),
             };
             Ok((op.to_string(), vec![rs2, rs1, rd]))
+        }
+
+        // Pseudo: li rd, imm — when imm fits in a signed 12-bit range,
+        // GAS expands to addi rd, zero, imm. Wider immediates expand to
+        // lui+addi, which we don't model yet.
+        "li" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("li: expected register for rd")),
+            };
+            let imm = match &instr.operands[1] {
+                Operand::Imm(n) if (-2048..2048).contains(n) => imm_to_bv12(*n),
+                Operand::Imm(n) => return Err(anyhow!("li: immediate {} doesn't fit in 12 bits", n)),
+                _ => return Err(anyhow!("li: expected immediate")),
+            };
+            Ok(("addi".to_string(), vec![imm, "reg_zero".to_string(), rd]))
+        }
+
+        // Pseudo (Zbb): zext.b rd, rs1 — andi rd, rs1, 0xff
+        "zext.b" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("zext.b: expected register for rd")),
+            };
+            let rs1 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("zext.b: expected register for rs1")),
+            };
+            Ok(("andi".to_string(), vec![imm_to_bv12(0xff), rs1, rd]))
         }
 
         // Return pseudo-instruction
@@ -1910,6 +2128,41 @@ pub fn emit_equivalence_query(
 
     writeln!(out, "(declare-rel bad ())")?;
     writeln!(out)?;
+
+    // Emit one rule per discrepancy kind so any observable difference fires
+    // `bad`. Conjuncting register equality with memory inequality (the prior
+    // shape) silently hid register divergences.
+    let reg_diffs = [
+        ("a0", "(not (= (get_reg regs1 reg_a0) (get_reg regs2 reg_a0)))"),
+        ("ra", "(not (= (get_reg regs1 reg_ra) (get_reg regs2 reg_ra)))"),
+        ("sp", "(not (= (get_reg regs1 reg_sp) (get_reg regs2 reg_sp)))"),
+        ("s0", "(not (= (get_reg regs1 reg_s0) (get_reg regs2 reg_s0)))"),
+        ("pc", "(not (= pc1 pc2))"),
+    ];
+    for (label, diff) in reg_diffs {
+        writeln!(out, "; ABI register {label} divergence")?;
+        writeln!(out, "(rule")?;
+        writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+        writeln!(out, "           (mem0  (Array (_ BitVec 64) (_ BitVec 8)))")?;
+        writeln!(out, "           (pc0   (_ BitVec 64))")?;
+        writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+        writeln!(out, "           (mem1  (Array (_ BitVec 64) (_ BitVec 8)))")?;
+        writeln!(out, "           (pc1   (_ BitVec 64))")?;
+        writeln!(out, "           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+        writeln!(out, "           (mem2  (Array (_ BitVec 64) (_ BitVec 8)))")?;
+        writeln!(out, "           (pc2   (_ BitVec 64))")?;
+        writeln!(out, "           (sp0   (_ BitVec 64)))")?;
+        writeln!(out, "    (=> (and")?;
+        writeln!(out, "          (= sp0 (get_reg regs0 reg_sp))")?;
+        writeln!(out, "          (bvuge sp0 (_ bv{frame_size} 64))")?;
+        writeln!(out, "          ({p1} regs0 mem0 pc0 regs1 mem1 pc1)")?;
+        writeln!(out, "          ({p2} regs0 mem0 pc0 regs2 mem2 pc2)")?;
+        writeln!(out, "          {diff})")?;
+        writeln!(out, "        bad)))")?;
+        writeln!(out)?;
+    }
+
+    writeln!(out, "; Observable memory divergence")?;
     writeln!(out, "(rule")?;
     writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
     writeln!(out, "           (mem0  (Array (_ BitVec 64) (_ BitVec 8)))")?;
@@ -1924,17 +2177,9 @@ pub fn emit_equivalence_query(
     writeln!(out, "           (a     (_ BitVec 64)))")?;
     writeln!(out, "    (=> (and")?;
     writeln!(out, "          (= sp0 (get_reg regs0 reg_sp))")?;
-    writeln!(out, "          ; Guard against wraparound of the private frame interval")?;
     writeln!(out, "          (bvuge sp0 (_ bv{frame_size} 64))")?;
     writeln!(out, "          ({p1} regs0 mem0 pc0 regs1 mem1 pc1)")?;
     writeln!(out, "          ({p2} regs0 mem0 pc0 regs2 mem2 pc2)")?;
-    writeln!(out, "          ; ABI-visible register equality")?;
-    writeln!(out, "          (= pc1 pc2)")?;
-    writeln!(out, "          (= (get_reg regs1 reg_a0) (get_reg regs2 reg_a0))")?;
-    writeln!(out, "          (= (get_reg regs1 reg_ra) (get_reg regs2 reg_ra))")?;
-    writeln!(out, "          (= (get_reg regs1 reg_sp) (get_reg regs2 reg_sp))")?;
-    writeln!(out, "          (= (get_reg regs1 reg_s0) (get_reg regs2 reg_s0))")?;
-    writeln!(out, "          ; Observable memory differs at some address")?;
     writeln!(out, "          (obs_addr sp0 a)")?;
     writeln!(out, "          (not (= (select mem1 a) (select mem2 a))))")?;
     writeln!(out, "        bad)))")?;

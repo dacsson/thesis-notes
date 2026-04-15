@@ -33,9 +33,19 @@ enum Cli {
 
         /// Function name to look up in both files. The two sides are
         /// renamed to `<function>1` (before) and `<function>2` (after) in
-        /// the emitted query so they don't collide.
+        /// the emitted query so they don't collide. When `--before-fn` /
+        /// `--after-fn` are set they override the lookup label per side
+        /// (useful when both versions live under different labels in one file).
         #[arg(short, long)]
         function: String,
+
+        /// Override the label looked up in the `--before` file.
+        #[arg(long)]
+        before_fn: Option<String>,
+
+        /// Override the label looked up in the `--after` file.
+        #[arg(long)]
+        after_fn: Option<String>,
 
         /// Output .smt2 file with equivalence query
         #[arg(short, long)]
@@ -59,9 +69,11 @@ fn main() -> Result<()> {
             std::fs::write(&output, chc)?;
             println!("Wrote CHC instruction definitions to {}", output.display());
         }
-        Cli::CheckEquiv { before, after, function, output, ir } => {
-            let mut prog1 = ricover::asm_parse::parse_asm_file(&before, &function)?;
-            let mut prog2 = ricover::asm_parse::parse_asm_file(&after, &function)?;
+        Cli::CheckEquiv { before, after, function, before_fn, after_fn, output, ir } => {
+            let before_label = before_fn.as_deref().unwrap_or(&function);
+            let after_label = after_fn.as_deref().unwrap_or(&function);
+            let mut prog1 = ricover::asm_parse::parse_asm_file(&before, before_label)?;
+            let mut prog2 = ricover::asm_parse::parse_asm_file(&after, after_label)?;
             prog1.name = format!("{function}1");
             prog2.name = format!("{function}2");
             let ir_contents = ricover::isla_ir::read_ir_file(&ir)?;

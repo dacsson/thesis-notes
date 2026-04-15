@@ -54,8 +54,27 @@ cargo run -- check-equiv \
 - `--before` — assembly file with unoptimized code
 - `--after` — assembly file with optimized code
 - `-f` — function label to look up in *both* files. The two sides are renamed to `<function>1` (before) and `<function>2` (after) in the emitted query so their relations don't collide.
+- `--before-fn` *(optional)* — override the label looked up in `--before`. When set, `-f` is used only as the relation-name prefix in the query.
+- `--after-fn` *(optional)* — override the label looked up in `--after`.
 - `--ir` — path to the `.ir` file; IR-derived rules are used for every opcode the IR covers, and a warning lists opcodes that fall back to hand-written rules
 - `-o` — output `.smt2` file
+
+#### Both versions in one assembly file
+
+Some benchmarks (notably the LLVM Alive2 miscompile reproductions in `benchmark/`) put the unoptimized and optimized versions of a function under different labels in a single `.s` file. Pass the same file as both `--before` and `--after` and use `--before-fn` / `--after-fn` to pick the labels:
+
+```bash
+cargo run -- check-equiv \
+  --before benchmark/bench1.s \
+  --after  benchmark/bench1.s \
+  --before-fn src \
+  --after-fn  tgt \
+  -f bench1 \
+  --ir snapshot/rv64d.ir \
+  -o /tmp/bench1.smt2
+```
+
+Here `src:` and `tgt:` live in the same file. `-f bench1` controls only the relation names emitted into the query (`bench11` / `bench12`); the actual function bodies are looked up by `--before-fn` / `--after-fn`. When either flag is omitted it falls back to the value of `-f`, so the existing two-file workflow is unchanged.
 
 ### Solving
 

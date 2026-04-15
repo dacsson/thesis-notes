@@ -48,10 +48,12 @@ pub fn parse_asm(contents: &str, function_name: &str) -> Result<AsmFunction> {
     let mut instructions = Vec::new();
 
     for line in contents.lines() {
-        let trimmed = line.trim();
+        // Strip inline comments so trailing `# @label` annotations don't
+        // hide the `:` from the next-label check below.
+        let no_comment = line.split('#').next().unwrap_or("");
+        let trimmed = no_comment.trim();
 
-        // Skip blanks and comments
-        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("//") {
+        if trimmed.is_empty() || trimmed.starts_with("//") {
             continue;
         }
 
