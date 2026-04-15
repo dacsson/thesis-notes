@@ -123,6 +123,13 @@ enum KnownCall {
     ZeroExtend,    // EXTZ(width, val) / zero_extend(width, val) → SMT zero_extend
     AddBits,       // add_bits(a, b) → bvadd
     SubBits,       // sub_bits(a, b) → bvsub
+    AndVec,        // and_vec(a, b) → bvand
+    OrVec,         // or_vec(a, b)  → bvor
+    XorVec,        // xor_vec(a, b) → bvxor
+    SubVec,        // sub_vec(a, b) → bvsub
+    LtSigned,      // (operator <_s)(a, b) → bvslt (returns SMT Bool)
+    LtUnsigned,    // (operator <_u)(a, b) → bvult (returns SMT Bool)
+    BoolToBits,    // bool_to_bits(b) → (ite b (_ bv1 1) (_ bv0 1))
     Concat,        // bitvector_concat(a, b) → (concat a b)
     Zeros,         // zeros(N) → (_ bv0 N)
     Ones,          // ones(N) → (_ bv<2^N-1> N)
@@ -138,6 +145,25 @@ enum KnownCall {
     MultAtom,      // mult_atom(a, b) — integer mul, eagerly evaluated on literals
     SubAtom,       // sub_atom(a, b) — integer sub, eagerly evaluated on literals
     SailAssert,    // sail_assert(cond, msg) — dropped (assertions are elided)
+    // vmem_read / vmem_write collapse the full Sail virtual-memory pipeline
+    // (address translation, PMP/PMA checks, exception generation, the
+    // MemoryAccessType tag, and the aq/rl ordering flags) down to a direct
+    // little-endian read/write at `reg[rs1] + offset`. Sound only under the
+    // projected-equivalence notion we verify here:
+    //   - Both sides run under the same page tables (same binary, same OS),
+    //     so identity indexing at the virtual-address level is equivalent to
+    //     indexing the physical memory produced by any fixed vaddr→paddr map.
+    //   - Fault behaviour is not observed: we follow the Ok arm of the
+    //     result union and drop the Err arm. If one side faults and the
+    //     other doesn't, we will (incorrectly) report equivalent. Compiler
+    //     optimizations on straight-line integer/memory code are required to
+    //     preserve faults at the same program points, so this holds in
+    //     practice — but it is a trust assumption, not a proof.
+    //   - Single-threaded execution: acquire/release flags are ignored, so
+    //     this does not model weak-memory orderings (LR/SC, fences).
+    // Code that genuinely depends on traps, atomics, privileged CSR ops, or
+    // TLB semantics is outside this model — LOADRES/STORECON and friends
+    // are (correctly) not routed through these handlers.
     VMemRead,      // vmem_read(rs1, off, width, ...) — load from reg+offset
     VMemWrite,     // vmem_write(rs1, off, width, val, ...) — store at reg+offset
     ExtendValue,   // extend_value(is_unsigned, data) — dispatches to sign/zero extend
@@ -157,6 +183,13 @@ fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "EXTZ" | "zero_extend" => KnownCall::ZeroExtend,
         "add_bits" => KnownCall::AddBits,
         "sub_bits" => KnownCall::SubBits,
+        "and_vec" => KnownCall::AndVec,
+        "or_vec" => KnownCall::OrVec,
+        "xor_vec" => KnownCall::XorVec,
+        "sub_vec" => KnownCall::SubVec,
+        "(operator <_s)" => KnownCall::LtSigned,
+        "(operator <_u)" => KnownCall::LtUnsigned,
+        "bool_to_bits" => KnownCall::BoolToBits,
         "bitvector_concat" => KnownCall::Concat,
         "zeros" => KnownCall::Zeros,
         "ones" => KnownCall::Ones,
@@ -222,6 +255,28 @@ fn call_to_smt(
         }
         KnownCall::SubBits => {
             Ok(format!("(bvsub {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::AndVec => {
+            Ok(format!("(bvand {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::OrVec => {
+            Ok(format!("(bvor {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::XorVec => {
+            Ok(format!("(bvxor {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::SubVec => {
+            Ok(format!("(bvsub {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::LtSigned => {
+            Ok(format!("(bvslt {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::LtUnsigned => {
+            Ok(format!("(bvult {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::BoolToBits => {
+            // Sail bool_to_bits : bool → bv1
+            Ok(format!("(ite {} (_ bv1 1) (_ bv0 1))", smt_args[0]))
         }
         KnownCall::Concat => {
             Ok(format!("(concat {} {})", smt_args[0], smt_args[1]))
@@ -1586,7 +1641,7 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
     let op = instr.opcode.as_str();
     match op {
         // I-type arithmetic: addi rd, rs1, imm
-        "addi" | "addiw" => {
+        "addi" | "addiw" | "andi" | "ori" | "xori" | "slti" | "sltiu" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -1628,6 +1683,24 @@ fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
                 _ => return Err(anyhow!("{}: expected memref for offset(base)", op)),
             };
             Ok((op.to_string(), vec![off, base, rd]))
+        }
+
+        // R-type arithmetic: add rd, rs1, rs2
+        // IR RTYPE tuple is (rs2, rs1, rd, op), so operands map to (rs2, rs1, rd).
+        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rd", op)),
+            };
+            let rs1 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs1", op)),
+            };
+            let rs2 = match &instr.operands[2] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs2", op)),
+            };
+            Ok((op.to_string(), vec![rs2, rs1, rd]))
         }
 
         // Return pseudo-instruction
