@@ -1,6 +1,6 @@
 # 1. Bug PR: https://github.com/llvm/llvm-project/issues/39208
 #
-# 2. LLVM-IR source:
+# 2. LLVM-IR source: https://godbolt.org/z/ch81G3vTv
 #
 # define i1 @src(i8 %x, i8 %y) {
 #     %tmp0 = lshr i8 255, %y
@@ -15,7 +15,7 @@
 #     ret i1 %1
 # }
 #
-# 3. Alive2 output:
+# 3. Alive2 output: https://alive2.llvm.org/ce/z/3WLQYi
 #
 # define i1 @src(i8 %x, i8 %y) {
 # #0:
