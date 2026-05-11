@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
-use crate::asm_parse::{AsmFunction, AsmInstruction, Operand, reg_index};
 use super::STATE_TYPES;
+use crate::asm_parse::{AsmFunction, AsmInstruction, Operand, reg_index};
 
 // =========================================================================
 // Assembly-level CHC emission
@@ -27,7 +27,10 @@ use super::STATE_TYPES;
 /// The IR transpiler produces rules named after Sail variants (e.g. "addi", "load").
 /// Assembly opcodes may differ (e.g. "ld" maps to IR "load" when only one LOAD variant exists).
 /// Returns None when the opcode has no IR coverage and needs a hand-written fallback.
-pub(crate) fn ir_rule_for_opcode<'a>(asm_opcode: &str, ir_names: &'a HashSet<String>) -> Option<&'a str> {
+pub(crate) fn ir_rule_for_opcode<'a>(
+    asm_opcode: &str,
+    ir_names: &'a HashSet<String>,
+) -> Option<&'a str> {
     // Direct match: asm opcode == IR variant name (most common with full IR)
     if let Some(name) = ir_names.get(asm_opcode) {
         return Some(name.as_str());
@@ -35,17 +38,17 @@ pub(crate) fn ir_rule_for_opcode<'a>(asm_opcode: &str, ir_names: &'a HashSet<Str
 
     // Per-width/sign specialized LOAD/STORE rules generated from the full IR.
     let mapped = match asm_opcode {
-        "lb"  => "load_1_s",
+        "lb" => "load_1_s",
         "lbu" => "load_1_u",
-        "lh"  => "load_2_s",
+        "lh" => "load_2_s",
         "lhu" => "load_2_u",
-        "lw"  => "load_4_s",
+        "lw" => "load_4_s",
         "lwu" => "load_4_u",
-        "ld"  => "load_8_s",
-        "sb"  => "store_1",
-        "sh"  => "store_2",
-        "sw"  => "store_4",
-        "sd"  => "store_8",
+        "ld" => "load_8_s",
+        "sb" => "store_1",
+        "sh" => "store_2",
+        "sw" => "store_4",
+        "sd" => "store_8",
         _ => return None,
     };
     if ir_names.contains(mapped) {
@@ -74,7 +77,10 @@ pub(crate) fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> 
 /// Emit a state variable binding for use in `forall`.
 /// E.g. emit_state_binding("regs3", "mem3", "pc3")
 fn emit_state_binding(out: &mut String, regs: &str, mem: &str, pc: &str) -> std::fmt::Result {
-    write!(out, "({regs} (Array (_ BitVec 5) (_ BitVec 64))) ({mem} (Array (_ BitVec 64) (_ BitVec 8))) ({pc} (_ BitVec 64))")
+    write!(
+        out,
+        "({regs} (Array (_ BitVec 5) (_ BitVec 64))) ({mem} (Array (_ BitVec 64) (_ BitVec 8))) ({pc} (_ BitVec 64))"
+    )
 }
 
 /// Convert a signed immediate value to a 12-bit bitvector literal in SMT-LIB2.
@@ -101,14 +107,15 @@ pub(crate) fn reg_to_smt(name: &str) -> Result<String> {
     let idx = reg_index(name)?;
     Ok(match name {
         "zero" => "reg_zero".to_string(),
-        "ra"   => "reg_ra".to_string(),
-        "sp"   => "reg_sp".to_string(),
+        "ra" => "reg_ra".to_string(),
+        "sp" => "reg_sp".to_string(),
         "s0" | "fp" => "reg_s0".to_string(),
-        "a0"   => "reg_a0".to_string(),
+        "a0" => "reg_a0".to_string(),
         _ => format!("(_ bv{} 5)", idx),
     })
 }
 
+/// IMPORTANT: Deprecated except for `ret` fallback
 /// Emit hand-written CHC rules for opcodes not covered by IR-derived rules.
 ///
 /// These are fallback definitions -- when the Isla IR covers an opcode, the
@@ -122,7 +129,10 @@ pub(crate) fn emit_fallback_rules(needed: &HashSet<String>, out: &mut String) ->
     if needed.is_empty() {
         return Ok(());
     }
-    writeln!(out, ";; Hand-written fallback rules for opcodes not yet in the IR:")?;
+    writeln!(
+        out,
+        ";; Hand-written fallback rules for opcodes not yet in the IR:"
+    )?;
     writeln!(out, ";; {:?}", needed)?;
     writeln!(out)?;
 
@@ -136,184 +146,259 @@ pub(crate) fn emit_fallback_rules(needed: &HashSet<String>, out: &mut String) ->
 /// Emit a single hand-written fallback rule.
 fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
     match opcode {
-    "addi" => {
-    // --- ADDI: rd = rs1 + sign_extend(imm) ---
-    writeln!(out, "(declare-rel addi")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (rs1 (_ BitVec 5)) (rd (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and (= regs1 (set_reg regs0 rd")?;
-    writeln!(out, "                               (bvadd (get_reg regs0 rs1)")?;
-    writeln!(out, "                                      ((_ sign_extend 52) imm))))")?;
-    writeln!(out, "             (= mem1 mem0)")?;
-    writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (addi regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))")?;
-    writeln!(out)?;
-    }
+        "addi" => {
+            // --- ADDI: rd = rs1 + sign_extend(imm) ---
+            writeln!(out, "(declare-rel addi")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (rs1 (_ BitVec 5)) (rd (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and (= regs1 (set_reg regs0 rd")?;
+            writeln!(
+                out,
+                "                               (bvadd (get_reg regs0 rs1)"
+            )?;
+            writeln!(
+                out,
+                "                                      ((_ sign_extend 52) imm))))"
+            )?;
+            writeln!(out, "             (= mem1 mem0)")?;
+            writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (addi regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "addiw" => {
-    // --- ADDIW: rd = sign_extend_32(truncate_32(rs1 + sign_extend(imm))) ---
-    // Word-width add: compute in 64 bits, truncate to low 32, sign-extend back to 64
-    writeln!(out, "(declare-rel addiw")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (rs1 (_ BitVec 5)) (rd (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and")?;
-    writeln!(out, "          (= regs1")?;
-    writeln!(out, "             (set_reg regs0 rd")?;
-    writeln!(out, "               ((_ sign_extend 32)")?;
-    writeln!(out, "                 ((_ extract 31 0)")?;
-    writeln!(out, "                   (bvadd (get_reg regs0 rs1)")?;
-    writeln!(out, "                          ((_ sign_extend 52) imm))))))")?;
-    writeln!(out, "          (= mem1 mem0)")?;
-    writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (addiw regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))")?;
-    writeln!(out)?;
-    }
+        "addiw" => {
+            // --- ADDIW: rd = sign_extend_32(truncate_32(rs1 + sign_extend(imm))) ---
+            // Word-width add: compute in 64 bits, truncate to low 32, sign-extend back to 64
+            writeln!(out, "(declare-rel addiw")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (rs1 (_ BitVec 5)) (rd (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1")?;
+            writeln!(out, "             (set_reg regs0 rd")?;
+            writeln!(out, "               ((_ sign_extend 32)")?;
+            writeln!(out, "                 ((_ extract 31 0)")?;
+            writeln!(out, "                   (bvadd (get_reg regs0 rs1)")?;
+            writeln!(
+                out,
+                "                          ((_ sign_extend 52) imm))))))"
+            )?;
+            writeln!(out, "          (= mem1 mem0)")?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (addiw regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "sw" => {
-    // --- SW: store word (4 bytes, little-endian) ---
-    writeln!(out, "(declare-rel sw")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rs2 (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and")?;
-    writeln!(out, "          (= regs1 regs0)")?;
-    writeln!(out, "          (= mem1 (write_mem_word mem0")?;
-    writeln!(out, "                                  (bvadd (get_reg regs0 base)")?;
-    writeln!(out, "                                         ((_ sign_extend 52) imm))")?;
-    writeln!(out, "                                  (get_reg regs0 rs2)))")?;
-    writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (sw regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))")?;
-    writeln!(out)?;
-    }
+        "sw" => {
+            // --- SW: store word (4 bytes, little-endian) ---
+            writeln!(out, "(declare-rel sw")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rs2 (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1 regs0)")?;
+            writeln!(out, "          (= mem1 (write_mem_word mem0")?;
+            writeln!(
+                out,
+                "                                  (bvadd (get_reg regs0 base)"
+            )?;
+            writeln!(
+                out,
+                "                                         ((_ sign_extend 52) imm))"
+            )?;
+            writeln!(
+                out,
+                "                                  (get_reg regs0 rs2)))"
+            )?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (sw regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "lw" => {
-    // --- LW: load word (4 bytes, sign-extended to 64 bits) ---
-    writeln!(out, "(declare-rel lw")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rd (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and")?;
-    writeln!(out, "          (= regs1 (set_reg regs0 rd")?;
-    writeln!(out, "                            (read_mem_word mem0")?;
-    writeln!(out, "                                           (bvadd (get_reg regs0 base)")?;
-    writeln!(out, "                                                  ((_ sign_extend 52) imm)))))")?;
-    writeln!(out, "          (= mem1 mem0)")?;
-    writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (lw regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))")?;
-    writeln!(out)?;
-    }
+        "lw" => {
+            // --- LW: load word (4 bytes, sign-extended to 64 bits) ---
+            writeln!(out, "(declare-rel lw")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rd (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1 (set_reg regs0 rd")?;
+            writeln!(out, "                            (read_mem_word mem0")?;
+            writeln!(
+                out,
+                "                                           (bvadd (get_reg regs0 base)"
+            )?;
+            writeln!(
+                out,
+                "                                                  ((_ sign_extend 52) imm)))))"
+            )?;
+            writeln!(out, "          (= mem1 mem0)")?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (lw regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "sd" => {
-    // --- SD: store doubleword (8 bytes, little-endian) ---
-    writeln!(out, "(declare-rel sd")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rs2 (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and")?;
-    writeln!(out, "          (= regs1 regs0)")?;
-    writeln!(out, "          (= mem1 (write_mem_dword mem0")?;
-    writeln!(out, "                                   (bvadd (get_reg regs0 base)")?;
-    writeln!(out, "                                          ((_ sign_extend 52) imm))")?;
-    writeln!(out, "                                   (get_reg regs0 rs2)))")?;
-    writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (sd regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))")?;
-    writeln!(out)?;
-    }
+        "sd" => {
+            // --- SD: store doubleword (8 bytes, little-endian) ---
+            writeln!(out, "(declare-rel sd")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rs2 (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1 regs0)")?;
+            writeln!(out, "          (= mem1 (write_mem_dword mem0")?;
+            writeln!(
+                out,
+                "                                   (bvadd (get_reg regs0 base)"
+            )?;
+            writeln!(
+                out,
+                "                                          ((_ sign_extend 52) imm))"
+            )?;
+            writeln!(
+                out,
+                "                                   (get_reg regs0 rs2)))"
+            )?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (sd regs0 mem0 pc0 regs1 mem1 pc1 imm base rs2))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "ld" => {
-    // --- LD: load doubleword (8 bytes) ---
-    writeln!(out, "(declare-rel ld")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}")?;
-    writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64))")?;
-    writeln!(out, "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rd (_ BitVec 5)))")?;
-    writeln!(out, "    (=> (and")?;
-    writeln!(out, "          (= regs1 (set_reg regs0 rd")?;
-    writeln!(out, "                            (read_mem_dword mem0")?;
-    writeln!(out, "                                            (bvadd (get_reg regs0 base)")?;
-    writeln!(out, "                                                   ((_ sign_extend 52) imm)))))")?;
-    writeln!(out, "          (= mem1 mem0)")?;
-    writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
-    writeln!(out, "        (ld regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))")?;
-    writeln!(out)?;
-    }
+        "ld" => {
+            // --- LD: load doubleword (8 bytes) ---
+            writeln!(out, "(declare-rel ld")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (base (_ BitVec 5)) (rd (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1 (set_reg regs0 rd")?;
+            writeln!(out, "                            (read_mem_dword mem0")?;
+            writeln!(
+                out,
+                "                                            (bvadd (get_reg regs0 base)"
+            )?;
+            writeln!(
+                out,
+                "                                                   ((_ sign_extend 52) imm)))))"
+            )?;
+            writeln!(out, "          (= mem1 mem0)")?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (ld regs0 mem0 pc0 regs1 mem1 pc1 imm base rd))))"
+            )?;
+            writeln!(out)?;
+        }
 
-    "ret" => {
-    // --- RET: pseudo-instruction (jalr zero, 0(ra)) ---
-    writeln!(out, "(declare-rel ret")?;
-    writeln!(out, "  ({STATE_TYPES}")?;
-    writeln!(out, "   {STATE_TYPES}))")?;
-    writeln!(out)?;
-    writeln!(out, "(rule")?;
-    writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc0 (_ BitVec 64))")?;
-    writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
-    writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-    writeln!(out, "           (pc1 (_ BitVec 64)))")?;
-    writeln!(out, "    (=> (and (= regs1 regs0)")?;
-    writeln!(out, "             (= mem1 mem0)")?;
-    writeln!(out, "             (= pc1 (get_reg regs0 reg_ra)))")?;
-    writeln!(out, "        (ret regs0 mem0 pc0 regs1 mem1 pc1))))")?;
-    writeln!(out)?;
-    }
+        "ret" => {
+            // --- RET: pseudo-instruction (jalr zero, 0(ra)) ---
+            writeln!(out, "(declare-rel ret")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64)))")?;
+            writeln!(out, "    (=> (and (= regs1 regs0)")?;
+            writeln!(out, "             (= mem1 mem0)")?;
+            writeln!(out, "             (= pc1 (get_reg regs0 reg_ra)))")?;
+            writeln!(out, "        (ret regs0 mem0 pc0 regs1 mem1 pc1))))")?;
+            writeln!(out)?;
+        }
 
-    _ => return Err(anyhow!("no fallback rule for opcode: {}", opcode)),
+        _ => return Err(anyhow!("no fallback rule for opcode: {}", opcode)),
     }
 
     Ok(())
@@ -424,7 +509,9 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
             };
             let imm = match &instr.operands[1] {
                 Operand::Imm(n) if (-2048..2048).contains(n) => imm_to_bv12(*n),
-                Operand::Imm(n) => return Err(anyhow!("li: immediate {} doesn't fit in 12 bits", n)),
+                Operand::Imm(n) => {
+                    return Err(anyhow!("li: immediate {} doesn't fit in 12 bits", n));
+                }
                 _ => return Err(anyhow!("li: expected immediate")),
             };
             Ok(("addi".to_string(), vec![imm, "reg_zero".to_string(), rd]))
@@ -482,7 +569,12 @@ pub(crate) fn emit_program_rule(
         if i > 0 {
             write!(out, "\n           ")?;
         }
-        emit_state_binding(out, &format!("regs{i}"), &format!("mem{i}"), &format!("pc{i}"))?;
+        emit_state_binding(
+            out,
+            &format!("regs{i}"),
+            &format!("mem{i}"),
+            &format!("pc{i}"),
+        )?;
     }
     writeln!(out, ")")?;
 
@@ -494,19 +586,32 @@ pub(crate) fn emit_program_rule(
         let rule_name = ir_rule_for_opcode(&opcode, ir_names)
             .map(|s| s.to_string())
             .unwrap_or(opcode);
-        let state_args = format!("regs{i} mem{i} pc{i} regs{} mem{} pc{}", i+1, i+1, i+1);
+        let state_args = format!(
+            "regs{i} mem{i} pc{i} regs{} mem{} pc{}",
+            i + 1,
+            i + 1,
+            i + 1
+        );
         // Comment with original assembly for readability
         writeln!(out, "          ; {}", format_asm_instr(instr))?;
         if operands.is_empty() {
             writeln!(out, "          ({rule_name} {state_args})")?;
         } else {
-            writeln!(out, "          ({rule_name} {state_args} {})", operands.join(" "))?;
+            writeln!(
+                out,
+                "          ({rule_name} {state_args} {})",
+                operands.join(" ")
+            )?;
         }
     }
 
     // Close (and ...) and emit the head
     writeln!(out, "        )")?;
-    writeln!(out, "        ({} regs0 mem0 pc0 regs{n} mem{n} pc{n}))))", func.name)?;
+    writeln!(
+        out,
+        "        ({} regs0 mem0 pc0 regs{n} mem{n} pc{n}))))",
+        func.name
+    )?;
     writeln!(out)?;
 
     Ok(())
@@ -517,11 +622,15 @@ fn format_asm_instr(instr: &AsmInstruction) -> String {
     if instr.operands.is_empty() {
         return instr.opcode.clone();
     }
-    let ops: Vec<String> = instr.operands.iter().map(|op| match op {
-        Operand::Reg(r) => r.clone(),
-        Operand::Imm(n) => n.to_string(),
-        Operand::MemRef { offset, base } => format!("{}({})", offset, base),
-    }).collect();
+    let ops: Vec<String> = instr
+        .operands
+        .iter()
+        .map(|op| match op {
+            Operand::Reg(r) => r.clone(),
+            Operand::Imm(n) => n.to_string(),
+            Operand::MemRef { offset, base } => format!("{}({})", offset, base),
+        })
+        .collect();
     format!("{} {}", instr.opcode, ops.join(", "))
 }
 
@@ -532,7 +641,9 @@ fn format_asm_instr(instr: &AsmInstruction) -> String {
 pub(crate) fn compute_frame_size(func: &AsmFunction) -> u64 {
     if let Some(first) = func.instructions.first() {
         if first.opcode == "addi" {
-            if let [Operand::Reg(rd), Operand::Reg(rs1), Operand::Imm(imm)] = first.operands.as_slice() {
+            if let [Operand::Reg(rd), Operand::Reg(rs1), Operand::Imm(imm)] =
+                first.operands.as_slice()
+            {
                 if rd == "sp" && rs1 == "sp" && *imm < 0 {
                     return (-imm) as u64;
                 }
@@ -571,31 +682,24 @@ mod tests {
         // Function with `addi sp, sp, -32`
         let func_with_frame = AsmFunction {
             name: "test".to_string(),
-            instructions: vec![
-                AsmInstruction {
-                    opcode: "addi".to_string(),
-                    operands: vec![
-                        Operand::Reg("sp".to_string()),
-                        Operand::Reg("sp".to_string()),
-                        Operand::Imm(-32),
-                    ],
-                },
-            ],
+            instructions: vec![AsmInstruction {
+                opcode: "addi".to_string(),
+                operands: vec![
+                    Operand::Reg("sp".to_string()),
+                    Operand::Reg("sp".to_string()),
+                    Operand::Imm(-32),
+                ],
+            }],
         };
         assert_eq!(compute_frame_size(&func_with_frame), 32);
 
         // Function without stack frame allocation
         let func_no_frame = AsmFunction {
             name: "test".to_string(),
-            instructions: vec![
-                AsmInstruction {
-                    opcode: "li".to_string(),
-                    operands: vec![
-                        Operand::Reg("a0".to_string()),
-                        Operand::Imm(42),
-                    ],
-                },
-            ],
+            instructions: vec![AsmInstruction {
+                opcode: "li".to_string(),
+                operands: vec![Operand::Reg("a0".to_string()), Operand::Imm(42)],
+            }],
         };
         assert_eq!(compute_frame_size(&func_no_frame), 0);
     }

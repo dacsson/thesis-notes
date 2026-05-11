@@ -40,6 +40,14 @@ cargo run -- check-equiv --before foo1.s --after foo2.s -f foo -o query.smt2 -ir
 z3 query.smt2   # UNSAT = equivalent, SAT = counterexample
 ```
 
+### Benchmarks
+
+There is assembly benchmarks at `doc/benchmark/`, currently supported benchmarks are at `doc/benchmark/supported/`, and unsupported benchmarks are at `doc/benchmark/todo/`. You can run them via:
+```bash
+cd doc/benchmark/supported/
+./run_bench.py <benchmark>.s
+```
+
 ## Conventions
 
 - Rust edition 2024, modules declared in `lib.rs`, CLI in `main.rs`
