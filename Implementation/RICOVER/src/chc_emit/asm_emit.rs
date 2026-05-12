@@ -37,6 +37,8 @@ pub(crate) fn ir_rule_for_opcode<'a>(
     }
 
     // Per-width/sign specialized LOAD/STORE rules generated from the full IR.
+    // AMO rule names already match their asm-level names (amoadd_4, amoswap_8, etc.)
+    // so they go through the direct-match path above.
     let mapped = match asm_opcode {
         "lb" => "load_1_s",
         "lbu" => "load_1_u",
@@ -404,6 +406,119 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
     Ok(())
 }
 
+/// Expand a compressed (C_*) instruction to its standard-width equivalent.
+///
+/// Returns None for non-compressed instructions. The expansion synthesizes
+/// an AsmInstruction with the standard opcode and operand layout so that
+/// the regular instruction_to_chc handlers process it.
+fn expand_compressed(instr: &AsmInstruction) -> Option<AsmInstruction> {
+    let op = instr.opcode.as_str();
+    let ops = &instr.operands;
+
+    match op {
+        // Load: same operand format as standard lw/ld
+        "c.lw" | "c.lwsp" => Some(AsmInstruction { opcode: "lw".into(), operands: ops.clone() }),
+        "c.ld" | "c.ldsp" => Some(AsmInstruction { opcode: "ld".into(), operands: ops.clone() }),
+        "c.lh" => Some(AsmInstruction { opcode: "lh".into(), operands: ops.clone() }),
+        "c.lhu" => Some(AsmInstruction { opcode: "lhu".into(), operands: ops.clone() }),
+        "c.lbu" => Some(AsmInstruction { opcode: "lbu".into(), operands: ops.clone() }),
+
+        // Store: same operand format as standard sw/sd
+        "c.sw" | "c.swsp" => Some(AsmInstruction { opcode: "sw".into(), operands: ops.clone() }),
+        "c.sd" | "c.sdsp" => Some(AsmInstruction { opcode: "sd".into(), operands: ops.clone() }),
+        "c.sh" => Some(AsmInstruction { opcode: "sh".into(), operands: ops.clone() }),
+        "c.sb" => Some(AsmInstruction { opcode: "sb".into(), operands: ops.clone() }),
+
+        // I-type: c.addi rd, imm → addi rd, rd, imm
+        "c.addi" | "c.addiw" | "c.andi" => {
+            let base_op = op.strip_prefix("c.").unwrap();
+            Some(AsmInstruction {
+                opcode: base_op.to_string(),
+                operands: vec![ops[0].clone(), ops[0].clone(), ops[1].clone()],
+            })
+        }
+
+        // c.li rd, imm → addi rd, zero, imm
+        "c.li" => Some(AsmInstruction {
+            opcode: "addi".to_string(),
+            operands: vec![ops[0].clone(), Operand::Reg("zero".into()), ops[1].clone()],
+        }),
+
+        // c.lui rd, imm → lui rd, imm (not yet modeled, but expand for correctness)
+        "c.lui" => Some(AsmInstruction {
+            opcode: "lui".to_string(),
+            operands: ops.clone(),
+        }),
+
+        // c.addi16sp sp, imm → addi sp, sp, imm
+        "c.addi16sp" => {
+            let imm = ops.iter().find(|o| matches!(o, Operand::Imm(_)))?.clone();
+            Some(AsmInstruction {
+                opcode: "addi".to_string(),
+                operands: vec![Operand::Reg("sp".into()), Operand::Reg("sp".into()), imm],
+            })
+        }
+
+        // c.addi4spn rd, sp, imm → addi rd, sp, imm
+        "c.addi4spn" => {
+            let imm = ops.iter().find(|o| matches!(o, Operand::Imm(_)))?.clone();
+            Some(AsmInstruction {
+                opcode: "addi".to_string(),
+                operands: vec![ops[0].clone(), Operand::Reg("sp".into()), imm],
+            })
+        }
+
+        // c.add rd, rs2 → add rd, rd, rs2
+        "c.add" => Some(AsmInstruction {
+            opcode: "add".to_string(),
+            operands: vec![ops[0].clone(), ops[0].clone(), ops[1].clone()],
+        }),
+
+        // c.mv rd, rs2 → add rd, zero, rs2
+        "c.mv" => Some(AsmInstruction {
+            opcode: "add".to_string(),
+            operands: vec![ops[0].clone(), Operand::Reg("zero".into()), ops[1].clone()],
+        }),
+
+        // R-type: c.sub/c.xor/c.or/c.and/c.addw/c.subw rd, rs2 → base rd, rd, rs2
+        "c.sub" | "c.xor" | "c.or" | "c.and" | "c.addw" | "c.subw" => {
+            let base_op = op.strip_prefix("c.").unwrap();
+            Some(AsmInstruction {
+                opcode: base_op.to_string(),
+                operands: vec![ops[0].clone(), ops[0].clone(), ops[1].clone()],
+            })
+        }
+
+        // Shift: c.slli/c.srli/c.srai rd, shamt → base rd, rd, shamt
+        "c.slli" | "c.srli" | "c.srai" => {
+            let base_op = op.strip_prefix("c.").unwrap();
+            Some(AsmInstruction {
+                opcode: base_op.to_string(),
+                operands: vec![ops[0].clone(), ops[0].clone(), ops[1].clone()],
+            })
+        }
+
+        _ => None,
+    }
+}
+
+/// Normalize an AMO opcode: strip ordering suffixes and extract byte width.
+///
+/// "amoadd.w.aqrl" → Some(("amoadd", "4"))
+/// "amoswap.d"     → Some(("amoswap", "8"))
+fn normalize_amo_opcode(op: &str) -> Option<(String, &'static str)> {
+    let rest = op.strip_prefix("amo")?;
+    let mut parts = rest.split('.');
+    let operation = parts.next()?;
+    let width_str = parts.next()?;
+    let width = match width_str {
+        "w" => "4",
+        "d" => "8",
+        _ => return None,
+    };
+    Some((format!("amo{}", operation), width))
+}
+
 /// Translate a single assembly instruction into its CHC relation call arguments.
 ///
 /// Returns (opcode, instruction-specific SMT operands).
@@ -415,6 +530,11 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
 ///   lw/ld      rd, off(base)  -> (opcode ... off_bv base_bv rd_bv)
 ///   ret                       -> (ret    ...)
 pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<String>)> {
+    // Expand compressed instructions to standard equivalents first
+    if let Some(expanded) = expand_compressed(instr) {
+        return instruction_to_chc(&expanded);
+    }
+
     let op = instr.opcode.as_str();
     match op {
         // I-type arithmetic: addi rd, rs1, imm
@@ -483,7 +603,8 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
 
         // R-type arithmetic: add rd, rs1, rs2
         // IR RTYPE tuple is (rs2, rs1, rd, op), so operands map to (rs2, rs1, rd).
-        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra" => {
+        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra"
+        | "addw" | "subw" | "sllw" | "srlw" | "sraw" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -532,6 +653,26 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
 
         // Return pseudo-instruction
         "ret" => Ok(("ret".to_string(), vec![])),
+
+        // AMO: amoadd.w rd, rs2, (rs1) → amoadd_4 rs2 rs1 rd
+        _ if op.starts_with("amo") => {
+            let (base_op, width) = normalize_amo_opcode(op)
+                .ok_or_else(|| anyhow!("{}: cannot parse AMO opcode", op))?;
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rd", op)),
+            };
+            let rs2 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs2", op)),
+            };
+            let rs1 = match &instr.operands[2] {
+                Operand::MemRef { offset: _, base } => reg_to_smt(base)?,
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected memref or register for rs1", op)),
+            };
+            Ok((format!("{}_{}", base_op, width), vec![rs2, rs1, rd]))
+        }
 
         _ => Err(anyhow!("unsupported instruction: {}", op)),
     }
@@ -709,6 +850,7 @@ mod tests {
         let mut ir_names = HashSet::new();
         ir_names.insert("addi".to_string());
         ir_names.insert("load_4_s".to_string());
+        ir_names.insert("amoadd_4".to_string());
 
         // Direct match
         assert_eq!(ir_rule_for_opcode("addi", &ir_names), Some("addi"));
@@ -716,7 +858,146 @@ mod tests {
         // Mapped opcode: lw -> load_4_s
         assert_eq!(ir_rule_for_opcode("lw", &ir_names), Some("load_4_s"));
 
+        // AMO: direct match after normalization in instruction_to_chc
+        assert_eq!(ir_rule_for_opcode("amoadd_4", &ir_names), Some("amoadd_4"));
+
         // No match
         assert_eq!(ir_rule_for_opcode("unknown_op", &ir_names), None);
+    }
+
+    #[test]
+    fn test_compressed_itype_expansion() {
+        // c.addi a0, 3 → addi a0, a0, 3
+        let instr = AsmInstruction {
+            opcode: "c.addi".into(),
+            operands: vec![Operand::Reg("a0".into()), Operand::Imm(3)],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "addi");
+        assert_eq!(args, vec![imm_to_bv12(3), "reg_a0".to_string(), "reg_a0".to_string()]);
+
+        // c.li a1, 5 → addi a1, zero, 5
+        let instr = AsmInstruction {
+            opcode: "c.li".into(),
+            operands: vec![Operand::Reg("a1".into()), Operand::Imm(5)],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "addi");
+        assert_eq!(args[1], "reg_zero");
+
+        // c.addiw a0, -1 → addiw a0, a0, -1
+        let instr = AsmInstruction {
+            opcode: "c.addiw".into(),
+            operands: vec![Operand::Reg("a0".into()), Operand::Imm(-1)],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "addiw");
+
+        // c.andi a2, 0xf → andi a2, a2, 0xf
+        let instr = AsmInstruction {
+            opcode: "c.andi".into(),
+            operands: vec![Operand::Reg("a2".into()), Operand::Imm(0xf)],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "andi");
+    }
+
+    #[test]
+    fn test_compressed_load_store_expansion() {
+        // c.lw a0, 0(a1) → lw a0, 0(a1)
+        let instr = AsmInstruction {
+            opcode: "c.lw".into(),
+            operands: vec![
+                Operand::Reg("a0".into()),
+                Operand::MemRef { offset: 4, base: "a1".into() },
+            ],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "lw");
+
+        // c.sdsp a0, 8(sp) → sd a0, 8(sp)
+        let instr = AsmInstruction {
+            opcode: "c.sdsp".into(),
+            operands: vec![
+                Operand::Reg("a0".into()),
+                Operand::MemRef { offset: 8, base: "sp".into() },
+            ],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "sd");
+    }
+
+    #[test]
+    fn test_compressed_rtype_expansion() {
+        // c.add a0, a1 → add a0, a0, a1
+        let instr = AsmInstruction {
+            opcode: "c.add".into(),
+            operands: vec![Operand::Reg("a0".into()), Operand::Reg("a1".into())],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "add");
+        // R-type: (rs2, rs1, rd) → a1, a0, a0
+        assert_eq!(args[0], reg_to_smt("a1").unwrap()); // rs2
+        assert_eq!(args[1], "reg_a0"); // rs1 = rd
+        assert_eq!(args[2], "reg_a0"); // rd
+
+        // c.mv a1, a0 → add a1, zero, a0
+        let instr = AsmInstruction {
+            opcode: "c.mv".into(),
+            operands: vec![Operand::Reg("a1".into()), Operand::Reg("a0".into())],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "add");
+        assert_eq!(args[1], "reg_zero"); // rs1 = zero
+
+        // c.sub a0, a1 → sub a0, a0, a1
+        let instr = AsmInstruction {
+            opcode: "c.sub".into(),
+            operands: vec![Operand::Reg("a0".into()), Operand::Reg("a1".into())],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "sub");
+    }
+
+    #[test]
+    fn test_compressed_shift_expansion() {
+        // c.slli a0, 3 → slli a0, a0, 3
+        let instr = AsmInstruction {
+            opcode: "c.slli".into(),
+            operands: vec![Operand::Reg("a0".into()), Operand::Imm(3)],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "slli");
+        assert_eq!(args[0], "(_ bv3 6)"); // shamt as bv6
+        assert_eq!(args[1], "reg_a0"); // rs1 = rd
+        assert_eq!(args[2], "reg_a0"); // rd
+    }
+
+    #[test]
+    fn test_amo_instruction_to_chc() {
+        // amoadd.w a0, a1, (a2) → amoadd_4 rs2=a1 rs1=a2 rd=a0
+        let instr = AsmInstruction {
+            opcode: "amoadd.w".into(),
+            operands: vec![
+                Operand::Reg("a0".into()),
+                Operand::Reg("a1".into()),
+                Operand::MemRef { offset: 0, base: "a2".into() },
+            ],
+        };
+        let (op, args) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "amoadd_4");
+        assert_eq!(args.len(), 3);
+
+        // amoswap.d.aqrl a3, a4, (a5) → amoswap_8
+        let instr = AsmInstruction {
+            opcode: "amoswap.d.aqrl".into(),
+            operands: vec![
+                Operand::Reg("a3".into()),
+                Operand::Reg("a4".into()),
+                Operand::MemRef { offset: 0, base: "a5".into() },
+            ],
+        };
+        let (op, _) = instruction_to_chc(&instr).unwrap();
+        assert_eq!(op, "amoswap_8");
     }
 }

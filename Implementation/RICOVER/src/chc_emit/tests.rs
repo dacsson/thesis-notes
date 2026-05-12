@@ -5,6 +5,8 @@ use crate::isla_ir;
 const RISCV_IR: &str = include_str!("../../snapshot/rv64d.ir");
 const FOO1_ASM: &str = include_str!("../../../../Examples/foo1.s");
 const FOO2_ASM: &str = include_str!("../../../../Examples/foo2.s");
+const COMPRESSED_ASM: &str = include_str!("../../benchmark/supported/compressed_equiv_SUCCESS.s");
+const AMO_SWAP_ASM: &str = include_str!("../../benchmark/supported/amo_swap_SUCCESS.s");
 
 #[test]
 fn emit_execute_produces_chc() {
@@ -73,4 +75,64 @@ fn emit_foo_equivalence_query() {
 
     // Check frame size computation (foo1 allocates 32 bytes)
     assert!(query.contains("bv32 64"));
+}
+
+#[test]
+fn test_compressed_equiv() {
+    let mut src = asm_parse::parse_asm(COMPRESSED_ASM, "src").expect("parse src");
+    let mut tgt = asm_parse::parse_asm(COMPRESSED_ASM, "tgt").expect("parse tgt");
+    src.name = "src".to_string();
+    tgt.name = "tgt".to_string();
+    let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse IR");
+    let query = emit_equivalence_query(&src, &tgt, "compressed", Some(&model))
+        .expect("emit compressed query");
+
+    // Uses IR-derived addi and add rules
+    assert!(query.contains("declare-rel addi"), "addi should be IR-derived");
+    assert!(query.contains("declare-rel add"), "add should be IR-derived");
+
+    // The program rules should use standard instruction names, not c_* names.
+    // Extract the program rule section (contains "declare-rel src" / "declare-rel tgt")
+    let program_section = query.split("declare-rel src").nth(1).unwrap_or("");
+    assert!(program_section.contains("addi regs"), "src program should use addi rule");
+    assert!(program_section.contains("add regs"), "src program should use add rule");
+    assert!(!program_section.contains("c_addi"), "program should not use c_addi");
+    assert!(!program_section.contains("c_mv"), "program should not use c_mv");
+}
+
+#[test]
+fn emit_execute_produces_amo_rules() {
+    let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse");
+    let result = emit_instruction_chc(&model, &["execute".to_string()]);
+    let chc = result.expect("failed to emit CHC");
+
+    // AMO width-specialized rules should be emitted
+    assert!(chc.contains("declare-rel amoswap_4"), "expected amoswap_4 from AMO");
+    assert!(chc.contains("declare-rel amoswap_8"), "expected amoswap_8 from AMO");
+    assert!(chc.contains("declare-rel amoadd_4"), "expected amoadd_4 from AMO");
+    assert!(chc.contains("declare-rel amoadd_8"), "expected amoadd_8 from AMO");
+
+    // AMO rules should use memory operations
+    let amo_section = chc.split("declare-rel amoswap_4")
+        .nth(1)
+        .and_then(|s| s.split("declare-rel").next())
+        .unwrap_or("");
+    assert!(amo_section.contains("mem_read_") || amo_section.contains("write_mem_"),
+        "AMO rule should include memory operations");
+}
+
+#[test]
+fn test_amo_swap_equiv() {
+    let mut src = asm_parse::parse_asm(AMO_SWAP_ASM, "src").expect("parse src");
+    let mut tgt = asm_parse::parse_asm(AMO_SWAP_ASM, "tgt").expect("parse tgt");
+    src.name = "src".to_string();
+    tgt.name = "tgt".to_string();
+    let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse IR");
+    let query = emit_equivalence_query(&src, &tgt, "amo_swap", Some(&model))
+        .expect("emit amo_swap query");
+
+    // The amoswap_4 rule should be IR-derived
+    assert!(query.contains("declare-rel amoswap_4"), "amoswap_4 should be IR-derived");
+    // The program should reference this rule
+    assert!(query.contains("amoswap_4 regs"), "program should use amoswap_4 rule");
 }

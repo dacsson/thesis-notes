@@ -139,8 +139,9 @@ pub(crate) fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>])
                     .unwrap_or(outer_skip);
                 let postamble = (postamble_start, outer_skip);
 
+                let mut sub_variants = Vec::new();
                 for (op_name, jump_idx, target) in &sub_guards {
-                    variants.push(InstrVariant {
+                    sub_variants.push(InstrVariant {
                         name: op_name.clone(),
                         segments: vec![prologue, (*jump_idx + 1, *target), postamble],
                         initial_bindings: HashMap::new(),
@@ -156,13 +157,24 @@ pub(crate) fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>])
                 let last_target = sub_guards.last().unwrap().2;
                 if last_target < postamble_start {
                     if let Some(name) = recover_fallthrough_arm(model, body, &sub_guards) {
-                        variants.push(InstrVariant {
+                        sub_variants.push(InstrVariant {
                             name,
                             segments: vec![prologue, (last_target, postamble_start), postamble],
                             initial_bindings: HashMap::new(),
                         });
                     }
                 }
+
+                // AMO width specialization: the AMO outer variant has a 7-field
+                // tuple (zamoop, aq, rl, rs2, rs1, width, rd). Create per-width
+                // copies for the 5 simple AMO operations.
+                if outer_name == "AMO" {
+                    sub_variants = specialize_amo_width(
+                        body, variant_start, outer_skip, sub_variants,
+                    );
+                }
+
+                variants.extend(sub_variants);
             }
 
             i = outer_skip;
@@ -322,6 +334,62 @@ fn try_specialize_result_variant(
     Some(variants)
 }
 
+/// Width-specialize AMO sub-variants.
+///
+/// AMO tuple layout: (zamoop:enum, aq:bool, rl:bool, rs2:bv5, rs1:bv5, width:i64, rd:bv5).
+/// For each of the 5 simple AMO operations (AMOSWAP, AMOADD, AMOXOR, AMOAND,
+/// AMOOR), produce two variants: one for width=4 (32-bit) and one for width=8
+/// (64-bit), with aq/rl pre-bound to false (ordering ignored).
+///
+/// The 4 conditional AMOs (AMOMIN, AMOMAX, AMOMINU, AMOMAXU) are passed
+/// through unmodified — they'll fail during translation (deferred).
+fn specialize_amo_width(
+    body: &[Instr<Name, B129>],
+    variant_start: usize,
+    outer_skip: usize,
+    sub_variants: Vec<InstrVariant>,
+) -> Vec<InstrVariant> {
+    // Collect tuple field IDs from the prologue
+    let mut field_ids: Vec<Name> = Vec::new();
+    for instr in &body[variant_start..outer_skip] {
+        if let Instr::Copy(Loc::Id(id), Exp::Field(inner, _), _) = instr {
+            if matches!(inner.as_ref(), Exp::Unwrap(_, _)) {
+                field_ids.push(*id);
+            }
+        }
+    }
+
+    // AMO needs at least 7 tuple fields
+    if field_ids.len() < 7 {
+        return sub_variants;
+    }
+    let aq_id = field_ids[1];
+    let rl_id = field_ids[2];
+    let width_id = field_ids[5];
+
+    let simple_amos: HashSet<&str> =
+        ["AMOSWAP", "AMOADD", "AMOXOR", "AMOAND", "AMOOR"].into_iter().collect();
+
+    let mut result = Vec::new();
+    for variant in sub_variants {
+        if simple_amos.contains(variant.name.as_str()) {
+            for &w in &[4u32, 8] {
+                let mut initial = variant.initial_bindings.clone();
+                initial.insert(width_id, w.to_string());
+                initial.insert(aq_id, "false".to_string());
+                initial.insert(rl_id, "false".to_string());
+                result.push(InstrVariant {
+                    name: format!("{}_{}", variant.name.to_lowercase(), w),
+                    segments: variant.segments.clone(),
+                    initial_bindings: initial,
+                });
+            }
+        }
+        // AMOMIN/MAX/MINU/MAXU: skip (conditional logic, deferred)
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,6 +418,18 @@ mod tests {
         assert!(names.contains(&"load_8_s"), "load_8_s not found");
         assert!(names.contains(&"store_4"), "store_4 not found");
         assert!(names.contains(&"store_8"), "store_8 not found");
+
+        // AMO width-specialized variants (5 simple ops × 2 widths)
+        assert!(names.contains(&"amoswap_4"), "amoswap_4 not found");
+        assert!(names.contains(&"amoswap_8"), "amoswap_8 not found");
+        assert!(names.contains(&"amoadd_4"), "amoadd_4 not found");
+        assert!(names.contains(&"amoadd_8"), "amoadd_8 not found");
+        assert!(names.contains(&"amoxor_4"), "amoxor_4 not found");
+        assert!(names.contains(&"amoand_4"), "amoand_4 not found");
+        assert!(names.contains(&"amoor_4"), "amoor_4 not found");
+        // AMOMIN/MAX/MINU/MAXU are NOT width-specialized (deferred)
+        assert!(!names.contains(&"amomin_4"), "amomin should not be specialized");
+        assert!(!names.contains(&"amomax_4"), "amomax should not be specialized");
 
         // Should have a reasonable number of variants (not zero, not thousands)
         assert!(variants.len() > 20, "too few variants: {}", variants.len());

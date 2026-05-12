@@ -146,8 +146,12 @@ fn parse_one_operand(s: &str) -> Result<Operand> {
         if s.ends_with(')') {
             let offset_str = &s[..paren_pos];
             let base = &s[paren_pos + 1..s.len() - 1];
-            let offset: i64 = offset_str.parse()
-                .map_err(|_| anyhow!("bad offset in '{}'", s))?;
+            let offset: i64 = if offset_str.is_empty() {
+                0
+            } else {
+                offset_str.parse()
+                    .map_err(|_| anyhow!("bad offset in '{}'", s))?
+            };
             return Ok(Operand::MemRef {
                 offset,
                 base: base.to_string(),

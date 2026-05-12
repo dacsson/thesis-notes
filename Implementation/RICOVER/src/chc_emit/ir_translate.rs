@@ -149,21 +149,51 @@ pub(crate) fn translate_variant(
                 // Type widths were already collected above.
             }
 
-            Instr::Init(id, _ty, exp, _) => {
+            Instr::Init(id, ty, exp, _) => {
                 // Propagate bitvector width through the assignment
                 if let Some(w) = infer_bv_width(exp, type_widths) {
                     type_widths.insert(*id, w);
                 }
-                let smt = exp_to_smt(model, exp, &bindings)?;
-                bindings.insert(*id, smt);
+                match exp_to_smt(model, exp, &bindings) {
+                    Ok(smt) => { bindings.insert(*id, smt); }
+                    // Error arms in the IR contain struct literals (exception
+                    // tuples) that exp_to_smt can't translate. These are in dead
+                    // code paths for our purposes, so bind a placeholder instead.
+                    Err(_) if matches!(ty,
+                        Ty::Union(_) | Ty::Enum(_) | Ty::Struct(_) | Ty::AnyBits
+                    ) || matches!(ty, Ty::Bits(n) if *n > 64) => {
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    Err(e) => return Err(e),
+                }
             }
 
             Instr::Copy(Loc::Id(id), exp, _) => {
                 // Check if this is a tuple field extraction from a union unwrap.
                 // IR pattern: $1 = merge#var as ITYPE.tuple#...0
                 // Isla represents this as Exp::Field(Exp::Unwrap(...), field_name)
-                // These become the instruction's forall-bound CHC parameters.
+                // These become the instruction's forall-bound CHC parameters —
+                // UNLESS the unwrap is an Ok/Err result dispatch, in which case
+                // we pass through or bind a placeholder.
                 if is_field_of_unwrap(exp) {
+                    if let Exp::Field(inner, _) = exp {
+                        if let Exp::Unwrap(ctor, unwrap_inner) = inner.as_ref() {
+                            let ctor_name = model.resolve_name(*ctor);
+                            if ctor_name.contains("Ok") || ctor_name.contains("_OK") {
+                                // Success-path result unwrap: bind to inner value
+                                let smt = exp_to_smt(model, unwrap_inner, &bindings)?;
+                                if let Some(w) = infer_bv_width(unwrap_inner, type_widths) {
+                                    type_widths.insert(*id, w);
+                                }
+                                bindings.insert(*id, smt);
+                                continue;
+                            }
+                            if ctor_name.contains("Err") || ctor_name.contains("Error") {
+                                bindings.insert(*id, "(_ unit)".to_string());
+                                continue;
+                            }
+                        }
+                    }
                     // Pre-bound via specialization (e.g. LOAD/STORE width & sign).
                     // Already in the bindings map; skip param creation.
                     if bindings.contains_key(id) {
@@ -197,8 +227,20 @@ pub(crate) fn translate_variant(
                     if let Some(w) = infer_bv_width(exp, type_widths) {
                         type_widths.insert(*id, w);
                     }
-                    let smt = exp_to_smt(model, exp, &bindings)?;
-                    bindings.insert(*id, smt);
+                    match exp_to_smt(model, exp, &bindings) {
+                        Ok(smt) => { bindings.insert(*id, smt); }
+                        Err(_) => {
+                            let ty = find_decl_type(body, *id);
+                            let is_opaque = matches!(ty,
+                                Ty::Union(_) | Ty::Enum(_) | Ty::Struct(_) | Ty::Unit | Ty::AnyBits
+                            ) || matches!(ty, Ty::Bits(n) if *n > 64);
+                            if is_opaque {
+                                bindings.insert(*id, "(_ unit)".to_string());
+                            } else {
+                                return Err(exp_to_smt(model, exp, &bindings).unwrap_err());
+                            }
+                        }
+                    }
                 }
             }
 
@@ -339,11 +381,79 @@ pub(crate) fn translate_variant(
                         current_mem = format!("({} {} {} {})", mem_fn, current_mem, addr, val_bv64);
                         bindings.insert(*id, "(_ unit)".to_string());
                     }
-                    KnownCall::SailAssert => {
-                        // sail_assert(cond, msg) — elided entirely. The message
-                        // arg is a string literal that exp_to_smt cannot translate,
-                        // so we must short-circuit before generic arg translation.
+                    KnownCall::SailAssert | KnownCall::MemWriteEA | KnownCall::IsAligned => {
+                        // sail_assert(cond, msg) — elided.
+                        // mem_write_ea — no-op (write early ack).
+                        // is_aligned_vaddr — assume always aligned.
                         bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::DataAddr => {
+                        // ext_data_get_addr(rs1:bv5, offset:bv64, access_type, width)
+                        // Returns union (Ok(addr) / Err(...)). We model as always-Ok.
+                        let rs1_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let offset_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        bindings.insert(*id, format!(
+                            "(bvadd (get_reg regs0 {}) {})", rs1_smt, offset_smt
+                        ));
+                        type_widths.insert(*id, 64);
+                    }
+                    KnownCall::TranslateAddr => {
+                        // translateAddr(addr, access_type) → identity (vaddr = paddr)
+                        let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        bindings.insert(*id, addr_smt);
+                        type_widths.insert(*id, 64);
+                    }
+                    KnownCall::MemReadFull => {
+                        // mem_read(access_type, addr, width, aq, rl, reserve)
+                        let addr_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[2], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("mem_read: non-literal width '{}' — AMO must be specialized", width_smt)
+                        })?;
+                        let (mem_fn, result_bits) = match width {
+                            1 => ("mem_read_1", 8u32),
+                            2 => ("mem_read_2", 16),
+                            4 => ("mem_read_4", 32),
+                            8 => ("mem_read_8", 64),
+                            _ => return Err(anyhow!("mem_read: unsupported width {}", width)),
+                        };
+                        bindings.insert(*id, format!("({} {} {})", mem_fn, current_mem, addr_smt));
+                        type_widths.insert(*id, result_bits);
+                    }
+                    KnownCall::MemWriteValue => {
+                        // mem_write_value(addr, width, val, aq, rl, ...)
+                        let addr_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let width_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let val_smt = exp_to_smt(model, &args[2], &bindings)?;
+                        let width = width_smt.parse::<u64>().map_err(|_| {
+                            anyhow!("mem_write_value: non-literal width '{}' — AMO must be specialized", width_smt)
+                        })?;
+                        let mem_fn = match width {
+                            1 => "write_mem_byte",
+                            2 => "write_mem_half",
+                            4 => "write_mem_word",
+                            8 => "write_mem_dword",
+                            _ => return Err(anyhow!("mem_write_value: unsupported width {}", width)),
+                        };
+                        let val_width = infer_bv_width(&args[2], type_widths)
+                            .ok_or_else(|| anyhow!("mem_write_value: cannot infer val width"))?;
+                        let val_bv64 = if val_width == 64 {
+                            val_smt
+                        } else {
+                            format!("((_ zero_extend {}) {})", 64 - val_width, val_smt)
+                        };
+                        current_mem = format!("({} {} {} {})", mem_fn, current_mem, addr_smt, val_bv64);
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::Trunc => {
+                        // trunc(target_width, val) → extract low bits
+                        let width_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let val_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let width = width_smt.parse::<u32>().map_err(|_| {
+                            anyhow!("trunc: non-literal target width '{}'", width_smt)
+                        })?;
+                        bindings.insert(*id, format!("((_ extract {} 0) {})", width - 1, val_smt));
+                        type_widths.insert(*id, width);
                     }
                     KnownCall::ExtendValue => {
                         // extend_value(is_unsigned:bool, data:bv) — pre-bound is_unsigned
@@ -403,8 +513,13 @@ pub(crate) fn translate_variant(
                         // vmem_read as access_type). Such constructors aren't
                         // real functions — if the destination is a union-typed
                         // variable, bind it to a placeholder instead of failing.
+                        // Also catch dead-branch code: Unit returns (side-effect
+                        // calls in dead paths, e.g. wX_pair_bits), wide bitvectors
+                        // (>64 bits, e.g. rX_pair_bits), and AnyBits.
                         let ty = find_decl_type(body, *id);
-                        let is_opaque = matches!(ty, Ty::Union(_) | Ty::Enum(_));
+                        let is_opaque = matches!(ty,
+                            Ty::Union(_) | Ty::Enum(_) | Ty::Unit | Ty::AnyBits | Ty::Struct(_)
+                        ) || matches!(ty, Ty::Bits(n) if *n > 64);
                         match call_to_smt(model, *func_id, args, &bindings) {
                             Ok(smt) => {
                                 // Track the result width for calls that produce a

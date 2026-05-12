@@ -63,6 +63,18 @@ pub(crate) enum KnownCall {
     VMemRead,      // vmem_read(rs1, off, width, ...) — load from reg+offset
     VMemWrite,     // vmem_write(rs1, off, width, val, ...) — store at reg+offset
     ExtendValue,   // extend_value(is_unsigned, data) — dispatches to sign/zero extend
+    BoolNot,       // not(b) → (not b)
+    IsAligned,     // is_aligned_vaddr(...) → true (assume aligned)
+    DataAddr,      // ext_data_get_addr(rs1, offset, ...) → address computation
+    TranslateAddr, // translateAddr(addr, ...) → identity (vaddr = paddr)
+    MemWriteEA,    // mem_write_ea(...) → no-op (write early ack)
+    MemReadFull,   // mem_read(access_type, addr, width, aq, rl, reserve)
+    MemWriteValue, // mem_write_value(addr, width, val, aq, rl, ...)
+    EqBool,        // eq_bool(a, b) → (= a b)
+    Identity,      // __id(x) → x (passthrough)
+    GtSigned,      // (operator >_s)(a, b) → bvsgt
+    GtUnsigned,    // (operator >_u)(a, b) → bvugt
+    Trunc,         // trunc(width, val) → truncate bitvector
     Unknown(String),
 }
 
@@ -106,6 +118,19 @@ pub(crate) fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "vmem_read" => KnownCall::VMemRead,
         "vmem_write" => KnownCall::VMemWrite,
         "extend_value" => KnownCall::ExtendValue,
+        "not" => KnownCall::BoolNot,
+        "is_aligned_vaddr" => KnownCall::IsAligned,
+        "ext_data_get_addr" => KnownCall::DataAddr,
+        "translateAddr" => KnownCall::TranslateAddr,
+        "mem_write_ea" => KnownCall::MemWriteEA,
+        "mem_read" => KnownCall::MemReadFull,
+        "mem_write_value" | "__write_mem_val" => KnownCall::MemWriteValue,
+        "eq_bool" => KnownCall::EqBool,
+        "__id" => KnownCall::Identity,
+        "(operator >_s)" => KnownCall::GtSigned,
+        "(operator >_u)" => KnownCall::GtUnsigned,
+        "trunc" => KnownCall::Trunc,
+        _ if name.starts_with("eq_anything") => KnownCall::EqBool,
         _ => KnownCall::Unknown(name),
     }
 }
@@ -276,11 +301,32 @@ pub(crate) fn call_to_smt(
             // Assertions are dropped — we elide them from the CHC semantics.
             Ok("(_ unit)".to_string())
         }
-        KnownCall::VMemRead | KnownCall::VMemWrite | KnownCall::ExtendValue => {
-            // Handled directly in translate_variant where current_mem and
-            // type_widths are accessible.
+        KnownCall::BoolNot => {
+            Ok(format!("(not {})", smt_args[0]))
+        }
+        KnownCall::IsAligned => {
+            Ok("true".to_string())
+        }
+        KnownCall::MemWriteEA => {
+            Ok("(_ unit)".to_string())
+        }
+        KnownCall::EqBool => {
+            Ok(format!("(= {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::Identity => {
+            Ok(smt_args[0].clone())
+        }
+        KnownCall::GtSigned => {
+            Ok(format!("(bvsgt {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::GtUnsigned => {
+            Ok(format!("(bvugt {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::VMemRead | KnownCall::VMemWrite | KnownCall::ExtendValue
+        | KnownCall::DataAddr | KnownCall::TranslateAddr | KnownCall::MemReadFull
+        | KnownCall::MemWriteValue | KnownCall::Trunc => {
             Err(anyhow!(
-                "vmem_read/vmem_write/extend_value must be handled in translate_variant"
+                "this call must be handled in translate_variant (requires current_mem/type_widths)"
             ))
         }
         KnownCall::ShiftBitsLeft | KnownCall::ShiftBitsRight | KnownCall::ShiftBitsRightArith => {
