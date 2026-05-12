@@ -33,6 +33,11 @@ pub(crate) struct PathTranslation {
     pub(crate) mem_expr: String,
     /// All bindings accumulated during the walk (variable → SMT expression)
     pub(crate) bindings: HashMap<Name, String>,
+    /// Symbolic expression for the next PC value.
+    /// Default: "(bvadd pc0 (_ bv4 64))".
+    /// Overridden by jump_to(target) for JAL/JALR, or
+    /// "(ite cond target (bvadd pc0 (_ bv4 64)))" for BTYPE.
+    pub(crate) pc_expr: String,
 }
 
 /// Walk a linear path of IR instructions and produce a PathTranslation.
@@ -93,6 +98,9 @@ pub(crate) fn collect_globals(model: &IslaIRModel) -> HashMap<Name, String> {
             }
         }
     }
+    if let Some(pc_id) = model.lookup_name("PC") {
+        globals.insert(pc_id, "pc0".to_string());
+    }
     globals
 }
 
@@ -137,6 +145,11 @@ pub(crate) fn translate_variant(
     // Starts as "mem0"; writes wrap it: "(write_mem_dword mem0 addr val)".
     // Reads reference it so a write-then-read sees the updated state.
     let mut current_mem = "mem0".to_string();
+
+    let mut pc_expr = "(bvadd pc0 (_ bv4 64))".to_string();
+    // When we see `jump <bool_id> goto <skip>`, record the condition SMT so the
+    // next zjump_to(target) can build `(ite cond target pc0+4)` for BTYPE.
+    let mut pending_branch_cond: Option<String> = None;
 
     // Walk each segment in order. Bindings, params, reg_write, and current_mem
     // accumulate across segments so a sub-dispatched variant's prologue,
@@ -387,6 +400,47 @@ pub(crate) fn translate_variant(
                         // is_aligned_vaddr — assume always aligned.
                         bindings.insert(*id, "(_ unit)".to_string());
                     }
+                    KnownCall::JumpTo => {
+                        let target = exp_to_smt(model, &args[0], &bindings)?;
+                        pc_expr = match pending_branch_cond.take() {
+                            Some(cond) => format!(
+                                "(ite {} {} (bvadd pc0 (_ bv4 64)))", cond, target
+                            ),
+                            None => target,
+                        };
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::GetNextPC => {
+                        bindings.insert(*id, "(bvadd pc0 (_ bv4 64))".to_string());
+                        type_widths.insert(*id, 64);
+                    }
+                    KnownCall::SetNextPC | KnownCall::UpdateElpState => {
+                        bindings.insert(*id, "(_ unit)".to_string());
+                    }
+                    KnownCall::BitVectorUpdate => {
+                        let bv = exp_to_smt(model, &args[0], &bindings)?;
+                        let idx_smt = exp_to_smt(model, &args[1], &bindings)?;
+                        let bit = exp_to_smt(model, &args[2], &bindings)?;
+                        let width = infer_bv_width(&args[0], type_widths)
+                            .ok_or_else(|| anyhow!("bitvector_update: cannot infer bv width"))?;
+                        let idx = idx_smt.parse::<u32>().map_err(|_| {
+                            anyhow!("bitvector_update: non-literal idx '{}'", idx_smt)
+                        })?;
+                        let result = if width == 1 {
+                            bit
+                        } else if idx == 0 {
+                            format!("(concat ((_ extract {} 1) {}) {})", width - 1, bv, bit)
+                        } else if idx == width - 1 {
+                            format!("(concat {} ((_ extract {} 0) {}))", bit, width - 2, bv)
+                        } else {
+                            format!(
+                                "(concat ((_ extract {} {}) {}) {} ((_ extract {} 0) {}))",
+                                width - 1, idx + 1, bv, bit, idx - 1, bv
+                            )
+                        };
+                        bindings.insert(*id, result);
+                        type_widths.insert(*id, width);
+                    }
                     KnownCall::DataAddr => {
                         // ext_data_get_addr(rs1:bv5, offset:bv64, access_type, width)
                         // Returns union (Ok(addr) / Err(...)). We model as always-Ok.
@@ -555,7 +609,13 @@ pub(crate) fn translate_variant(
             // Segment boundaries are controlled by the caller. Internal
             // control-flow instructions (gotos, inner jumps, function end)
             // are skipped — they don't contribute to the translation.
-            Instr::Goto(_) | Instr::End | Instr::Jump(_, _, _) => {}
+            Instr::Goto(_) | Instr::End => {}
+            Instr::Jump(Exp::Id(cond_id), _, _) => {
+                if let Some(smt) = bindings.get(cond_id) {
+                    pending_branch_cond = Some(smt.clone());
+                }
+            }
+            Instr::Jump(_, _, _) => {}
             _ => {}
         }
         }
@@ -566,6 +626,7 @@ pub(crate) fn translate_variant(
         reg_write,
         mem_expr: current_mem,
         bindings,
+        pc_expr,
     })
 }
 

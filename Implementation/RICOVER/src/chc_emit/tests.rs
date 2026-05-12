@@ -70,8 +70,9 @@ fn emit_foo_equivalence_query() {
     assert!(!query.contains("declare-rel lw\n"));
     assert!(!query.contains("declare-rel sd\n"));
     assert!(!query.contains("declare-rel sw\n"));
-    // ret is still a fallback (JALR not yet handled).
-    assert!(query.contains("declare-rel ret"));
+    // ret is now handled via IR-derived JALR rule.
+    assert!(query.contains("declare-rel jalr"), "jalr should be IR-derived");
+    assert!(!query.contains("declare-rel ret"), "ret fallback should no longer appear");
 
     // Check frame size computation (foo1 allocates 32 bytes)
     assert!(query.contains("bv32 64"));

@@ -380,11 +380,12 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
             writeln!(out)?;
         }
 
-        "ret" => {
-            // --- RET: pseudo-instruction (jalr zero, 0(ra)) ---
-            writeln!(out, "(declare-rel ret")?;
+        "jalr" => {
+            // --- JALR: rd = pc+4, pc = (rs1 + sign_extend(imm)) & ~1 ---
+            writeln!(out, "(declare-rel jalr")?;
             writeln!(out, "  ({STATE_TYPES}")?;
-            writeln!(out, "   {STATE_TYPES}))")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
             writeln!(out)?;
             writeln!(out, "(rule")?;
             writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
@@ -392,11 +393,27 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
             writeln!(out, "           (pc0 (_ BitVec 64))")?;
             writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
             writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
-            writeln!(out, "           (pc1 (_ BitVec 64)))")?;
-            writeln!(out, "    (=> (and (= regs1 regs0)")?;
-            writeln!(out, "             (= mem1 mem0)")?;
-            writeln!(out, "             (= pc1 (get_reg regs0 reg_ra)))")?;
-            writeln!(out, "        (ret regs0 mem0 pc0 regs1 mem1 pc1))))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(
+                out,
+                "           (imm (_ BitVec 12)) (rs1 (_ BitVec 5)) (rd (_ BitVec 5)))"
+            )?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(
+                out,
+                "          (= regs1 (set_reg regs0 rd (bvadd pc0 (_ bv4 64))))"
+            )?;
+            writeln!(out, "          (= mem1 mem0)")?;
+            writeln!(out, "          (= pc1 (concat ((_ extract 63 1)")?;
+            writeln!(
+                out,
+                "                           (bvadd (get_reg regs0 rs1) ((_ sign_extend 52) imm)))"
+            )?;
+            writeln!(out, "                         (_ bv0 1))))")?;
+            writeln!(
+                out,
+                "        (jalr regs0 mem0 pc0 regs1 mem1 pc1 imm rs1 rd))))"
+            )?;
             writeln!(out)?;
         }
 
@@ -651,8 +668,11 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
             Ok(("andi".to_string(), vec![imm_to_bv12(0xff), rs1, rd]))
         }
 
-        // Return pseudo-instruction
-        "ret" => Ok(("ret".to_string(), vec![])),
+        // ret = jalr x0, 0(ra)
+        "ret" => Ok((
+            "jalr".to_string(),
+            vec!["(_ bv0 12)".to_string(), "reg_ra".to_string(), "reg_zero".to_string()],
+        )),
 
         // AMO: amoadd.w rd, rs2, (rs1) → amoadd_4 rs2 rs1 rd
         _ if op.starts_with("amo") => {

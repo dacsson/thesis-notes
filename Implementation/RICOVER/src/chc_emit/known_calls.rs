@@ -74,7 +74,14 @@ pub(crate) enum KnownCall {
     Identity,      // __id(x) → x (passthrough)
     GtSigned,      // (operator >_s)(a, b) → bvsgt
     GtUnsigned,    // (operator >_u)(a, b) → bvugt
+    GteSigned,     // (operator >=_s)(a, b) → bvsge
+    GteUnsigned,   // (operator >=_u)(a, b) → bvuge
     Trunc,         // trunc(width, val) → truncate bitvector
+    JumpTo,        // jump_to(target) → sets nextPC = target
+    GetNextPC,     // get_next_pc() → PC+4 (return address)
+    SetNextPC,     // set_next_pc(pc) → no-op (pc_expr derived from jump_to)
+    UpdateElpState, // update_elp_state(rs1) → Zicfilp no-op
+    BitVectorUpdate, // bitvector_update(bv, idx, bit) → clear/set one bit
     Unknown(String),
 }
 
@@ -129,7 +136,14 @@ pub(crate) fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "__id" => KnownCall::Identity,
         "(operator >_s)" => KnownCall::GtSigned,
         "(operator >_u)" => KnownCall::GtUnsigned,
+        "(operator >=_s)" => KnownCall::GteSigned,
+        "(operator >=_u)" => KnownCall::GteUnsigned,
         "trunc" => KnownCall::Trunc,
+        "jump_to" => KnownCall::JumpTo,
+        "get_next_pc" => KnownCall::GetNextPC,
+        "set_next_pc" => KnownCall::SetNextPC,
+        "update_elp_state" => KnownCall::UpdateElpState,
+        "bitvector_update" => KnownCall::BitVectorUpdate,
         _ if name.starts_with("eq_anything") => KnownCall::EqBool,
         _ => KnownCall::Unknown(name),
     }
@@ -322,9 +336,17 @@ pub(crate) fn call_to_smt(
         KnownCall::GtUnsigned => {
             Ok(format!("(bvugt {} {})", smt_args[0], smt_args[1]))
         }
+        KnownCall::GteSigned => {
+            Ok(format!("(bvsge {} {})", smt_args[0], smt_args[1]))
+        }
+        KnownCall::GteUnsigned => {
+            Ok(format!("(bvuge {} {})", smt_args[0], smt_args[1]))
+        }
         KnownCall::VMemRead | KnownCall::VMemWrite | KnownCall::ExtendValue
         | KnownCall::DataAddr | KnownCall::TranslateAddr | KnownCall::MemReadFull
-        | KnownCall::MemWriteValue | KnownCall::Trunc => {
+        | KnownCall::MemWriteValue | KnownCall::Trunc
+        | KnownCall::JumpTo | KnownCall::GetNextPC | KnownCall::SetNextPC
+        | KnownCall::UpdateElpState | KnownCall::BitVectorUpdate => {
             Err(anyhow!(
                 "this call must be handled in translate_variant (requires current_mem/type_widths)"
             ))

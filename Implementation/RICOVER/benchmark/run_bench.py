@@ -37,26 +37,50 @@ def build():
 def emit_query(bench_path: Path, out_smt: Path):
     name = bench_path.stem
     cmd = [
-        str(RICOVER), "check-equiv",
-        "--before", str(bench_path),
-        "--after", str(bench_path),
-        "--before-fn", "src",
-        "--after-fn", "tgt",
-        "-f", name,
-        "--ir", str(IR_FILE),
-        "-o", str(out_smt),
+        str(RICOVER),
+        "check-equiv",
+        "--before",
+        str(bench_path),
+        "--after",
+        str(bench_path),
+        "--before-fn",
+        "src",
+        "--after-fn",
+        "tgt",
+        "-f",
+        name,
+        "--ir",
+        str(IR_FILE),
+        "-o",
+        str(out_smt),
     ]
+
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         print(f"ricover emit failed:\n{r.stderr}", file=sys.stderr)
         return False
+
+    print("\n========== Run logs ==========")
+    print(f"{r.stdout}")
+    print("==============================\n")
+
     if r.stderr:
+        print("\n========== Warnings ==========")
         # Print warnings (fallback rules, skipped variants) but abbreviated
+
+        # Save all stderr to a log file
+        log_file = bench_path.parent / f"{name}.log"
+        with open(log_file, "w") as f:
+            f.write(r.stderr)
+
+        print(f"  (full log saved to {log_file})")
+
         for line in r.stderr.splitlines():
             if line.startswith("warning: falling back"):
                 print(f"  {line}")
             elif line.startswith("warning: IR transpiler skipped"):
                 print(f"  {line.split(';')[0]}")
+        print("==============================\n")
     return True
 
 
@@ -72,7 +96,9 @@ def run_z3(smt_file: Path, timeout: int) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Run a RICOVER benchmark")
     parser.add_argument("file", type=Path, help="Path to .s benchmark file")
-    parser.add_argument("--timeout", type=int, default=60, help="z3 timeout in seconds (default: 60)")
+    parser.add_argument(
+        "--timeout", type=int, default=60, help="z3 timeout in seconds (default: 60)"
+    )
     parser.add_argument("--keep", action="store_true", help="Keep generated .smt2 file")
     args = parser.parse_args()
 
@@ -102,7 +128,9 @@ def main():
     if args.keep:
         out_smt = bench.with_suffix(".smt2")
     else:
-        tmp = tempfile.NamedTemporaryFile(suffix=".smt2", delete=False, prefix=f"{name}_")
+        tmp = tempfile.NamedTemporaryFile(
+            suffix=".smt2", delete=False, prefix=f"{name}_"
+        )
         out_smt = Path(tmp.name)
         tmp.close()
 

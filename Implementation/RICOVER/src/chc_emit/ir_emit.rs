@@ -79,8 +79,7 @@ fn emit_variant_chc(
     // If writes occurred, mem_expr is a nested write expression like
     //   (write_mem_dword mem0 addr val)
     writeln!(out, "             (= mem1 {})", translation.mem_expr)?;
-    // PC always advances by 4
-    writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+    writeln!(out, "             (= pc1 {}))", translation.pc_expr)?;
 
     // Head of the rule
     write!(out, "        ({} regs0 mem0 pc0 regs1 mem1 pc1", name)?;

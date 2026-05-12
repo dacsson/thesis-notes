@@ -21,6 +21,11 @@ pub struct IrFunction<'a> {
 }
 
 impl<'ir> IslaIRModel<'ir> {
+    pub fn lookup_name(&self, name: &str) -> Option<Name> {
+        let encoded = zencode::encode(name);
+        self.symtab.get(&encoded)
+    }
+
     pub fn get_function(&self, name: &str) -> Option<IrFunction<'_>> {
         let encoded = zencode::encode(name);
         let id = self.symtab.get(&encoded)?;
