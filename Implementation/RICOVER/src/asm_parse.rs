@@ -4,6 +4,8 @@
 //! with their operands (registers, immediates).
 
 use anyhow::{anyhow, Result};
+use std::collections::HashMap;
+use std::ops::Range;
 use std::path::Path;
 
 /// A single RISC-V instruction with its operands.
@@ -22,6 +24,8 @@ pub enum Operand {
     Imm(i64),
     /// Memory reference: offset(base_reg)
     MemRef { offset: i64, base: String },
+    /// Branch target label (e.g., ".LBB0_2")
+    Label(String),
 }
 
 /// A parsed assembly function: label + sequence of instructions.
@@ -29,6 +33,137 @@ pub enum Operand {
 pub struct AsmFunction {
     pub name: String,
     pub instructions: Vec<AsmInstruction>,
+    /// Intra-function labels: label name → index of first instruction after that label.
+    pub labels: HashMap<String, usize>,
+}
+
+/// A basic block within a function's control-flow graph.
+#[derive(Debug, Clone)]
+pub struct BasicBlock {
+    pub id: usize,
+    /// Data instruction indices (excludes branch terminator, if any).
+    pub instr_range: Range<usize>,
+    pub terminator: Terminator,
+}
+
+#[derive(Debug, Clone)]
+pub enum Terminator {
+    /// Conditional branch: taken → one block, not-taken → another.
+    Branch {
+        branch_instr_idx: usize,
+        taken_block: usize,
+        fallthrough_block: usize,
+    },
+    /// Unconditional fall-through to the next block.
+    Fallthrough(usize),
+    /// Function exit (block ends with `ret` or is the last block).
+    Exit,
+}
+
+/// Return true if the opcode is a conditional branch.
+pub fn is_branch(opcode: &str) -> bool {
+    matches!(
+        opcode,
+        "beq" | "bne" | "blt" | "bge" | "bltu" | "bgeu"
+            | "beqz" | "bnez" | "bltz" | "bgez" | "blez" | "bgtz"
+    )
+}
+
+/// Extract the target label from a branch instruction.
+pub fn branch_target(instr: &AsmInstruction) -> Result<String> {
+    let label_op = instr
+        .operands
+        .last()
+        .ok_or_else(|| anyhow!("{}: branch has no operands", instr.opcode))?;
+    match label_op {
+        Operand::Label(l) => Ok(l.clone()),
+        _ => Err(anyhow!("{}: last operand is not a label", instr.opcode)),
+    }
+}
+
+/// Build a control-flow graph from a parsed function.
+///
+/// Each basic block gets a contiguous range of data instructions and a
+/// terminator (branch, fallthrough, or exit). Block boundaries are placed
+/// at label targets and after branch instructions.
+pub fn build_cfg(func: &AsmFunction) -> Result<Vec<BasicBlock>> {
+    let instrs = &func.instructions;
+    if instrs.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // Collect block-start indices
+    let mut starts: Vec<usize> = vec![0];
+    for &idx in func.labels.values() {
+        starts.push(idx);
+    }
+    for (i, instr) in instrs.iter().enumerate() {
+        if is_branch(&instr.opcode) && i + 1 < instrs.len() {
+            starts.push(i + 1);
+        }
+    }
+    starts.sort_unstable();
+    starts.dedup();
+    starts.retain(|&idx| idx < instrs.len());
+
+    let idx_to_block: HashMap<usize, usize> = starts
+        .iter()
+        .enumerate()
+        .map(|(block_id, &start)| (start, block_id))
+        .collect();
+
+    let num_blocks = starts.len();
+    let mut blocks = Vec::new();
+
+    for (block_id, &start) in starts.iter().enumerate() {
+        let end = if block_id + 1 < num_blocks {
+            starts[block_id + 1]
+        } else {
+            instrs.len()
+        };
+
+        let last_idx = end - 1;
+        let last_instr = &instrs[last_idx];
+
+        let (instr_range, terminator) = if is_branch(&last_instr.opcode) {
+            let target_label = branch_target(last_instr)?;
+            let target_idx = *func.labels.get(&target_label).ok_or_else(|| {
+                anyhow!("unknown branch target label: {}", target_label)
+            })?;
+            let taken_block = *idx_to_block.get(&target_idx).ok_or_else(|| {
+                anyhow!(
+                    "branch target {} (idx {}) is not a block start",
+                    target_label,
+                    target_idx
+                )
+            })?;
+            let fallthrough_block = if block_id + 1 < num_blocks {
+                block_id + 1
+            } else {
+                return Err(anyhow!("branch at end of function with no fallthrough"));
+            };
+            (
+                start..last_idx,
+                Terminator::Branch {
+                    branch_instr_idx: last_idx,
+                    taken_block,
+                    fallthrough_block,
+                },
+            )
+        } else if last_instr.opcode == "ret" || block_id + 1 >= num_blocks {
+            (start..end, Terminator::Exit)
+        } else {
+            (start..end, Terminator::Fallthrough(block_id + 1))
+        };
+
+        blocks.push(BasicBlock {
+            id: block_id,
+            instr_range,
+            terminator,
+        });
+    }
+
+    Ok(blocks)
 }
 
 /// Parse a .s file and extract the named function.
@@ -46,6 +181,7 @@ pub fn parse_asm(contents: &str, function_name: &str) -> Result<AsmFunction> {
     let label = format!("{}:", function_name);
     let mut in_function = false;
     let mut instructions = Vec::new();
+    let mut labels = HashMap::new();
 
     for line in contents.lines() {
         // Strip inline comments so trailing `# @label` annotations don't
@@ -63,9 +199,16 @@ pub fn parse_asm(contents: &str, function_name: &str) -> Result<AsmFunction> {
             continue;
         }
 
-        // Another label means the function ended
+        // Another label means the function ended (non-dot labels only)
         if in_function && !trimmed.starts_with('.') && trimmed.ends_with(':') {
             break;
+        }
+
+        // Intra-function labels (e.g. .LBB0_2:) — record position
+        if in_function && trimmed.starts_with('.') && trimmed.ends_with(':') {
+            let lbl = trimmed.trim_end_matches(':').to_string();
+            labels.insert(lbl, instructions.len());
+            continue;
         }
 
         // Skip assembler directives (.globl, .type, etc.)
@@ -87,6 +230,7 @@ pub fn parse_asm(contents: &str, function_name: &str) -> Result<AsmFunction> {
     Ok(AsmFunction {
         name: function_name.to_string(),
         instructions,
+        labels,
     })
 }
 
@@ -141,6 +285,11 @@ fn parse_operands(s: &str) -> Result<Vec<Operand>> {
 ///   - Immediate:        "-32", "1"           → Imm(i64)
 ///   - Register:         "sp", "a0", "zero"   → Reg(String)
 fn parse_one_operand(s: &str) -> Result<Operand> {
+    // Branch target label (e.g. ".LBB0_2")
+    if s.starts_with('.') {
+        return Ok(Operand::Label(s.to_string()));
+    }
+
     // Memory reference: offset(base) e.g. "24(sp)" or "-20(s0)"
     if let Some(paren_pos) = s.find('(') {
         if s.ends_with(')') {
@@ -244,5 +393,113 @@ mod tests {
             }
             _ => panic!("expected MemRef"),
         }
+    }
+
+    #[test]
+    fn parse_label_operand() {
+        let op = parse_one_operand(".LBB0_2").unwrap();
+        match op {
+            Operand::Label(l) => assert_eq!(l, ".LBB0_2"),
+            _ => panic!("expected Label"),
+        }
+    }
+
+    const PR44306: &str = include_str!("../benchmark/supported/PR44306_BAD.s");
+
+    #[test]
+    fn parse_branch_function_src() {
+        let func = parse_asm(PR44306, "src").unwrap();
+        assert_eq!(func.instructions.len(), 7);
+        assert_eq!(func.instructions[0].opcode, "lw");
+        assert_eq!(func.instructions[2].opcode, "blt");
+        assert_eq!(func.instructions[3].opcode, "mv");
+        assert_eq!(func.instructions[4].opcode, "ld");
+        assert_eq!(func.instructions[6].opcode, "ret");
+        assert_eq!(func.labels.get(".LBB0_2"), Some(&4));
+    }
+
+    #[test]
+    fn parse_branch_function_tgt() {
+        let func = parse_asm(PR44306, "tgt").unwrap();
+        assert_eq!(func.instructions.len(), 6);
+        assert_eq!(func.instructions[2].opcode, "blt");
+        assert_eq!(func.instructions[4].opcode, "sw");
+        assert_eq!(func.labels.get(".LBB0_2"), Some(&4));
+    }
+
+    #[test]
+    fn parse_foo1_no_labels() {
+        let func = parse_asm(FOO1, "foo").unwrap();
+        assert!(func.labels.is_empty());
+    }
+
+    // ── CFG construction tests ──────────────────────────────────────
+
+    #[test]
+    fn cfg_straight_line_foo1() {
+        let func = parse_asm(FOO1, "foo").unwrap();
+        let cfg = build_cfg(&func).unwrap();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].instr_range, 0..14);
+        assert!(matches!(cfg[0].terminator, Terminator::Exit));
+    }
+
+    #[test]
+    fn cfg_straight_line_foo2() {
+        let func = parse_asm(FOO2, "foo").unwrap();
+        let cfg = build_cfg(&func).unwrap();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].instr_range, 0..2);
+        assert!(matches!(cfg[0].terminator, Terminator::Exit));
+    }
+
+    #[test]
+    fn cfg_pr44306_src() {
+        let func = parse_asm(PR44306, "src").unwrap();
+        let cfg = build_cfg(&func).unwrap();
+        assert_eq!(cfg.len(), 3);
+
+        // bb0: lw, lw (branch terminator excluded)
+        assert_eq!(cfg[0].instr_range, 0..2);
+        match cfg[0].terminator {
+            Terminator::Branch { branch_instr_idx, taken_block, fallthrough_block } => {
+                assert_eq!(branch_instr_idx, 2);
+                assert_eq!(taken_block, 2);
+                assert_eq!(fallthrough_block, 1);
+            }
+            _ => panic!("expected Branch terminator for bb0"),
+        }
+
+        // bb1: mv (fallthrough to bb2)
+        assert_eq!(cfg[1].instr_range, 3..4);
+        assert!(matches!(cfg[1].terminator, Terminator::Fallthrough(2)));
+
+        // bb2: ld, sd, ret (exit)
+        assert_eq!(cfg[2].instr_range, 4..7);
+        assert!(matches!(cfg[2].terminator, Terminator::Exit));
+    }
+
+    #[test]
+    fn cfg_pr44306_tgt() {
+        let func = parse_asm(PR44306, "tgt").unwrap();
+        let cfg = build_cfg(&func).unwrap();
+        assert_eq!(cfg.len(), 3);
+
+        // bb0: lw, lw (branch)
+        assert_eq!(cfg[0].instr_range, 0..2);
+        match cfg[0].terminator {
+            Terminator::Branch { taken_block, fallthrough_block, .. } => {
+                assert_eq!(taken_block, 2);
+                assert_eq!(fallthrough_block, 1);
+            }
+            _ => panic!("expected Branch"),
+        }
+
+        // bb1: mv (fallthrough)
+        assert_eq!(cfg[1].instr_range, 3..4);
+
+        // bb2: sw, ret (exit)
+        assert_eq!(cfg[2].instr_range, 4..6);
+        assert!(matches!(cfg[2].terminator, Terminator::Exit));
     }
 }

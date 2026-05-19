@@ -4,7 +4,9 @@ use std::fmt::Write;
 use anyhow::{Result, anyhow};
 
 use super::STATE_TYPES;
-use crate::asm_parse::{AsmFunction, AsmInstruction, Operand, reg_index};
+use crate::asm_parse::{
+    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, is_branch, reg_index,
+};
 
 // =========================================================================
 // Assembly-level CHC emission
@@ -61,10 +63,16 @@ pub(crate) fn ir_rule_for_opcode<'a>(
 }
 
 /// Collect the set of distinct opcodes used across assembly functions.
+///
+/// Branch instructions are excluded — they are handled structurally
+/// (ite merge) and don't need their own CHC relation.
 pub(crate) fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> {
     let mut opcodes = HashSet::new();
     for prog in progs {
         for instr in &prog.instructions {
+            if is_branch(&instr.opcode) {
+                continue;
+            }
             // Use the post-translation opcode so pseudo-instructions
             // (li -> addi, zext.b -> andi) don't register as missing.
             let resolved = instruction_to_chc(instr)
@@ -417,6 +425,38 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
             writeln!(out)?;
         }
 
+        "mv" => {
+            // --- MV: addi rd, rs1, 0 ---
+            writeln!(out, "(declare-rel addi")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(out, "    (=> (and (= regs1 (set_reg regs0 rd")?;
+            writeln!(
+                out,
+                "                               (bvadd (get_reg regs0 rs1)"
+            )?;
+            writeln!(
+                out,
+                "                                      ((_ sign_extend 52) 0))))"
+            )?;
+            writeln!(out, "             (= mem1 mem0)")?;
+            writeln!(out, "             (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(
+                out,
+                "        (addi regs0 mem0 pc0 regs1 mem1 pc1 rs1 rd))))"
+            )?;
+            writeln!(out)?;
+        }
+
         _ => return Err(anyhow!("no fallback rule for opcode: {}", opcode)),
     }
 
@@ -434,17 +474,44 @@ fn expand_compressed(instr: &AsmInstruction) -> Option<AsmInstruction> {
 
     match op {
         // Load: same operand format as standard lw/ld
-        "c.lw" | "c.lwsp" => Some(AsmInstruction { opcode: "lw".into(), operands: ops.clone() }),
-        "c.ld" | "c.ldsp" => Some(AsmInstruction { opcode: "ld".into(), operands: ops.clone() }),
-        "c.lh" => Some(AsmInstruction { opcode: "lh".into(), operands: ops.clone() }),
-        "c.lhu" => Some(AsmInstruction { opcode: "lhu".into(), operands: ops.clone() }),
-        "c.lbu" => Some(AsmInstruction { opcode: "lbu".into(), operands: ops.clone() }),
+        "c.lw" | "c.lwsp" => Some(AsmInstruction {
+            opcode: "lw".into(),
+            operands: ops.clone(),
+        }),
+        "c.ld" | "c.ldsp" => Some(AsmInstruction {
+            opcode: "ld".into(),
+            operands: ops.clone(),
+        }),
+        "c.lh" => Some(AsmInstruction {
+            opcode: "lh".into(),
+            operands: ops.clone(),
+        }),
+        "c.lhu" => Some(AsmInstruction {
+            opcode: "lhu".into(),
+            operands: ops.clone(),
+        }),
+        "c.lbu" => Some(AsmInstruction {
+            opcode: "lbu".into(),
+            operands: ops.clone(),
+        }),
 
         // Store: same operand format as standard sw/sd
-        "c.sw" | "c.swsp" => Some(AsmInstruction { opcode: "sw".into(), operands: ops.clone() }),
-        "c.sd" | "c.sdsp" => Some(AsmInstruction { opcode: "sd".into(), operands: ops.clone() }),
-        "c.sh" => Some(AsmInstruction { opcode: "sh".into(), operands: ops.clone() }),
-        "c.sb" => Some(AsmInstruction { opcode: "sb".into(), operands: ops.clone() }),
+        "c.sw" | "c.swsp" => Some(AsmInstruction {
+            opcode: "sw".into(),
+            operands: ops.clone(),
+        }),
+        "c.sd" | "c.sdsp" => Some(AsmInstruction {
+            opcode: "sd".into(),
+            operands: ops.clone(),
+        }),
+        "c.sh" => Some(AsmInstruction {
+            opcode: "sh".into(),
+            operands: ops.clone(),
+        }),
+        "c.sb" => Some(AsmInstruction {
+            opcode: "sb".into(),
+            operands: ops.clone(),
+        }),
 
         // I-type: c.addi rd, imm → addi rd, rd, imm
         "c.addi" | "c.addiw" | "c.andi" => {
@@ -620,8 +687,8 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
 
         // R-type arithmetic: add rd, rs1, rs2
         // IR RTYPE tuple is (rs2, rs1, rd, op), so operands map to (rs2, rs1, rd).
-        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra"
-        | "addw" | "subw" | "sllw" | "srlw" | "sraw" => {
+        "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra" | "addw"
+        | "subw" | "sllw" | "srlw" | "sraw" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -671,8 +738,25 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
         // ret = jalr x0, 0(ra)
         "ret" => Ok((
             "jalr".to_string(),
-            vec!["(_ bv0 12)".to_string(), "reg_ra".to_string(), "reg_zero".to_string()],
+            vec![
+                "(_ bv0 12)".to_string(),
+                "reg_ra".to_string(),
+                "reg_zero".to_string(),
+            ],
         )),
+
+        // mv = addi rd, rs1, 0
+        "mv" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("mv: expected register for rd")),
+            };
+            let rs1 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("mv: expected register for rs1")),
+            };
+            Ok(("addi".to_string(), vec![imm_to_bv12(0), rs1, rd]))
+        }
 
         // AMO: amoadd.w rd, rs2, (rs1) → amoadd_4 rs2 rs1 rd
         _ if op.starts_with("amo") => {
@@ -698,35 +782,122 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
     }
 }
 
-/// Emit a CHC rule for a complete assembly function.
+// =========================================================================
+// Branch handling
+// =========================================================================
+
+/// Build the SMT-LIB2 condition expression for a branch instruction.
 ///
-/// The function becomes a relation mapping initial state to final state:
-///   (declare-rel funcname (Regs_in Mem_in PC_in  Regs_out Mem_out PC_out))
+/// The condition is true when the branch is **taken** (i.e. jump to target).
+/// State variables are read from the state at `state_idx`.
+fn branch_condition(instr: &AsmInstruction, state_idx: usize) -> Result<String> {
+    let op = instr.opcode.as_str();
+    let s = state_idx;
+
+    // Expand pseudo-branches to their base form with explicit zero operand
+    let (cmp_op, rs1_smt, rs2_smt) = match op {
+        // B-type: op rs1, rs2, label
+        "beq" | "bne" | "blt" | "bge" | "bltu" | "bgeu" => {
+            let rs1 = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs1", op)),
+            };
+            let rs2 = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("{}: expected register for rs2", op)),
+            };
+            (op, rs1, rs2)
+        }
+        // Pseudo: beqz rs, label → beq rs, zero
+        "beqz" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("beqz: expected register")),
+            };
+            ("beq", rs, "reg_zero".to_string())
+        }
+        "bnez" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("bnez: expected register")),
+            };
+            ("bne", rs, "reg_zero".to_string())
+        }
+        // bltz rs → blt rs, zero
+        "bltz" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("bltz: expected register")),
+            };
+            ("blt", rs, "reg_zero".to_string())
+        }
+        // bgez rs → bge rs, zero
+        "bgez" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("bgez: expected register")),
+            };
+            ("bge", rs, "reg_zero".to_string())
+        }
+        // blez rs → bge zero, rs
+        "blez" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("blez: expected register")),
+            };
+            ("bge", "reg_zero".to_string(), rs)
+        }
+        // bgtz rs → blt zero, rs
+        "bgtz" => {
+            let rs = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("bgtz: expected register")),
+            };
+            ("blt", "reg_zero".to_string(), rs)
+        }
+        _ => return Err(anyhow!("{}: not a branch instruction", op)),
+    };
+
+    let r1 = format!("(get_reg regs{s} {rs1_smt})");
+    let r2 = format!("(get_reg regs{s} {rs2_smt})");
+
+    Ok(match cmp_op {
+        "beq" => format!("(= {} {})", r1, r2),
+        "bne" => format!("(not (= {} {}))", r1, r2),
+        "blt" => format!("(bvslt {} {})", r1, r2),
+        "bge" => format!("(bvsge {} {})", r1, r2),
+        "bltu" => format!("(bvult {} {})", r1, r2),
+        "bgeu" => format!("(bvuge {} {})", r1, r2),
+        _ => unreachable!(),
+    })
+}
+
+// =========================================================================
+// Per-block CHC emission
+// =========================================================================
+
+/// Emit the body rule for a single basic block.
 ///
-/// The rule chains all instructions sequentially with intermediate state variables:
-///   (rule (forall ((regs0 ...) ... (regsN ...))
-///     (=> (and (instr1 regs0 mem0 pc0 regs1 mem1 pc1 ...)
-///              ...
-///              (instrN regsN-1 ... regsN ...))
-///         (funcname regs0 mem0 pc0 regsN memN pcN))))
-pub(crate) fn emit_program_rule(
+/// Declares `<func_name>_bb<N>` and emits a rule chaining its data
+/// instructions with state threading.
+fn emit_block_body_rule(
+    func_name: &str,
+    block: &BasicBlock,
     func: &AsmFunction,
     ir_names: &HashSet<String>,
     out: &mut String,
 ) -> Result<()> {
-    let n = func.instructions.len();
+    let bb_name = format!("{}_bb{}", func_name, block.id);
+    let n_instrs = block.instr_range.len();
 
-    // Declare the function relation: (state_in, state_out)
-    writeln!(out, "(declare-rel {}", func.name)?;
+    writeln!(out, "(declare-rel {bb_name}")?;
     writeln!(out, "  ({STATE_TYPES}")?;
     writeln!(out, "   {STATE_TYPES}))")?;
     writeln!(out)?;
 
-    // Build forall bindings: n+1 state triples (regs0..regsN, mem0..memN, pc0..pcN)
     writeln!(out, "(rule")?;
     write!(out, "  (forall (")?;
-
-    for i in 0..=n {
+    for i in 0..=n_instrs {
         if i > 0 {
             write!(out, "\n           ")?;
         }
@@ -739,41 +910,203 @@ pub(crate) fn emit_program_rule(
     }
     writeln!(out, ")")?;
 
-    // Conjunction of instruction relation calls
     writeln!(out, "    (=> (and")?;
-    for (i, instr) in func.instructions.iter().enumerate() {
-        let (opcode, operands) = instruction_to_chc(instr)?;
-        // Prefer an IR-derived rule name when the IR covers this opcode.
-        let rule_name = ir_rule_for_opcode(&opcode, ir_names)
-            .map(|s| s.to_string())
-            .unwrap_or(opcode);
-        let state_args = format!(
-            "regs{i} mem{i} pc{i} regs{} mem{} pc{}",
-            i + 1,
-            i + 1,
-            i + 1
-        );
-        // Comment with original assembly for readability
-        writeln!(out, "          ; {}", format_asm_instr(instr))?;
-        if operands.is_empty() {
-            writeln!(out, "          ({rule_name} {state_args})")?;
-        } else {
-            writeln!(
-                out,
-                "          ({rule_name} {state_args} {})",
-                operands.join(" ")
-            )?;
+
+    if n_instrs == 0 {
+        writeln!(out, "          (= regs0 regs0) ; empty block")?;
+    } else {
+        for (local_idx, global_idx) in block.instr_range.clone().enumerate() {
+            let instr = &func.instructions[global_idx];
+            let (opcode, operands) = instruction_to_chc(instr)?;
+            let rule_name = ir_rule_for_opcode(&opcode, ir_names)
+                .map(|s| s.to_string())
+                .unwrap_or(opcode);
+            let si = local_idx;
+            let so = local_idx + 1;
+            let state_args = format!("regs{si} mem{si} pc{si} regs{so} mem{so} pc{so}");
+
+            writeln!(out, "          ; {}", format_asm_instr(instr))?;
+            if operands.is_empty() {
+                writeln!(out, "          ({rule_name} {state_args})")?;
+            } else {
+                writeln!(
+                    out,
+                    "          ({rule_name} {state_args} {})",
+                    operands.join(" ")
+                )?;
+            }
         }
     }
 
-    // Close (and ...) and emit the head
     writeln!(out, "        )")?;
     writeln!(
         out,
-        "        ({} regs0 mem0 pc0 regs{n} mem{n} pc{n}))))",
-        func.name
+        "        ({bb_name} regs0 mem0 pc0 regs{n_instrs} mem{n_instrs} pc{n_instrs}))))"
     )?;
     writeln!(out)?;
+
+    Ok(())
+}
+
+/// Emit "from block to exit" composition rules for every block in the CFG.
+///
+/// - Exit block: `from_bbN(in, out) :- bbN(in, out)`
+/// - Fallthrough: `from_bbN(in, out) :- bbN(in, mid) ∧ from_bbM(mid, out)`
+/// - Branch: two rules — taken and fallthrough path — with the branch
+///   condition as guard
+///
+/// The entry block (bb0) uses `func_name` as its relation name instead of
+/// `func_name_from_bb0`.
+fn emit_composition_rules(
+    func_name: &str,
+    cfg: &[BasicBlock],
+    func: &AsmFunction,
+    out: &mut String,
+) -> Result<()> {
+    // Declare all composition relations up front (Z3 requires declare-rel
+    // before first use, so forward references must be pre-declared).
+    for block in cfg {
+        let from_name = if block.id == 0 {
+            func_name.to_string()
+        } else {
+            format!("{}_from_bb{}", func_name, block.id)
+        };
+        writeln!(out, "(declare-rel {from_name}")?;
+        writeln!(out, "  ({STATE_TYPES}")?;
+        writeln!(out, "   {STATE_TYPES}))")?;
+    }
+    writeln!(out)?;
+
+    // Emit rules
+    for block in cfg {
+        let from_name = if block.id == 0 {
+            func_name.to_string()
+        } else {
+            format!("{}_from_bb{}", func_name, block.id)
+        };
+        let bb_name = format!("{}_bb{}", func_name, block.id);
+
+        match &block.terminator {
+            Terminator::Exit => {
+                writeln!(out, "(rule")?;
+                writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc0 (_ BitVec 64))")?;
+                writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc1 (_ BitVec 64)))")?;
+                writeln!(out, "    (=> ({bb_name} regs0 mem0 pc0 regs1 mem1 pc1)")?;
+                writeln!(out, "        ({from_name} regs0 mem0 pc0 regs1 mem1 pc1))))")?;
+            }
+
+            Terminator::Fallthrough(next_id) => {
+                let next_from = if *next_id == 0 {
+                    func_name.to_string()
+                } else {
+                    format!("{}_from_bb{}", func_name, next_id)
+                };
+
+                writeln!(out, "(rule")?;
+                writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc0 (_ BitVec 64))")?;
+                writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc1 (_ BitVec 64))")?;
+                writeln!(out, "           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc2 (_ BitVec 64)))")?;
+                writeln!(out, "    (=> (and ({bb_name} regs0 mem0 pc0 regs1 mem1 pc1)")?;
+                writeln!(out, "             ({next_from} regs1 mem1 pc1 regs2 mem2 pc2))")?;
+                writeln!(out, "        ({from_name} regs0 mem0 pc0 regs2 mem2 pc2))))")?;
+            }
+
+            Terminator::Branch {
+                branch_instr_idx,
+                taken_block,
+                fallthrough_block,
+            } => {
+                let taken_from = if *taken_block == 0 {
+                    func_name.to_string()
+                } else {
+                    format!("{}_from_bb{}", func_name, taken_block)
+                };
+                let fall_from = if *fallthrough_block == 0 {
+                    func_name.to_string()
+                } else {
+                    format!("{}_from_bb{}", func_name, fallthrough_block)
+                };
+
+                let branch_instr = &func.instructions[*branch_instr_idx];
+                // The branch condition reads from the block's output state (regs1),
+                // which is the state after the block body executes.
+                let cond = branch_condition(branch_instr, 1)?;
+
+                // Taken path
+                writeln!(out, "; taken: {} → bb{}", format_asm_instr(branch_instr), taken_block)?;
+                writeln!(out, "(rule")?;
+                writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc0 (_ BitVec 64))")?;
+                writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc1 (_ BitVec 64))")?;
+                writeln!(out, "           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc2 (_ BitVec 64)))")?;
+                writeln!(out, "    (=> (and ({bb_name} regs0 mem0 pc0 regs1 mem1 pc1)")?;
+                writeln!(out, "             {cond}")?;
+                writeln!(out, "             ({taken_from} regs1 mem1 pc1 regs2 mem2 pc2))")?;
+                writeln!(out, "        ({from_name} regs0 mem0 pc0 regs2 mem2 pc2))))")?;
+                writeln!(out)?;
+
+                // Fallthrough path
+                writeln!(out, "; not-taken: fallthrough → bb{}", fallthrough_block)?;
+                writeln!(out, "(rule")?;
+                writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc0 (_ BitVec 64))")?;
+                writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc1 (_ BitVec 64))")?;
+                writeln!(out, "           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+                writeln!(out, "           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+                writeln!(out, "           (pc2 (_ BitVec 64)))")?;
+                writeln!(out, "    (=> (and ({bb_name} regs0 mem0 pc0 regs1 mem1 pc1)")?;
+                writeln!(out, "             (not {cond})")?;
+                writeln!(out, "             ({fall_from} regs1 mem1 pc1 regs2 mem2 pc2))")?;
+                writeln!(out, "        ({from_name} regs0 mem0 pc0 regs2 mem2 pc2))))")?;
+            }
+        }
+        writeln!(out)?;
+    }
+
+    Ok(())
+}
+
+/// Emit CHC rules for a complete assembly function using per-block encoding.
+///
+/// Each basic block gets a body relation `<name>_bb<N>` chaining its data
+/// instructions, then composition rules connect blocks from entry to exit.
+/// The function summary `<name>(state_in, state_out)` is the entry block's
+/// "from here to exit" relation.
+pub(crate) fn emit_program_rule(
+    func: &AsmFunction,
+    ir_names: &HashSet<String>,
+    out: &mut String,
+) -> Result<()> {
+    let cfg = build_cfg(func)?;
+
+    writeln!(out, ";; ── {} ({} blocks) ──", func.name, cfg.len())?;
+    writeln!(out)?;
+
+    // Block body rules
+    for block in &cfg {
+        emit_block_body_rule(&func.name, block, func, ir_names, out)?;
+    }
+
+    // Composition rules (includes function summary declaration)
+    emit_composition_rules(&func.name, &cfg, func, out)?;
 
     Ok(())
 }
@@ -790,6 +1123,7 @@ fn format_asm_instr(instr: &AsmInstruction) -> String {
             Operand::Reg(r) => r.clone(),
             Operand::Imm(n) => n.to_string(),
             Operand::MemRef { offset, base } => format!("{}({})", offset, base),
+            Operand::Label(l) => l.clone(),
         })
         .collect();
     format!("{} {}", instr.opcode, ops.join(", "))
@@ -817,7 +1151,7 @@ pub(crate) fn compute_frame_size(func: &AsmFunction) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::asm_parse::{AsmFunction, AsmInstruction, Operand};
+    use crate::asm_parse::{AsmFunction, AsmInstruction, Operand, branch_target};
 
     #[test]
     fn test_imm_to_bv12() {
@@ -851,6 +1185,7 @@ mod tests {
                     Operand::Imm(-32),
                 ],
             }],
+            labels: Default::default(),
         };
         assert_eq!(compute_frame_size(&func_with_frame), 32);
 
@@ -861,6 +1196,7 @@ mod tests {
                 opcode: "li".to_string(),
                 operands: vec![Operand::Reg("a0".to_string()), Operand::Imm(42)],
             }],
+            labels: Default::default(),
         };
         assert_eq!(compute_frame_size(&func_no_frame), 0);
     }
@@ -894,7 +1230,10 @@ mod tests {
         };
         let (op, args) = instruction_to_chc(&instr).unwrap();
         assert_eq!(op, "addi");
-        assert_eq!(args, vec![imm_to_bv12(3), "reg_a0".to_string(), "reg_a0".to_string()]);
+        assert_eq!(
+            args,
+            vec![imm_to_bv12(3), "reg_a0".to_string(), "reg_a0".to_string()]
+        );
 
         // c.li a1, 5 → addi a1, zero, 5
         let instr = AsmInstruction {
@@ -929,7 +1268,10 @@ mod tests {
             opcode: "c.lw".into(),
             operands: vec![
                 Operand::Reg("a0".into()),
-                Operand::MemRef { offset: 4, base: "a1".into() },
+                Operand::MemRef {
+                    offset: 4,
+                    base: "a1".into(),
+                },
             ],
         };
         let (op, _) = instruction_to_chc(&instr).unwrap();
@@ -940,7 +1282,10 @@ mod tests {
             opcode: "c.sdsp".into(),
             operands: vec![
                 Operand::Reg("a0".into()),
-                Operand::MemRef { offset: 8, base: "sp".into() },
+                Operand::MemRef {
+                    offset: 8,
+                    base: "sp".into(),
+                },
             ],
         };
         let (op, _) = instruction_to_chc(&instr).unwrap();
@@ -1001,7 +1346,10 @@ mod tests {
             operands: vec![
                 Operand::Reg("a0".into()),
                 Operand::Reg("a1".into()),
-                Operand::MemRef { offset: 0, base: "a2".into() },
+                Operand::MemRef {
+                    offset: 0,
+                    base: "a2".into(),
+                },
             ],
         };
         let (op, args) = instruction_to_chc(&instr).unwrap();
@@ -1014,10 +1362,140 @@ mod tests {
             operands: vec![
                 Operand::Reg("a3".into()),
                 Operand::Reg("a4".into()),
-                Operand::MemRef { offset: 0, base: "a5".into() },
+                Operand::MemRef {
+                    offset: 0,
+                    base: "a5".into(),
+                },
             ],
         };
         let (op, _) = instruction_to_chc(&instr).unwrap();
         assert_eq!(op, "amoswap_8");
+    }
+
+    #[test]
+    fn test_is_branch() {
+        assert!(is_branch("blt"));
+        assert!(is_branch("bge"));
+        assert!(is_branch("beq"));
+        assert!(is_branch("bne"));
+        assert!(is_branch("bltu"));
+        assert!(is_branch("bgeu"));
+        assert!(is_branch("beqz"));
+        assert!(is_branch("bnez"));
+        assert!(!is_branch("addi"));
+        assert!(!is_branch("ret"));
+        assert!(!is_branch("lw"));
+    }
+
+    #[test]
+    fn test_branch_condition_blt() {
+        let instr = AsmInstruction {
+            opcode: "blt".into(),
+            operands: vec![
+                Operand::Reg("a3".into()),
+                Operand::Reg("a4".into()),
+                Operand::Label(".LBB0_2".into()),
+            ],
+        };
+        let cond = branch_condition(&instr, 2).unwrap();
+        assert!(cond.contains("bvslt"));
+        assert!(cond.contains("regs2"));
+    }
+
+    #[test]
+    fn test_branch_condition_beq() {
+        let instr = AsmInstruction {
+            opcode: "beq".into(),
+            operands: vec![
+                Operand::Reg("a0".into()),
+                Operand::Reg("a1".into()),
+                Operand::Label(".L1".into()),
+            ],
+        };
+        let cond = branch_condition(&instr, 0).unwrap();
+        assert!(cond.starts_with("(= "));
+    }
+
+    #[test]
+    fn test_branch_condition_bnez() {
+        let instr = AsmInstruction {
+            opcode: "bnez".into(),
+            operands: vec![
+                Operand::Reg("a0".into()),
+                Operand::Label(".L1".into()),
+            ],
+        };
+        let cond = branch_condition(&instr, 0).unwrap();
+        assert!(cond.contains("not"));
+        assert!(cond.contains("reg_zero"));
+    }
+
+    #[test]
+    fn test_branch_target() {
+        let instr = AsmInstruction {
+            opcode: "blt".into(),
+            operands: vec![
+                Operand::Reg("a3".into()),
+                Operand::Reg("a4".into()),
+                Operand::Label(".LBB0_2".into()),
+            ],
+        };
+        assert_eq!(branch_target(&instr).unwrap(), ".LBB0_2");
+    }
+
+    #[test]
+    fn test_emit_program_rule_with_branch() {
+        use std::collections::HashMap;
+
+        let func = AsmFunction {
+            name: "test_br".to_string(),
+            instructions: vec![
+                AsmInstruction {
+                    opcode: "addi".into(),
+                    operands: vec![
+                        Operand::Reg("a0".into()),
+                        Operand::Reg("zero".into()),
+                        Operand::Imm(1),
+                    ],
+                },
+                AsmInstruction {
+                    opcode: "blt".into(),
+                    operands: vec![
+                        Operand::Reg("a0".into()),
+                        Operand::Reg("a1".into()),
+                        Operand::Label(".L1".into()),
+                    ],
+                },
+                AsmInstruction {
+                    opcode: "addi".into(),
+                    operands: vec![
+                        Operand::Reg("a0".into()),
+                        Operand::Reg("zero".into()),
+                        Operand::Imm(2),
+                    ],
+                },
+                // .L1:
+                AsmInstruction {
+                    opcode: "ret".into(),
+                    operands: vec![],
+                },
+            ],
+            labels: HashMap::from([(".L1".to_string(), 3)]),
+        };
+        let ir_names = HashSet::new();
+        let mut out = String::new();
+        emit_program_rule(&func, &ir_names, &mut out).unwrap();
+
+        // Per-block encoding: block body relations + composition
+        assert!(out.contains("declare-rel test_br_bb0"));
+        assert!(out.contains("declare-rel test_br_bb1"));
+        assert!(out.contains("declare-rel test_br_bb2"));
+        assert!(out.contains("declare-rel test_br\n"), "function summary relation");
+        assert!(out.contains("declare-rel test_br_from_bb1"));
+        assert!(out.contains("declare-rel test_br_from_bb2"));
+        // Branch condition on taken path
+        assert!(out.contains("bvslt"));
+        // No ite — per-block encoding uses separate rules
+        assert!(!out.contains("ite"));
     }
 }
