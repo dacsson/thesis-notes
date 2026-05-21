@@ -1,0 +1,10 @@
+--- !Passed
+Pass:            slp-vectorizer
+Name:            StoresVectorized
+Function:        test
+Args:
+  - String:          'Stores SLP vectorized with cost '
+  - Cost:            '-2'
+  - String:          ' and with tree size '
+  - TreeSize:        '2'
+...

@@ -1,0 +1,173 @@
+# Source: LoopVectorize/fminimumnum.riscv64___v__zvfh__loop-vectorize.ll
+# Function: fmax16
+# src = pre-opt (fmax16), tgt = post-opt (fmax16)
+# Triple: riscv64, Attrs: "+v,+zvfh"
+#
+
+                                        # -- End function
+	.globl	src                             # -- Begin function src
+	.p2align	2
+	.type	src,@function
+src:                                    # @src
+	.cfi_startproc
+# %bb.0:                                # %entry
+	addi	sp, sp, -80
+	.cfi_def_cfa_offset 80
+	sd	ra, 72(sp)                      # 8-byte Folded Spill
+	.cfi_offset ra, -8
+	sd	a2, 40(sp)                      # 8-byte Folded Spill
+	sd	a1, 48(sp)                      # 8-byte Folded Spill
+	sd	a0, 56(sp)                      # 8-byte Folded Spill
+	li	a0, 0
+	sd	a0, 64(sp)                      # 8-byte Folded Spill
+	j	.LBB5_1
+.LBB5_1:                                # %for.body
+                                        # =>This Inner Loop Header: Depth=1
+	ld	a2, 64(sp)                      # 8-byte Folded Reload
+	ld	a1, 48(sp)                      # 8-byte Folded Reload
+	ld	a0, 56(sp)                      # 8-byte Folded Reload
+	sd	a2, 32(sp)                      # 8-byte Folded Spill
+	slli	a2, a2, 1
+	sd	a2, 24(sp)                      # 8-byte Folded Spill
+	add	a0, a0, a2
+	lhu	a0, 0(a0)
+	add	a1, a1, a2
+	lhu	a1, 0(a1)
+	sd	a1, 8(sp)                       # 8-byte Folded Spill
+	call	__extendhfsf2
+	mv	a1, a0
+	ld	a0, 8(sp)                       # 8-byte Folded Reload
+	sd	a1, 16(sp)                      # 8-byte Folded Spill
+	call	__extendhfsf2
+	mv	a1, a0
+	ld	a0, 16(sp)                      # 8-byte Folded Reload
+	call	fmaximum_numf
+	call	__truncsfhf2
+	ld	a3, 24(sp)                      # 8-byte Folded Reload
+	ld	a2, 40(sp)                      # 8-byte Folded Reload
+	mv	a1, a0
+	ld	a0, 32(sp)                      # 8-byte Folded Reload
+	add	a2, a2, a3
+	sh	a1, 0(a2)
+	addi	a0, a0, 1
+	lui	a1, 1
+	mv	a2, a0
+	sd	a2, 64(sp)                      # 8-byte Folded Spill
+	bne	a0, a1, .LBB5_1
+	j	.LBB5_2
+.LBB5_2:                                # %exit
+	ld	ra, 72(sp)                      # 8-byte Folded Reload
+	.cfi_restore ra
+	addi	sp, sp, 80
+	.cfi_def_cfa_offset 0
+	ret
+.Lfunc_end5:
+	.size	src, .Lfunc_end5-src
+	.cfi_endproc
+                                        # -- End function
+
+	.globl	tgt                             # -- Begin function tgt
+	.p2align	2
+	.type	tgt,@function
+tgt:                                    # @tgt
+	.cfi_startproc
+# %bb.0:                                # %entry
+	addi	sp, sp, -96
+	.cfi_def_cfa_offset 96
+	sd	a2, 48(sp)                      # 8-byte Folded Spill
+	sd	a1, 56(sp)                      # 8-byte Folded Spill
+	sd	a0, 64(sp)                      # 8-byte Folded Spill
+	sd	a1, 72(sp)                      # 8-byte Folded Spill
+	sd	a0, 80(sp)                      # 8-byte Folded Spill
+	sd	a2, 88(sp)                      # 8-byte Folded Spill
+	j	.LBB5_1
+.LBB5_1:                                # %vector.memcheck
+	ld	a2, 88(sp)                      # 8-byte Folded Reload
+	ld	a3, 72(sp)                      # 8-byte Folded Reload
+	ld	a0, 80(sp)                      # 8-byte Folded Reload
+	csrr	a1, vlenb
+	slli	a1, a1, 1
+	sd	a1, 32(sp)                      # 8-byte Folded Spill
+	sub	a0, a2, a0
+	sub	a2, a2, a3
+	sd	a2, 40(sp)                      # 8-byte Folded Spill
+	bltu	a0, a1, .LBB5_6
+	j	.LBB5_2
+.LBB5_2:                                # %vector.memcheck
+	ld	a0, 40(sp)                      # 8-byte Folded Reload
+	ld	a1, 32(sp)                      # 8-byte Folded Reload
+	bltu	a0, a1, .LBB5_6
+	j	.LBB5_3
+.LBB5_3:                                # %vector.ph
+	lui	a0, 1
+	li	a1, 0
+	sd	a1, 16(sp)                      # 8-byte Folded Spill
+	sd	a0, 24(sp)                      # 8-byte Folded Spill
+	j	.LBB5_4
+.LBB5_4:                                # %vector.body
+                                        # =>This Inner Loop Header: Depth=1
+	ld	a0, 24(sp)                      # 8-byte Folded Reload
+	ld	a1, 16(sp)                      # 8-byte Folded Reload
+	ld	a3, 48(sp)                      # 8-byte Folded Reload
+	ld	a5, 56(sp)                      # 8-byte Folded Reload
+	ld	a6, 64(sp)                      # 8-byte Folded Reload
+	vsetvli	a2, a0, e8, m1, ta, ma
+	slli	a4, a1, 1
+	add	a6, a6, a4
+                                        # implicit-def: $v10m2
+	vsetvli	zero, a2, e16, m2, tu, ma
+	vle16.v	v10, (a6)
+	add	a5, a5, a4
+                                        # implicit-def: $v12m2
+	vsetvli	zero, a2, e16, m2, tu, ma
+	vle16.v	v12, (a5)
+                                        # implicit-def: $v8m2
+	vsetvli	a5, zero, e16, m2, ta, ma
+	vfmax.vv	v8, v10, v12
+	add	a3, a3, a4
+	vsetvli	zero, a2, e16, m2, ta, ma
+	vse16.v	v8, (a3)
+	add	a1, a2, a1
+	sub	a0, a0, a2
+	sd	a1, 16(sp)                      # 8-byte Folded Spill
+	mv	a1, a0
+	sd	a1, 24(sp)                      # 8-byte Folded Spill
+	bnez	a0, .LBB5_4
+	j	.LBB5_5
+.LBB5_5:                                # %middle.block
+	j	.LBB5_8
+.LBB5_6:                                # %scalar.ph
+	li	a0, 0
+	sd	a0, 8(sp)                       # 8-byte Folded Spill
+	j	.LBB5_7
+.LBB5_7:                                # %for.body
+                                        # =>This Inner Loop Header: Depth=1
+	ld	a0, 8(sp)                       # 8-byte Folded Reload
+	ld	a1, 48(sp)                      # 8-byte Folded Reload
+	ld	a3, 56(sp)                      # 8-byte Folded Reload
+	ld	a4, 64(sp)                      # 8-byte Folded Reload
+	slli	a2, a0, 1
+	add	a4, a4, a2
+	flh	fa5, 0(a4)
+	add	a3, a3, a2
+	flh	fa4, 0(a3)
+	fcvt.s.h	fa4, fa4
+	fcvt.s.h	fa5, fa5
+	fmax.s	fa5, fa5, fa4
+	fcvt.h.s	fa5, fa5
+	add	a1, a1, a2
+	fsh	fa5, 0(a1)
+	addi	a0, a0, 1
+	lui	a1, 1
+	mv	a2, a0
+	sd	a2, 8(sp)                       # 8-byte Folded Spill
+	bne	a0, a1, .LBB5_7
+	j	.LBB5_8
+.LBB5_8:                                # %exit
+	addi	sp, sp, 96
+	.cfi_def_cfa_offset 0
+	ret
+.Lfunc_end5:
+	.size	tgt, .Lfunc_end5-tgt
+	.cfi_endproc
+                                        # -- End function

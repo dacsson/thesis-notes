@@ -1,0 +1,248 @@
+@@ -6,29 +6,15 @@
+-	addi	sp, sp, -32
+
+-	sd	ra, 24(sp)                      # 8-byte Folded Spill
+
+-	sd	s0, 16(sp)                      # 8-byte Folded Spill
+
+-	addi	s0, sp, 32
+
+-                                        # kill: def $x12 killed $x11
+
+-	sd	a0, -24(s0)
+
+-	sw	a1, -28(s0)
+
+-	ld	a2, -24(s0)
+
+-	auipc	a0, %pcrel_hi(context)
+
+-	addi	a1, a0, %pcrel_lo(.Lpcrel_hi0)
+
+-	ld	a0, 0(a1)
+
++	auipc	a1, %pcrel_hi(context)
+
++	ld	a2, %pcrel_lo(.Lpcrel_hi0)(a1)
+
+-	sd	a0, 0(a1)
+
+-	ld	a0, 0(a1)
+
+-	sd	a0, 0(a1)
+
+-	ld	ra, 24(sp)                      # 8-byte Folded Reload
+
+-	ld	s0, 16(sp)                      # 8-byte Folded Reload
+
+-	addi	sp, sp, 32
+
++	sd	a0, %pcrel_lo(.Lpcrel_hi0)(a1)
+
+@@ -38,48 +24,18 @@
+-	addi	sp, sp, -32
+
+-	sd	ra, 24(sp)                      # 8-byte Folded Spill
+
+-	sd	s0, 16(sp)                      # 8-byte Folded Spill
+
+-	addi	s0, sp, 32
+
+-	addi	a0, a0, %pcrel_lo(.Lpcrel_hi1)
+
+-	ld	a1, 0(a0)
+
+-	li	a0, 4
+
++	ld	a0, %pcrel_lo(.Lpcrel_hi1)(a0)
+
++	li	a1, 5
+
+-	j	.LBB1_1
+
+-.LBB1_1:
+
+-.Lpcrel_hi2:
+
+-	auipc	a0, %pcrel_hi(DEPTH)
+
+-	addi	a1, a0, %pcrel_lo(.Lpcrel_hi2)
+
+-	ld	a0, 0(a1)
+
+-	addi	a0, a0, 1
+
+-	sd	a0, 0(a1)
+
+-	lui	a0, 8
+
+-	addi	a0, a0, -230
+
+-	sh	a0, -22(s0)
+
++# %bb.1:
+
++	lui	a0, 393486
+
++	addi	a0, a0, -431
+
++	ret
+
++.LBB1_2:
+
+-	sh	a0, -24(s0)
+
+-	li	a0, -1753
+
+-	sh	a0, -22(s0)
+
+-	ld	a0, 0(a1)
+
+-	addi	a0, a0, -1
+
+-	sd	a0, 0(a1)
+
+-	lhu	a0, -24(s0)
+
+-	sw	a0, -20(s0)
+
+-	j	.LBB1_3
+
+-.LBB1_2:
+
+-	lui	a0, 393486
+
+-	addi	a0, a0, -431
+
+-	sw	a0, -20(s0)
+
+-	j	.LBB1_3
+
+-.LBB1_3:
+
+-	lw	a0, -20(s0)
+
+-	ld	ra, 24(sp)                      # 8-byte Folded Reload
+
+-	ld	s0, 16(sp)                      # 8-byte Folded Reload
+
+-	addi	sp, sp, 32
+
+@@ -89,61 +45,18 @@
+-	addi	sp, sp, -48
+
+-	sd	ra, 40(sp)                      # 8-byte Folded Spill
+
+-	sd	s0, 32(sp)                      # 8-byte Folded Spill
+
+-	addi	s0, sp, 48
+
+-                                        # kill: def $x12 killed $x10
+
+-	li	a2, 0
+
+-	sw	a2, -28(s0)
+
+-	sw	a0, -32(s0)
+
+-	sd	a1, -40(s0)
+
++	addi	sp, sp, -16
+
++	sd	ra, 8(sp)                       # 8-byte Folded Spill
+
++.Lpcrel_hi2:
+
++	auipc	a0, %pcrel_hi(context)
+
++	ld	a1, %pcrel_lo(.Lpcrel_hi2)(a0)
+
+-	auipc	a0, %pcrel_hi(DEPTH)
+
++	auipc	a0, %pcrel_hi(.L.str)
+
+-	ld	a1, 0(a0)
+
+-	li	a0, 4
+
+-	blt	a0, a1, .LBB2_2
+
+-	j	.LBB2_1
+
+-.LBB2_1:
+
+-.Lpcrel_hi4:
+
+-	auipc	a0, %pcrel_hi(DEPTH)
+
+-	addi	a1, a0, %pcrel_lo(.Lpcrel_hi4)
+
+-	ld	a0, 0(a1)
+
+-	addi	a0, a0, 1
+
+-	sd	a0, 0(a1)
+
+-	lui	a0, 8
+
+-	addi	a0, a0, -230
+
+-	sh	a0, -22(s0)
+
+-	lui	a0, 5
+
+-	addi	a0, a0, 1967
+
+-	sh	a0, -24(s0)
+
+-	li	a0, -1753
+
+-	sh	a0, -22(s0)
+
+-	ld	a0, 0(a1)
+
+-	addi	a0, a0, -1
+
+-	sd	a0, 0(a1)
+
+-	lhu	a0, -24(s0)
+
+-	sw	a0, -20(s0)
+
+-	j	.LBB2_3
+
+-.LBB2_2:
+
+-	lui	a0, 393486
+
+-	addi	a0, a0, -431
+
+-	sw	a0, -20(s0)
+
+-	j	.LBB2_3
+
+-.LBB2_3:
+
+-.Lpcrel_hi5:
+
+-	auipc	a0, %pcrel_hi(context)
+
+-	addi	a0, a0, %pcrel_lo(.Lpcrel_hi5)
+
+-	ld	a1, 0(a0)
+
+-.Lpcrel_hi6:
+
+-	auipc	a0, %pcrel_hi(.L.str)
+
+-	addi	a0, a0, %pcrel_lo(.Lpcrel_hi6)
+
+-	ld	ra, 40(sp)                      # 8-byte Folded Reload
+
+-	ld	s0, 32(sp)                      # 8-byte Folded Reload
+
+-	addi	sp, sp, 48
+
++	ld	ra, 8(sp)                       # 8-byte Folded Reload
+
++	addi	sp, sp, 16

@@ -40,6 +40,8 @@ cargo run -- check-equiv --before foo1.s --after foo2.s -f foo -o query.smt2 -ir
 z3 query.smt2   # UNSAT = equivalent, SAT = counterexample
 ```
 
+The guid on how to run is in @doc/GUIDE.md
+
 ### Benchmarks
 
 There is assembly benchmarks at `doc/benchmark/`, currently supported benchmarks are at `doc/benchmark/supported/`, and unsupported benchmarks are at `doc/benchmark/todo/`. You can run them via:
