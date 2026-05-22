@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use anyhow::{anyhow, Result};
@@ -170,6 +170,128 @@ pub(crate) fn emit_execute_chc(model: &IslaIRModel, out: &mut String) -> Result<
     }
 
     Ok(ir_names)
+}
+
+/// Instruction semantics stored as template strings for direct inlining
+/// into program rules, eliminating per-instruction CHC relations.
+///
+/// Instead of emitting `(declare-rel addi ...)` + `(rule ...)` and calling
+/// `(addi regs0 mem0 pc0 regs1 mem1 pc1 p0 p1 p2)` in the program rule,
+/// we substitute concrete operand values into these templates and emit three
+/// equality constraints directly: `(= regs1 ...) (= mem1 ...) (= pc1 ...)`.
+pub(crate) struct InlinedSemantics {
+    /// Expression for regs_out. Contains `regs0` for input state, `p0`..`pN` for params.
+    /// E.g. `"(set_reg regs0 p2 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0)))"`.
+    /// `"regs0"` when the instruction doesn't write a register.
+    pub regs_expr: String,
+    /// Expression for mem_out. Contains `mem0`, `regs0`, and `p0`..`pN`.
+    pub mem_expr: String,
+    /// Expression for pc_out. Contains `pc0` and possibly `regs0`, `p0`..`pN`.
+    pub pc_expr: String,
+    /// Number of parameters that need substitution (p0..p{n-1}).
+    pub n_params: usize,
+}
+
+impl InlinedSemantics {
+    fn from_translation(t: &PathTranslation) -> Self {
+        let regs_expr = match &t.reg_write {
+            Some((rd, val)) => format!("(set_reg regs0 {} {})", rd, val),
+            None => "regs0".to_string(),
+        };
+        InlinedSemantics {
+            regs_expr,
+            mem_expr: t.mem_expr.clone(),
+            pc_expr: t.pc_expr.clone(),
+            n_params: t.params.len(),
+        }
+    }
+
+    /// Substitute concrete operand values and state indices into the templates.
+    ///
+    /// Returns three SMT equality constraints:
+    ///   `(= regs{so} <expr>)`, `(= mem{so} <expr>)`, `(= pc{so} <expr>)`
+    pub fn instantiate(&self, operands: &[String], si: usize, so: usize) -> [String; 3] {
+        let regs_in = format!("regs{}", si);
+        let mem_in = format!("mem{}", si);
+        let pc_in = format!("pc{}", si);
+
+        let mut exprs = [
+            self.regs_expr.clone(),
+            self.mem_expr.clone(),
+            self.pc_expr.clone(),
+        ];
+
+        for expr in &mut exprs {
+            *expr = expr.replace("regs0", &regs_in)
+                        .replace("mem0", &mem_in)
+                        .replace("pc0", &pc_in);
+        }
+
+        // Replace parameters in reverse order to avoid p1 matching inside p10
+        for i in (0..self.n_params).rev() {
+            let from = format!("p{}", i);
+            let to = &operands[i];
+            for expr in &mut exprs {
+                *expr = expr.replace(&from, to);
+            }
+        }
+
+        [
+            format!("(= regs{} {})", so, exprs[0]),
+            format!("(= mem{} {})", so, exprs[1]),
+            format!("(= pc{} {})", so, exprs[2]),
+        ]
+    }
+}
+
+/// Collect inlined instruction semantics from the IR model's execute function.
+///
+/// Returns a map from lowercased variant name to its inlined semantics.
+/// Used by `emit_equivalence_query` to inline instruction constraints directly
+/// into program rules, avoiding per-instruction CHC relations entirely.
+pub(crate) fn collect_instruction_semantics(
+    model: &IslaIRModel,
+) -> Result<HashMap<String, InlinedSemantics>> {
+    let func = model
+        .get_function("execute")
+        .ok_or_else(|| anyhow!("'execute' function not found"))?;
+
+    let body = func.body;
+    let variants = discover_variants(model, body);
+    let mut type_widths = collect_type_widths(body);
+    let globals = collect_globals(model);
+
+    let mut semantics = HashMap::new();
+    let mut skipped: Vec<(String, String)> = Vec::new();
+
+    for variant in &variants {
+        let mut initial = globals.clone();
+        initial.extend(variant.initial_bindings.iter().map(|(k, v)| (*k, v.clone())));
+
+        match translate_variant(model, &variant.segments, body, &mut type_widths, &initial) {
+            Ok(t) => {
+                let sem = InlinedSemantics::from_translation(&t);
+                semantics.insert(variant.name.to_lowercase(), sem);
+            }
+            Err(e) => {
+                let reason = format!("{e}").lines().next().unwrap_or("").to_string();
+                skipped.push((variant.name.clone(), reason));
+            }
+        }
+    }
+
+    if !skipped.is_empty() {
+        eprintln!(
+            "warning: IR transpiler skipped {} of {} variant(s):",
+            skipped.len(),
+            variants.len()
+        );
+        for (name, reason) in &skipped {
+            eprintln!("  - {name}: {reason}");
+        }
+    }
+
+    Ok(semantics)
 }
 
 /// Translate IR functions into CHC definitions in SMT-LIB2 HORN format.

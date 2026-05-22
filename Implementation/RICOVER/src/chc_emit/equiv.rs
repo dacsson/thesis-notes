@@ -1,22 +1,20 @@
-use std::collections::HashSet;
 use std::fmt::Write;
 
 use anyhow::Result;
 
 use crate::asm_parse::AsmFunction;
 use crate::isla_ir::IslaIRModel;
-use super::ir_emit::emit_execute_chc;
-use super::asm_emit::{collect_needed_opcodes, ir_rule_for_opcode, emit_fallback_rules, emit_program_rule, compute_frame_size};
+use super::ir_emit::collect_instruction_semantics;
+use super::asm_emit::{emit_program_rule_inlined, compute_frame_size};
 use super::STDLIB;
 
 /// Emit a complete equivalence checking query for two assembly functions.
 ///
 /// Produces a self-contained .smt2 file with:
 ///   1. (set-logic HORN) + stdlib (register/memory operations)
-///   2. Instruction relation rules (addi, addiw, sw, lw, sd, ld, ret)
-///   3. Program relation rules for prog1 and prog2
-///   4. Observable-address predicate (excludes private stack frame)
-///   5. Projected equivalence query (bad_proj):
+///   2. Program relation rules with inlined instruction semantics
+///   3. Observable-address predicate (excludes private stack frame)
+///   4. Projected equivalence query:
 ///      "Is there any initial state where the two programs differ on
 ///       ABI-visible registers (a0, ra, sp, s0) or PC, or on any memory
 ///       byte outside the function's stack frame?"
@@ -35,45 +33,22 @@ pub fn emit_equivalence_query(
     writeln!(out, "{}", STDLIB)?;
     writeln!(out)?;
 
-    // 2a. IR-derived instruction rules (if a model was provided)
-    let ir_names: HashSet<String> = if let Some(m) = model {
-        writeln!(out, "; {}", "=".repeat(70))?;
-        writeln!(out, "; IR-derived instruction rules (from Sail spec via Isla)")?;
-        writeln!(out, "; {}", "=".repeat(70))?;
-        writeln!(out)?;
-        emit_execute_chc(m, &mut out)?
+    // 2. Collect inlined instruction semantics from IR and emit program rules.
+    // Instead of emitting hundreds of per-instruction CHC relations and calling
+    // them from program rules, we inline the three state constraints
+    // (regs, mem, pc) directly into each block body rule.
+    let semantics = if let Some(m) = model {
+        collect_instruction_semantics(m)?
     } else {
-        HashSet::new()
+        std::collections::HashMap::new()
     };
 
-    // 2b. Hand-written fallback rules for opcodes not covered by the IR
-    let needed = collect_needed_opcodes(&[prog1, prog2]);
-    let fallback_needed: HashSet<String> = needed
-        .iter()
-        .filter(|op| ir_rule_for_opcode(op, &ir_names).is_none())
-        .cloned()
-        .collect();
-    if !fallback_needed.is_empty() {
-        let mut sorted: Vec<&String> = fallback_needed.iter().collect();
-        sorted.sort();
-        eprintln!(
-            "warning: falling back to hand-written CHC rules for opcodes not covered by the IR: {}",
-            sorted.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-        );
-    }
     writeln!(out, "; {}", "=".repeat(70))?;
-    writeln!(out, "; Hand-written fallback instruction rules")?;
+    writeln!(out, "; Programs (instruction semantics inlined)")?;
     writeln!(out, "; {}", "=".repeat(70))?;
     writeln!(out)?;
-    emit_fallback_rules(&fallback_needed, &mut out)?;
-
-    // 3. Program relation rules
-    writeln!(out, "; {}", "=".repeat(70))?;
-    writeln!(out, "; Programs")?;
-    writeln!(out, "; {}", "=".repeat(70))?;
-    writeln!(out)?;
-    emit_program_rule(prog1, &ir_names, &mut out)?;
-    emit_program_rule(prog2, &ir_names, &mut out)?;
+    emit_program_rule_inlined(prog1, &semantics, &mut out)?;
+    emit_program_rule_inlined(prog2, &semantics, &mut out)?;
 
     // 4. Observable-address predicate
     //

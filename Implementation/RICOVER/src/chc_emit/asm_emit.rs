@@ -1,13 +1,17 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::Write;
 
 use anyhow::{Result, anyhow};
 
 use super::STATE_TYPES;
+use super::ir_emit::InlinedSemantics;
 use crate::asm_parse::{
-    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, is_branch,
-    is_unconditional_jump, reg_index,
+    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, reg_index,
 };
+#[cfg(test)]
+use std::collections::HashSet;
+#[cfg(test)]
+use crate::asm_parse::{is_branch, is_unconditional_jump};
 
 // =========================================================================
 // Assembly-level CHC emission
@@ -30,6 +34,7 @@ use crate::asm_parse::{
 /// The IR transpiler produces rules named after Sail variants (e.g. "addi", "load").
 /// Assembly opcodes may differ (e.g. "ld" maps to IR "load" when only one LOAD variant exists).
 /// Returns None when the opcode has no IR coverage and needs a hand-written fallback.
+#[cfg(test)]
 pub(crate) fn ir_rule_for_opcode<'a>(
     asm_opcode: &str,
     ir_names: &'a HashSet<String>,
@@ -75,6 +80,8 @@ pub(crate) fn ir_rule_for_opcode<'a>(
 ///
 /// Branch instructions are excluded — they are handled structurally
 /// (ite merge) and don't need their own CHC relation.
+#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> {
     let mut opcodes = HashSet::new();
     for prog in progs {
@@ -156,6 +163,8 @@ pub(crate) fn reg_to_smt(name: &str) -> Result<String> {
 /// Each instruction is a relation with signature:
 ///   (declare-rel opcode (Regs_in Mem_in PC_in  Regs_out Mem_out PC_out  operands...))
 ///   (rule (forall (...) (=> (and constraints...) (opcode ...))))
+#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn emit_fallback_rules(needed: &HashSet<String>, out: &mut String) -> Result<()> {
     if needed.is_empty() {
         return Ok(());
@@ -175,6 +184,8 @@ pub(crate) fn emit_fallback_rules(needed: &HashSet<String>, out: &mut String) ->
 }
 
 /// Emit a single hand-written fallback rule.
+#[cfg(test)]
+#[allow(dead_code)]
 fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
     match opcode {
         "addi" => {
@@ -954,6 +965,7 @@ fn branch_condition(instr: &AsmInstruction, state_idx: usize) -> Result<String> 
 ///
 /// Declares `<func_name>_bb<N>` and emits a rule chaining its data
 /// instructions with state threading.
+#[cfg(test)]
 fn emit_block_body_rule(
     func_name: &str,
     block: &BasicBlock,
@@ -1164,6 +1176,7 @@ fn emit_composition_rules(
 /// instructions, then composition rules connect blocks from entry to exit.
 /// The function summary `<name>(state_in, state_out)` is the entry block's
 /// "from here to exit" relation.
+#[cfg(test)]
 pub(crate) fn emit_program_rule(
     func: &AsmFunction,
     ir_names: &HashSet<String>,
@@ -1180,6 +1193,140 @@ pub(crate) fn emit_program_rule(
     }
 
     // Composition rules (includes function summary declaration)
+    emit_composition_rules(&func.name, &cfg, func, out)?;
+
+    Ok(())
+}
+
+// =========================================================================
+// Inlined emission (no per-instruction CHC relations)
+// =========================================================================
+
+/// Look up the InlinedSemantics for an assembly opcode.
+///
+/// Checks the semantics map (IR-derived) first, using the same opcode→rule
+/// name mapping as ir_rule_for_opcode. Returns None if not found.
+fn lookup_semantics<'a>(
+    asm_opcode: &str,
+    semantics: &'a HashMap<String, InlinedSemantics>,
+) -> Option<&'a InlinedSemantics> {
+    if let Some(sem) = semantics.get(asm_opcode) {
+        return Some(sem);
+    }
+    let mapped = match asm_opcode {
+        "lb" => "load_1_s",
+        "lbu" => "load_1_u",
+        "lh" => "load_2_s",
+        "lhu" => "load_2_u",
+        "lw" => "load_4_s",
+        "lwu" => "load_4_u",
+        "ld" => "load_8_s",
+        "sb" => "store_1",
+        "sh" => "store_2",
+        "sw" => "store_4",
+        "sd" => "store_8",
+        "rem" => "rem_s",
+        "remu" => "rem_u",
+        "remw" => "remw_s",
+        "remuw" => "remw_u",
+        "div" => "div_s",
+        "divu" => "div_u",
+        "divw" => "divw_s",
+        "divuw" => "divw_u",
+        _ => return None,
+    };
+    semantics.get(mapped)
+}
+
+/// Emit the body rule for a single basic block with inlined instruction semantics.
+///
+/// Instead of emitting relation calls like `(addi regs0 mem0 pc0 regs1 mem1 pc1 ...)`,
+/// this inlines three equality constraints per instruction directly:
+///   `(= regs1 (set_reg regs0 ...))  (= mem1 mem0)  (= pc1 (bvadd pc0 (_ bv4 64)))`
+fn emit_block_body_rule_inlined(
+    func_name: &str,
+    block: &BasicBlock,
+    func: &AsmFunction,
+    semantics: &HashMap<String, InlinedSemantics>,
+    out: &mut String,
+) -> Result<()> {
+    let bb_name = format!("{}_bb{}", func_name, block.id);
+    let n_instrs = block.instr_range.len();
+
+    writeln!(out, "(declare-rel {bb_name}")?;
+    writeln!(out, "  ({STATE_TYPES}")?;
+    writeln!(out, "   {STATE_TYPES}))")?;
+    writeln!(out)?;
+
+    writeln!(out, "(rule")?;
+    write!(out, "  (forall (")?;
+    for i in 0..=n_instrs {
+        if i > 0 {
+            write!(out, "\n           ")?;
+        }
+        emit_state_binding(
+            out,
+            &format!("regs{i}"),
+            &format!("mem{i}"),
+            &format!("pc{i}"),
+        )?;
+    }
+    writeln!(out, ")")?;
+
+    writeln!(out, "    (=> (and")?;
+
+    if n_instrs == 0 {
+        writeln!(out, "          (= regs0 regs0) ; empty block")?;
+    } else {
+        for (local_idx, global_idx) in block.instr_range.clone().enumerate() {
+            let instr = &func.instructions[global_idx];
+            let (opcode, operands) = instruction_to_chc(instr)?;
+
+            let sem = lookup_semantics(&opcode, semantics)
+                .ok_or_else(|| anyhow!(
+                    "no inlined semantics for opcode '{}' (from '{}')",
+                    opcode, instr.opcode
+                ))?;
+
+            let si = local_idx;
+            let so = local_idx + 1;
+            let constraints = sem.instantiate(&operands, si, so);
+
+            writeln!(out, "          ; {}", format_asm_instr(instr))?;
+            for c in &constraints {
+                writeln!(out, "          {}", c)?;
+            }
+        }
+    }
+
+    writeln!(out, "        )")?;
+    writeln!(
+        out,
+        "        ({bb_name} regs0 mem0 pc0 regs{n_instrs} mem{n_instrs} pc{n_instrs}))))"
+    )?;
+    writeln!(out)?;
+
+    Ok(())
+}
+
+/// Emit CHC rules for a complete assembly function with inlined instruction semantics.
+///
+/// Same block/composition structure as `emit_program_rule`, but instruction
+/// semantics are inlined as equality constraints instead of relation calls.
+pub(crate) fn emit_program_rule_inlined(
+    func: &AsmFunction,
+    semantics: &HashMap<String, InlinedSemantics>,
+    out: &mut String,
+) -> Result<()> {
+    let cfg = build_cfg(func)?;
+
+    writeln!(out, ";; ── {} ({} blocks) ──", func.name, cfg.len())?;
+    writeln!(out)?;
+
+    for block in &cfg {
+        emit_block_body_rule_inlined(&func.name, block, func, semantics, out)?;
+    }
+
     emit_composition_rules(&func.name, &cfg, func, out)?;
 
     Ok(())

@@ -41,7 +41,6 @@ fn emit_execute_produces_chc() {
 fn emit_foo_equivalence_query() {
     let mut foo1 = asm_parse::parse_asm(FOO1_ASM, "foo").expect("parse foo (before)");
     let mut foo2 = asm_parse::parse_asm(FOO2_ASM, "foo").expect("parse foo (after)");
-    // The CLI auto-suffixes the two sides so the emitted rules don't collide.
     foo1.name = "foo1".to_string();
     foo2.name = "foo2".to_string();
     let model = isla_ir::parse_ir(RISCV_IR).expect("failed to parse");
@@ -56,23 +55,18 @@ fn emit_foo_equivalence_query() {
     assert!(query.contains("obs_addr"));
     assert!(query.contains("query bad"));
 
-    // IR-derived rules from the full rv64d.ir: addi, addiw, and the
-    // specialized load/store variants needed by foo (lw/sw/ld/sd).
-    assert!(query.contains("declare-rel addi"), "addi should come from IR");
-    assert!(query.contains("declare-rel addiw"), "addiw should come from IR");
-    assert!(query.contains("declare-rel load_4_s"), "lw should map to IR load_4_s");
-    assert!(query.contains("declare-rel load_8_s"), "ld should map to IR load_8_s");
-    assert!(query.contains("declare-rel store_4"), "sw should map to IR store_4");
-    assert!(query.contains("declare-rel store_8"), "sd should map to IR store_8");
-    // The asm-level opcode names should not appear as standalone rules --
-    // they're mapped to the IR-derived rules, not emitted as fallbacks.
-    assert!(!query.contains("declare-rel ld\n"));
-    assert!(!query.contains("declare-rel lw\n"));
-    assert!(!query.contains("declare-rel sd\n"));
-    assert!(!query.contains("declare-rel sw\n"));
-    // ret is now handled via IR-derived JALR rule.
-    assert!(query.contains("declare-rel jalr"), "jalr should be IR-derived");
-    assert!(!query.contains("declare-rel ret"), "ret fallback should no longer appear");
+    // With inlined semantics, no per-instruction declare-rel should appear.
+    // Only block-level and function-level relations.
+    assert!(!query.contains("declare-rel addi"), "addi should be inlined, not a separate relation");
+    assert!(!query.contains("declare-rel jalr"), "jalr should be inlined");
+
+    // Inlined instruction semantics: set_reg/get_reg/sign_extend appear
+    // directly in block body rules, not in separate instruction rules.
+    assert!(query.contains("set_reg"), "inlined semantics should use set_reg");
+    assert!(query.contains("get_reg"), "inlined semantics should use get_reg");
+    assert!(query.contains("sign_extend"), "inlined semantics should use sign_extend");
+    assert!(query.contains("write_mem_dword"), "sd inlined semantics should use write_mem_dword");
+    assert!(query.contains("mem_read_4"), "lw inlined semantics should use mem_read_4");
 
     // Check frame size computation (foo1 allocates 32 bytes)
     assert!(query.contains("bv32 64"));
@@ -88,17 +82,17 @@ fn test_compressed_equiv() {
     let query = emit_equivalence_query(&src, &tgt, "compressed", Some(&model))
         .expect("emit compressed query");
 
-    // Uses IR-derived addi and add rules
-    assert!(query.contains("declare-rel addi"), "addi should be IR-derived");
-    assert!(query.contains("declare-rel add"), "add should be IR-derived");
+    // With inlined semantics, no per-instruction relations
+    assert!(!query.contains("declare-rel addi\n"), "addi should be inlined");
+    assert!(!query.contains("declare-rel add\n"), "add should be inlined");
 
-    // The program rules should use standard instruction names, not c_* names.
-    // Extract the program rule section (contains "declare-rel src" / "declare-rel tgt")
-    let program_section = query.split("declare-rel src").nth(1).unwrap_or("");
-    assert!(program_section.contains("addi regs"), "src program should use addi rule");
-    assert!(program_section.contains("add regs"), "src program should use add rule");
-    assert!(!program_section.contains("c_addi"), "program should not use c_addi");
-    assert!(!program_section.contains("c_mv"), "program should not use c_mv");
+    // Inlined semantics should contain set_reg/get_reg from addi/add
+    assert!(query.contains("set_reg"), "inlined addi/add should use set_reg");
+    assert!(query.contains("bvadd"), "inlined addi should use bvadd");
+
+    // No compressed instruction names should leak into the output
+    assert!(!query.contains("c_addi"), "program should not use c_addi");
+    assert!(!query.contains("c_mv"), "program should not use c_mv");
 }
 
 #[test]
@@ -132,8 +126,10 @@ fn test_amo_swap_equiv() {
     let query = emit_equivalence_query(&src, &tgt, "amo_swap", Some(&model))
         .expect("emit amo_swap query");
 
-    // The amoswap_4 rule should be IR-derived
-    assert!(query.contains("declare-rel amoswap_4"), "amoswap_4 should be IR-derived");
-    // The program should reference this rule
-    assert!(query.contains("amoswap_4 regs"), "program should use amoswap_4 rule");
+    // With inlined semantics, amoswap_4 is not a separate relation
+    assert!(!query.contains("declare-rel amoswap_4"), "amoswap_4 should be inlined");
+
+    // Inlined AMO semantics should contain memory read/write operations
+    assert!(query.contains("mem_read_4") || query.contains("write_mem_word"),
+        "inlined amoswap should include memory operations");
 }
