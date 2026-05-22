@@ -6,7 +6,7 @@
 # Configuration
 MAX_PROGRAMS=20            # Number of small programs we want to generate
 MAX_SIZE=100               # Maximum allowed lines of code (considered "small")
-OUTPUT_DIR="small_programs" # Directory to save the small programs
+OUTPUT_DIR="../TestSuite/randprog" # Directory to save the small programs
 
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
@@ -30,7 +30,7 @@ while [ $counter -lt $MAX_PROGRAMS ]; do
     
     # Generate program and save to temp file first
     temp_file="temp_program_$generated.c"
-    ./randprog > "$temp_file"
+    ~/Downloads/randprog/randprog/randprog > "$temp_file"
     
     # Count lines in the generated program
     line_count=$(wc -l < "$temp_file")

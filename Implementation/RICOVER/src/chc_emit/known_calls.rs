@@ -82,6 +82,16 @@ pub(crate) enum KnownCall {
     SetNextPC,     // set_next_pc(pc) → no-op (pc_expr derived from jump_to)
     UpdateElpState, // update_elp_state(rs1) → Zicfilp no-op
     BitVectorUpdate, // bitvector_update(bv, idx, bit) → clear/set one bit
+    MultToBitsHalf,  // mult_to_bits_half(result_part, sign_rs1, sign_rs2, rs1, rs2) → bvmul
+    Signed,          // sail_signed(bv) → passthrough (signedness implicit in bvs* ops)
+    RemRoundZero,    // tmod_int(a, b) → bvsrem / bvurem
+    QuotRoundZero,   // tdiv_int(a, b) → bvsdiv / bvudiv
+    ToBitsTruncate,  // to_bits_truncate(width, val) → extract low bits
+    EqInt,           // eq_int(a, b) → integer equality
+    NegateAtom,      // neg_int(a) → bvneg
+    Pow2,            // pow2(n) → 2^n as bitvector
+    GteqInt,         // gteq(a, b) → integer >=
+    AddAtom,         // add_atom(a, b) — integer add
     Unknown(String),
 }
 
@@ -117,7 +127,8 @@ pub(crate) fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "neq_bits" => KnownCall::NeqBits,
         "subrange_bits" => KnownCall::SubrangeBits,
         "unsigned" => KnownCall::Unsigned,
-        "%i64->%i" | "%i->%i64" => KnownCall::IntToI64,
+        "%i->%i64" => KnownCall::IntToI64,
+        "%i64->%i" => KnownCall::I64ToInt,
         "lteq_int" => KnownCall::LTEqInt,
         "mult_atom" => KnownCall::MultAtom,
         "sub_atom" => KnownCall::SubAtom,
@@ -144,6 +155,17 @@ pub(crate) fn classify_call(model: &IslaIRModel, func_id: Name) -> KnownCall {
         "set_next_pc" => KnownCall::SetNextPC,
         "update_elp_state" => KnownCall::UpdateElpState,
         "bitvector_update" => KnownCall::BitVectorUpdate,
+        "mult_to_bits_half" => KnownCall::MultToBitsHalf,
+        "signed" | "sail_signed" => KnownCall::Signed,
+        "rem_round_zero" => KnownCall::RemRoundZero,
+        "quot_round_zero" => KnownCall::QuotRoundZero,
+        "to_bits_truncate" => KnownCall::ToBitsTruncate,
+        "eq_int" => KnownCall::EqInt,
+        "negate_atom" => KnownCall::NegateAtom,
+        "pow2" => KnownCall::Pow2,
+        "gteq_int" => KnownCall::GteqInt,
+        "not_bool" => KnownCall::BoolNot,
+        "add_atom" => KnownCall::AddAtom,
         _ if name.starts_with("eq_anything") => KnownCall::EqBool,
         _ => KnownCall::Unknown(name),
     }
@@ -316,7 +338,11 @@ pub(crate) fn call_to_smt(
             Ok("(_ unit)".to_string())
         }
         KnownCall::BoolNot => {
-            Ok(format!("(not {})", smt_args[0]))
+            match smt_args[0].as_str() {
+                "true" => Ok("false".to_string()),
+                "false" => Ok("true".to_string()),
+                _ => Ok(format!("(not {})", smt_args[0])),
+            }
         }
         KnownCall::IsAligned => {
             Ok("true".to_string())
@@ -346,7 +372,11 @@ pub(crate) fn call_to_smt(
         | KnownCall::DataAddr | KnownCall::TranslateAddr | KnownCall::MemReadFull
         | KnownCall::MemWriteValue | KnownCall::Trunc
         | KnownCall::JumpTo | KnownCall::GetNextPC | KnownCall::SetNextPC
-        | KnownCall::UpdateElpState | KnownCall::BitVectorUpdate => {
+        | KnownCall::UpdateElpState | KnownCall::BitVectorUpdate
+        | KnownCall::MultToBitsHalf
+        | KnownCall::Signed | KnownCall::RemRoundZero | KnownCall::QuotRoundZero
+        | KnownCall::ToBitsTruncate | KnownCall::EqInt | KnownCall::NegateAtom
+        | KnownCall::Pow2 | KnownCall::GteqInt | KnownCall::AddAtom => {
             Err(anyhow!(
                 "this call must be handled in translate_variant (requires current_mem/type_widths)"
             ))

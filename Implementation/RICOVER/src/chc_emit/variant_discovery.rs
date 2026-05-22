@@ -108,6 +108,14 @@ pub(crate) fn discover_variants(model: &IslaIRModel, body: &[Instr<Name, B129>])
                     model, body, variant_start, outer_skip, &outer_name,
                 ) {
                     variants.extend(specialized);
+                } else if let Some(specialized) = try_specialize_mul(
+                    model, body, variant_start, outer_skip, &outer_name,
+                ) {
+                    variants.extend(specialized);
+                } else if let Some(specialized) = try_specialize_div_rem(
+                    body, variant_start, outer_skip, &outer_name,
+                ) {
+                    variants.extend(specialized);
                 } else {
                     variants.push(InstrVariant {
                         name: outer_name,
@@ -331,6 +339,141 @@ fn try_specialize_result_variant(
         }
     }
 
+    Some(variants)
+}
+
+/// Specialize the MUL variant by its `mul_op` struct fields.
+///
+/// MUL tuple layout: (rs2:bv5, rs1:bv5, rd:bv5, mul_op:struct{high_half, signed_rs1, signed_rs2}).
+/// The struct can't be emitted as a CHC parameter. We pre-bind its field-access
+/// target variables to concrete enum constructor names and produce 4 sub-variants:
+///   mul (low, signed, signed), mulh (high, signed, signed),
+///   mulhsu (high, signed, unsigned), mulhu (high, unsigned, unsigned).
+fn try_specialize_mul(
+    model: &IslaIRModel,
+    body: &[Instr<Name, B129>],
+    variant_start: usize,
+    outer_skip: usize,
+    outer_name: &str,
+) -> Option<Vec<InstrVariant>> {
+    if outer_name != "MUL" {
+        return None;
+    }
+
+    // Collect tuple field IDs: (rs2, rs1, rd, mul_op_struct)
+    let mut field_ids: Vec<Name> = Vec::new();
+    for instr in &body[variant_start..outer_skip] {
+        if let Instr::Copy(Loc::Id(id), Exp::Field(inner, _), _) = instr {
+            if matches!(inner.as_ref(), Exp::Unwrap(_, _)) {
+                field_ids.push(*id);
+            }
+        }
+    }
+    if field_ids.len() < 4 {
+        return None;
+    }
+    let struct_id = field_ids[3];
+
+    // Find struct field access targets: Copy(target, Field(Id(struct_id), field_name))
+    // These are the variables that hold result_part, signed_rs1, signed_rs2.
+    let mut struct_fields: Vec<(Name, String)> = Vec::new();
+    for instr in &body[variant_start..outer_skip] {
+        if let Instr::Copy(Loc::Id(target), Exp::Field(inner, field_name), _) = instr {
+            if let Exp::Id(src_id) = inner.as_ref() {
+                if *src_id == struct_id {
+                    let fname = model.resolve_name(*field_name);
+                    struct_fields.push((*target, fname));
+                }
+            }
+        }
+    }
+    if struct_fields.len() < 3 {
+        return None;
+    }
+
+    // The 4 MUL sub-variants with concrete struct field values.
+    // Sail names: zHigh/zLow for result_part, zSigned/zUnsigned for signedness.
+    let configs = [
+        ("mul", "zLow", "zSigned", "zSigned"),
+        ("mulh", "zHigh", "zSigned", "zSigned"),
+        ("mulhsu", "zHigh", "zSigned", "zUnsigned"),
+        ("mulhu", "zHigh", "zUnsigned", "zUnsigned"),
+    ];
+
+    let segments = vec![(variant_start, outer_skip)];
+    let mut variants = Vec::new();
+
+    for (name, result_part, sign_rs1, sign_rs2) in &configs {
+        let mut initial = HashMap::new();
+        // Bind the struct variable itself so it's skipped as a CHC parameter
+        initial.insert(struct_id, "(_ unit)".to_string());
+        // Bind each struct field access target by matching on field name
+        for (target_name, field_name) in &struct_fields {
+            let val = if field_name.contains("result_part") {
+                result_part
+            } else if field_name.contains("signed_rs1") {
+                sign_rs1
+            } else if field_name.contains("signed_rs2") {
+                sign_rs2
+            } else {
+                continue;
+            };
+            initial.insert(*target_name, val.to_string());
+        }
+        variants.push(InstrVariant {
+            name: name.to_string(),
+            segments: segments.clone(),
+            initial_bindings: initial,
+        });
+    }
+
+    Some(variants)
+}
+
+/// Specialize DIV/REM/DIVW/REMW by the `is_unsigned` boolean (tuple field 3).
+///
+/// Tuple layout: (rs2:bv5, rs1:bv5, rd:bv5, is_unsigned:bool).
+/// Pre-binding `is_unsigned` makes the signed/unsigned dispatch jumps deterministic.
+fn try_specialize_div_rem(
+    body: &[Instr<Name, B129>],
+    variant_start: usize,
+    outer_skip: usize,
+    outer_name: &str,
+) -> Option<Vec<InstrVariant>> {
+    if !matches!(outer_name, "DIV" | "REM" | "DIVW" | "REMW") {
+        return None;
+    }
+
+    let mut field_ids: Vec<Name> = Vec::new();
+    for instr in &body[variant_start..outer_skip] {
+        if let Instr::Copy(Loc::Id(id), Exp::Field(inner, _), _) = instr {
+            if matches!(inner.as_ref(), Exp::Unwrap(_, _)) {
+                field_ids.push(*id);
+            }
+        }
+    }
+    if field_ids.len() < 4 {
+        return None;
+    }
+    let is_unsigned_id = field_ids[3];
+
+    let lower = outer_name.to_ascii_lowercase();
+    let segments = vec![(variant_start, outer_skip)];
+    let configs = [
+        (format!("{}_s", lower), "false"),
+        (format!("{}_u", lower), "true"),
+    ];
+
+    let mut variants = Vec::new();
+    for (name, is_unsigned_val) in &configs {
+        let mut initial = HashMap::new();
+        initial.insert(is_unsigned_id, is_unsigned_val.to_string());
+        variants.push(InstrVariant {
+            name: name.clone(),
+            segments: segments.clone(),
+            initial_bindings: initial,
+        });
+    }
     Some(variants)
 }
 

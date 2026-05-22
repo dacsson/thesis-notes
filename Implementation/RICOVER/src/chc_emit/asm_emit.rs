@@ -5,7 +5,8 @@ use anyhow::{Result, anyhow};
 
 use super::STATE_TYPES;
 use crate::asm_parse::{
-    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, is_branch, reg_index,
+    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, is_branch,
+    is_unconditional_jump, reg_index,
 };
 
 // =========================================================================
@@ -53,6 +54,14 @@ pub(crate) fn ir_rule_for_opcode<'a>(
         "sh" => "store_2",
         "sw" => "store_4",
         "sd" => "store_8",
+        "rem" => "rem_s",
+        "remu" => "rem_u",
+        "remw" => "remw_s",
+        "remuw" => "remw_u",
+        "div" => "div_s",
+        "divu" => "div_u",
+        "divw" => "divw_s",
+        "divuw" => "divw_u",
         _ => return None,
     };
     if ir_names.contains(mapped) {
@@ -70,7 +79,7 @@ pub(crate) fn collect_needed_opcodes(progs: &[&AsmFunction]) -> HashSet<String> 
     let mut opcodes = HashSet::new();
     for prog in progs {
         for instr in &prog.instructions {
-            if is_branch(&instr.opcode) {
+            if is_branch(&instr.opcode) || is_unconditional_jump(&instr.opcode) {
                 continue;
             }
             // Use the post-translation opcode so pseudo-instructions
@@ -91,6 +100,18 @@ fn emit_state_binding(out: &mut String, regs: &str, mem: &str, pc: &str) -> std:
         out,
         "({regs} (Array (_ BitVec 5) (_ BitVec 64))) ({mem} (Array (_ BitVec 64) (_ BitVec 8))) ({pc} (_ BitVec 64))"
     )
+}
+
+/// Convert a signed immediate value to a 20-bit bitvector literal in SMT-LIB2.
+///
+/// Used for `lui` which takes a 20-bit immediate (the upper 20 bits placed at [31:12]).
+pub(crate) fn imm_to_bv20(val: i64) -> String {
+    let unsigned = if val < 0 {
+        ((1i64 << 20) + val) as u64
+    } else {
+        val as u64
+    };
+    format!("(_ bv{} 20)", unsigned)
 }
 
 /// Convert a signed immediate value to a 12-bit bitvector literal in SMT-LIB2.
@@ -457,6 +478,30 @@ fn emit_one_fallback_rule(opcode: &str, out: &mut String) -> Result<()> {
             writeln!(out)?;
         }
 
+        "lui" => {
+            // --- LUI: rd = sign_extend_64(imm[19:0] << 12) ---
+            writeln!(out, "(declare-rel lui")?;
+            writeln!(out, "  ({STATE_TYPES}")?;
+            writeln!(out, "   {STATE_TYPES}")?;
+            writeln!(out, "   (_ BitVec 20) (_ BitVec 5)))")?;
+            writeln!(out)?;
+            writeln!(out, "(rule")?;
+            writeln!(out, "  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc0 (_ BitVec 64))")?;
+            writeln!(out, "           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))")?;
+            writeln!(out, "           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))")?;
+            writeln!(out, "           (pc1 (_ BitVec 64))")?;
+            writeln!(out, "           (imm (_ BitVec 20)) (rd (_ BitVec 5)))")?;
+            writeln!(out, "    (=> (and")?;
+            writeln!(out, "          (= regs1 (set_reg regs0 rd")?;
+            writeln!(out, "                     ((_ sign_extend 32) (concat imm (_ bv0 12)))))")?;
+            writeln!(out, "          (= mem1 mem0)")?;
+            writeln!(out, "          (= pc1 (bvadd pc0 (_ bv4 64))))")?;
+            writeln!(out, "        (lui regs0 mem0 pc0 regs1 mem1 pc1 imm rd))))")?;
+            writeln!(out)?;
+        }
+
         _ => return Err(anyhow!("no fallback rule for opcode: {}", opcode)),
     }
 
@@ -688,7 +733,9 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
         // R-type arithmetic: add rd, rs1, rs2
         // IR RTYPE tuple is (rs2, rs1, rd, op), so operands map to (rs2, rs1, rd).
         "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" | "sll" | "srl" | "sra" | "addw"
-        | "subw" | "sllw" | "srlw" | "sraw" => {
+        | "subw" | "sllw" | "srlw" | "sraw"
+        | "mul" | "mulh" | "mulhsu" | "mulhu" | "mulw"
+        | "rem" | "remu" | "remw" | "remuw" | "div" | "divu" | "divw" | "divuw" => {
             let rd = match &instr.operands[0] {
                 Operand::Reg(r) => reg_to_smt(r)?,
                 _ => return Err(anyhow!("{}: expected register for rd", op)),
@@ -702,6 +749,33 @@ pub(crate) fn instruction_to_chc(instr: &AsmInstruction) -> Result<(String, Vec<
                 _ => return Err(anyhow!("{}: expected register for rs2", op)),
             };
             Ok((op.to_string(), vec![rs2, rs1, rd]))
+        }
+
+        // U-type: lui rd, imm -- rd = sign_extend_64(imm[19:0] << 12)
+        "lui" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("lui: expected register for rd")),
+            };
+            let imm = match &instr.operands[1] {
+                Operand::Imm(n) => imm_to_bv20(*n),
+                _ => return Err(anyhow!("lui: expected immediate")),
+            };
+            Ok(("lui".to_string(), vec![imm, rd]))
+        }
+
+        // Pseudo: snez rd, rs -- sltu rd, zero, rs (rd = (rs != 0) ? 1 : 0)
+        "snez" => {
+            let rd = match &instr.operands[0] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("snez: expected register for rd")),
+            };
+            let rs = match &instr.operands[1] {
+                Operand::Reg(r) => reg_to_smt(r)?,
+                _ => return Err(anyhow!("snez: expected register for rs")),
+            };
+            // sltu operand order: (rs2, rs1, rd)
+            Ok(("sltu".to_string(), vec![rs, "reg_zero".to_string(), rd]))
         }
 
         // Pseudo: li rd, imm -- when imm fits in a signed 12-bit range,

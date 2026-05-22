@@ -73,6 +73,16 @@ def parse_args():
         default="0",
         help="Base optimization level to compare others against (default: 0)"
     )
+    parser.add_argument(
+        "--csmith",
+        action="store_true",
+        help="csmith mode: strip 'static' from functions and add -fno-inline at non-base opt levels"
+    )
+    parser.add_argument(
+        "--csmith-runtime",
+        default="",
+        help="Path to csmith runtime headers (adds -I<path> to compiler flags)"
+    )
     return parser.parse_args()
 
 
@@ -96,27 +106,21 @@ def compile_to_assembly(
     cc: str,
     arch: str,
     output_file: str,
-    opt_level: str
+    opt_level: str,
+    extra_flags: List[str] = []
 ) -> bool:
-    """
-    Compile a C program to RISC-V assembly.
-    
-    Args:
-        c_file: Path to C source file
-        cc: Compiler executable
-        arch: Target architecture
-        output_file: Output assembly file path
-        opt_level: Optimization level (0, 1, 2, 3, s, z)
-    
-    Returns:
-        True if compilation succeeded, False otherwise
-    """
     try:
         cmd = [
             cc,
             f"--target={arch}",
+            "--sysroot=/usr/riscv64-linux-gnu",
+            "-march=rv64gc",
+            "-mabi=lp64d",
             f"-O{opt_level}",
-            "-S",  # Generate assembly
+            "-fno-asynchronous-unwind-tables",
+            "-fno-unwind-tables",
+            *extra_flags,
+            "-S",
             "-o", output_file,
             c_file
         ]
@@ -174,11 +178,17 @@ def split_into_functions(lines: List[str]) -> Dict[str, List[str]]:
     current_func = None
     current_lines = []
     
-    # Filter out directives and empty lines
+    # Filter out directives and empty lines, but keep internal labels (.L*)
     filtered_lines = []
     for line in lines:
         stripped = line.strip()
-        if not stripped or stripped.startswith('.'):
+        if not stripped:
+            continue
+        if stripped.startswith('.'):
+            # Keep basic block labels (.LBB*) — they are branch targets.
+            # Skip .Lfunc_end*, .LCPI* (constant pool), and other directives.
+            if re.match(r'\.LBB[A-Za-z0-9_]+\s*:', stripped):
+                filtered_lines.append(line)
             continue
         filtered_lines.append(line)
     
@@ -322,6 +332,11 @@ def generate_traditional_diff(
         print(f"  Warning: Could not generate traditional diff: {e}")
 
 
+def has_relocation(instructions: List[str]) -> bool:
+    return any('%pcrel' in i or 'auipc' in i or '%hi(' in i or '%lo(' in i
+              for i in instructions)
+
+
 def generate_ricover_file(
     func_name: str,
     src_instructions: List[str],
@@ -347,10 +362,10 @@ def generate_ricover_file(
     """
     os.makedirs(output_dir, exist_ok=True)
     
-    # Create filename: function_O0_vs_O{opt}.ricover
+    # Create filename: function_O0_vs_O{opt}.s
     ricover_filename = os.path.join(
         output_dir,
-        f"{func_name}_O{base_opt}_vs_{comparison_name}.ricover"
+        f"{func_name}_O{base_opt}_vs_{comparison_name}.s"
     )
     
     lines = []
@@ -374,19 +389,25 @@ def generate_ricover_file(
         lines.append("src:")
     
     for instr in src_instructions:
-        lines.append(f"    {instr}")
-    
+        if instr.startswith('.L') and instr.endswith(':'):
+            lines.append(instr)
+        else:
+            lines.append(f"    {instr}")
+
     lines.append("")
     lines.append("")
-    
+
     # tgt function
     lines.append(f"# Function: tgt ({comparison_name} version)")
     lines.append(".globl tgt")
     if ricover_format == 'label_syntax':
         lines.append("tgt:")
-    
+
     for instr in tgt_instructions:
-        lines.append(f"    {instr}")
+        if instr.startswith('.L') and instr.endswith(':'):
+            lines.append(instr)
+        else:
+            lines.append(f"    {instr}")
     
     lines.append("")
     
@@ -465,10 +486,20 @@ def main():
     if not c_file_path.exists():
         print(f"Error: C file '{args.c_file}' not found")
         sys.exit(1)
-    
+
+    # csmith mode: produce a de-static'd copy so -fno-inline actually works
+    if args.csmith:
+        nonstatic_path = c_file_path.with_suffix('.nonstatic.c')
+        with open(c_file_path) as f:
+            src = f.read()
+        with open(nonstatic_path, 'w') as f:
+            f.write(src.replace('static ', ''))
+        c_file_path = nonstatic_path
+        print(f"csmith mode: using de-static'd source {c_file_path}")
+
     # Parse optimization levels
     opt_levels = [level.strip().lstrip('O') for level in args.opt_levels.split(',')]
-    
+
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
@@ -490,12 +521,18 @@ def main():
         asm_files[opt_level] = str(asm_filename)
         
         print(f"\nCompiling O{opt_level}...")
+        extra_flags = []
+        if args.csmith_runtime:
+            extra_flags += [f"-I{args.csmith_runtime}"]
+        if args.csmith and opt_level != args.base_opt:
+            extra_flags += ["-fno-inline"]
         success = compile_to_assembly(
             str(c_file_path),
             args.cc,
             args.arch,
             str(asm_filename),
-            opt_level
+            opt_level,
+            extra_flags
         )
         
         if success:
@@ -555,49 +592,41 @@ def main():
         # Generate ricover files if requested
         if args.ricover:
             print(f"  Generating ricover files for O{args.base_opt} -> O{opt_level}...")
-            
+
             # Read both files
             lines1 = read_assembly_file(base_asm)
             lines2 = read_assembly_file(asm_path)
-            
+
             # Split into functions
             funcs1 = split_into_functions(lines1)
             funcs2 = split_into_functions(lines2)
-            
+
             comparison_name = f"O{opt_level}"
-            
+
             # Get all unique function names
             all_funcs = set(funcs1.keys()) | set(funcs2.keys())
-            
+
             for func_name in sorted(all_funcs):
                 seq1 = funcs1.get(func_name, [])
                 seq2 = funcs2.get(func_name, [])
-                
-                # Find differing blocks
-                blocks = find_instruction_blocks(seq1, seq2)
-                
-                if not blocks:
+
+                if seq1 == seq2:
                     continue
-                
-                # Process each block - create ricover file for each changed block
-                for i, block in enumerate(blocks):
-                    if block['seq1_block'] or block['seq2_block']:
-                        # Create a unique name if multiple blocks in same function
-                        if len(blocks) > 1:
-                            block_func_name = f"{func_name}_block{i+1}"
-                        else:
-                            block_func_name = func_name
-                        
-                        generate_ricover_file(
-                            block_func_name,
-                            block['seq1_block'] if block['seq1_block'] else [],
-                            block['seq2_block'] if block['seq2_block'] else [],
-                            comparison_name,
-                            str(ricover_dir),
-                            str(c_file_path),
-                            args.base_opt,
-                            args.ricover_format
-                        )
+
+                if has_relocation(seq1) or has_relocation(seq2):
+                    print(f"  Skipping {func_name}: contains PC-relative relocations")
+                    continue
+
+                generate_ricover_file(
+                        func_name,
+                        seq1,
+                        seq2,
+                        comparison_name,
+                        str(ricover_dir),
+                        str(c_file_path),
+                        args.base_opt,
+                        args.ricover_format
+                    )
     
     # Clean up intermediate files if requested
     if not args.keep_files:

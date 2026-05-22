@@ -69,6 +69,11 @@ pub fn is_branch(opcode: &str) -> bool {
     )
 }
 
+/// Return true if the opcode is an unconditional jump (no fallthrough).
+pub fn is_unconditional_jump(opcode: &str) -> bool {
+    matches!(opcode, "j" | "c.j")
+}
+
 /// Extract the target label from a branch instruction.
 pub fn branch_target(instr: &AsmInstruction) -> Result<String> {
     let label_op = instr
@@ -98,7 +103,9 @@ pub fn build_cfg(func: &AsmFunction) -> Result<Vec<BasicBlock>> {
         starts.push(idx);
     }
     for (i, instr) in instrs.iter().enumerate() {
-        if is_branch(&instr.opcode) && i + 1 < instrs.len() {
+        if (is_branch(&instr.opcode) || is_unconditional_jump(&instr.opcode))
+            && i + 1 < instrs.len()
+        {
             starts.push(i + 1);
         }
     }
@@ -125,7 +132,20 @@ pub fn build_cfg(func: &AsmFunction) -> Result<Vec<BasicBlock>> {
         let last_idx = end - 1;
         let last_instr = &instrs[last_idx];
 
-        let (instr_range, terminator) = if is_branch(&last_instr.opcode) {
+        let (instr_range, terminator) = if is_unconditional_jump(&last_instr.opcode) {
+            let target_label = branch_target(last_instr)?;
+            let target_idx = *func.labels.get(&target_label).ok_or_else(|| {
+                anyhow!("unknown jump target label: {}", target_label)
+            })?;
+            let target_block = *idx_to_block.get(&target_idx).ok_or_else(|| {
+                anyhow!(
+                    "jump target {} (idx {}) is not a block start",
+                    target_label,
+                    target_idx
+                )
+            })?;
+            (start..last_idx, Terminator::Fallthrough(target_block))
+        } else if is_branch(&last_instr.opcode) {
             let target_label = branch_target(last_instr)?;
             let target_idx = *func.labels.get(&target_label).ok_or_else(|| {
                 anyhow!("unknown branch target label: {}", target_label)

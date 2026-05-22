@@ -155,7 +155,14 @@ pub(crate) fn translate_variant(
     // accumulate across segments so a sub-dispatched variant's prologue,
     // arm body, and shared post-amble all contribute to the same translation.
     for &(start, end) in segments {
-        for instr in &body[start..end] {
+        let mut skip_until: Option<usize> = None;
+        for (abs_idx, instr) in body[start..end].iter().enumerate().map(|(i, x)| (start + i, x)) {
+        if let Some(target) = skip_until {
+            if abs_idx < target {
+                continue;
+            }
+            skip_until = None;
+        }
         match instr {
             Instr::Decl(_, _, _) => {
                 // Declarations don't produce constraints — variables are introduced on use.
@@ -182,6 +189,10 @@ pub(crate) fn translate_variant(
             }
 
             Instr::Copy(Loc::Id(id), exp, _) => {
+                // If this variable was pre-bound by specialization, keep it.
+                if initial_bindings.contains_key(id) {
+                    continue;
+                }
                 // Check if this is a tuple field extraction from a union unwrap.
                 // IR pattern: $1 = merge#var as ITYPE.tuple#...0
                 // Isla represents this as Exp::Field(Exp::Unwrap(...), field_name)
@@ -532,6 +543,152 @@ pub(crate) fn translate_variant(
                         bindings.insert(*id, format!("((_ {} {}) {})", op, ext_amount, val_smt));
                         type_widths.insert(*id, 64);
                     }
+                    KnownCall::MultToBitsHalf => {
+                        // mult_to_bits_half(xlen, sign1, sign2, rs1, rs2, result_part)
+                        let sign1 = exp_to_smt(model, &args[1], &bindings)?;
+                        let sign2 = exp_to_smt(model, &args[2], &bindings)?;
+                        let rs1_smt = exp_to_smt(model, &args[3], &bindings)?;
+                        let rs2_smt = exp_to_smt(model, &args[4], &bindings)?;
+                        let part = exp_to_smt(model, &args[5], &bindings)?;
+
+                        let ext1 = if sign1 == "zSigned" { "sign_extend" } else { "zero_extend" };
+                        let ext2 = if sign2 == "zSigned" { "sign_extend" } else { "zero_extend" };
+
+                        let result = if part == "zLow" {
+                            format!("(bvmul {} {})", rs1_smt, rs2_smt)
+                        } else {
+                            format!(
+                                "((_ extract 127 64) (bvmul ((_ {} 64) {}) ((_ {} 64) {})))",
+                                ext1, rs1_smt, ext2, rs2_smt
+                            )
+                        };
+                        bindings.insert(*id, result);
+                        type_widths.insert(*id, 64);
+                    }
+                    KnownCall::Signed => {
+                        // signed(bv) → passthrough. Signedness is implicit in
+                        // bvsdiv/bvsrem used by quot/rem_round_zero.
+                        let val = exp_to_smt(model, &args[0], &bindings)?;
+                        if let Some(w) = infer_bv_width(&args[0], type_widths) {
+                            type_widths.insert(*id, w);
+                        }
+                        bindings.insert(*id, val);
+                    }
+                    KnownCall::RemRoundZero | KnownCall::QuotRoundZero => {
+                        // rem/quot_round_zero(a, b) → bvsrem/bvsdiv or bvurem/bvudiv.
+                        // Signedness determined by whether is_unsigned was pre-bound
+                        // to "true" in the variant's initial_bindings.
+                        let a = exp_to_smt(model, &args[0], &bindings)?;
+                        let b = exp_to_smt(model, &args[1], &bindings)?;
+                        let is_unsigned = initial_bindings.values().any(|v| v == "true");
+                        let op = match (&call_kind, is_unsigned) {
+                            (KnownCall::RemRoundZero, false) => "bvsrem",
+                            (KnownCall::RemRoundZero, true) => "bvurem",
+                            (KnownCall::QuotRoundZero, false) => "bvsdiv",
+                            (KnownCall::QuotRoundZero, true) => "bvudiv",
+                            _ => unreachable!(),
+                        };
+                        if let Some(w) = infer_bv_width(&args[0], type_widths) {
+                            type_widths.insert(*id, w);
+                        }
+                        bindings.insert(*id, format!("({} {} {})", op, a, b));
+                    }
+                    KnownCall::ToBitsTruncate => {
+                        // to_bits_truncate(width, val) → extract low bits
+                        let width_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        let val = exp_to_smt(model, &args[1], &bindings)?;
+                        let width = width_smt.parse::<u32>().map_err(|_| {
+                            anyhow!("to_bits_truncate: non-literal width '{}'", width_smt)
+                        })?;
+                        let val_w = infer_bv_width(&args[1], type_widths);
+                        let result = if val_w == Some(width) {
+                            val
+                        } else {
+                            format!("((_ extract {} 0) {})", width - 1, val)
+                        };
+                        bindings.insert(*id, result);
+                        type_widths.insert(*id, width);
+                    }
+                    KnownCall::EqInt => {
+                        // eq_int(a, b) → (= a b), with BV/int literal coercion.
+                        let a = exp_to_smt(model, &args[0], &bindings)?;
+                        let b = exp_to_smt(model, &args[1], &bindings)?;
+                        let wa = infer_bv_width(&args[0], type_widths);
+                        let wb = infer_bv_width(&args[1], type_widths);
+                        let result = match (a.parse::<i64>(), b.parse::<i64>(), wa, wb) {
+                            (Ok(n), _, _, Some(w)) => {
+                                let bv = int_literal_to_bv(n, w);
+                                format!("(= {} {})", bv, b)
+                            }
+                            (_, Ok(n), Some(w), _) => {
+                                let bv = int_literal_to_bv(n, w);
+                                format!("(= {} {})", a, bv)
+                            }
+                            _ => format!("(= {} {})", a, b),
+                        };
+                        bindings.insert(*id, result);
+                    }
+                    KnownCall::NegateAtom => {
+                        // neg_int(a) → bvneg if BV, else integer negation
+                        let a = exp_to_smt(model, &args[0], &bindings)?;
+                        if let Some(w) = infer_bv_width(&args[0], type_widths) {
+                            bindings.insert(*id, format!("(bvneg {})", a));
+                            type_widths.insert(*id, w);
+                        } else if let Ok(n) = a.parse::<i128>() {
+                            bindings.insert(*id, (-n).to_string());
+                        } else {
+                            bindings.insert(*id, format!("(- {})", a));
+                        }
+                    }
+                    KnownCall::Pow2 => {
+                        // pow2(n) → 2^n. Used in DIV overflow check.
+                        let n_smt = exp_to_smt(model, &args[0], &bindings)?;
+                        if let Ok(n) = n_smt.parse::<u32>() {
+                            let val = 1u128 << n;
+                            bindings.insert(*id, val.to_string());
+                        } else {
+                            bindings.insert(*id, "(_ unit)".to_string());
+                        }
+                    }
+                    KnownCall::GteqInt => {
+                        let a = exp_to_smt(model, &args[0], &bindings)?;
+                        let b = exp_to_smt(model, &args[1], &bindings)?;
+                        // Eagerly evaluate when both are literals
+                        match (a.parse::<i128>(), b.parse::<i128>()) {
+                            (Ok(va), Ok(vb)) => {
+                                bindings.insert(*id, if va >= vb { "true" } else { "false" }.to_string());
+                            }
+                            _ => {
+                                bindings.insert(*id, format!("(>= {} {})", a, b));
+                            }
+                        }
+                    }
+                    KnownCall::AddAtom => {
+                        let a = exp_to_smt(model, &args[0], &bindings)?;
+                        let b = exp_to_smt(model, &args[1], &bindings)?;
+                        match (a.parse::<i128>(), b.parse::<i128>()) {
+                            (Ok(va), Ok(vb)) => {
+                                bindings.insert(*id, (va + vb).to_string());
+                            }
+                            _ => {
+                                bindings.insert(*id, format!("(+ {} {})", a, b));
+                            }
+                        }
+                    }
+                    KnownCall::Unsigned => {
+                        let val = exp_to_smt(model, &args[0], &bindings)?;
+                        if let Some(w) = infer_bv_width(&args[0], type_widths) {
+                            type_widths.insert(*id, w);
+                        }
+                        bindings.insert(*id, val);
+                    }
+                    KnownCall::IntToI64 | KnownCall::I64ToInt => {
+                        let val = exp_to_smt(model, &args[0], &bindings)?;
+                        if let Some(w) = infer_bv_width(&args[0], type_widths) {
+                            type_widths.insert(*id, w);
+                        }
+                        bindings.insert(*id, val);
+                    }
                     KnownCall::ShiftBitsLeft
                     | KnownCall::ShiftBitsRight
                     | KnownCall::ShiftBitsRightArith => {
@@ -606,13 +763,25 @@ pub(crate) fn translate_variant(
                 }
             }
 
-            // Segment boundaries are controlled by the caller. Internal
-            // control-flow instructions (gotos, inner jumps, function end)
-            // are skipped — they don't contribute to the translation.
-            Instr::Goto(_) | Instr::End => {}
-            Instr::Jump(Exp::Id(cond_id), _, _) => {
+            Instr::Goto(target) => {
+                if *target < end {
+                    skip_until = Some(*target);
+                }
+            }
+            Instr::End => {}
+            Instr::Jump(Exp::Id(cond_id), target, _) => {
                 if let Some(smt) = bindings.get(cond_id) {
-                    pending_branch_cond = Some(smt.clone());
+                    match smt.as_str() {
+                        "true" => {
+                            if *target < end {
+                                skip_until = Some(*target);
+                            }
+                        }
+                        "false" => {}
+                        _ => {
+                            pending_branch_cond = Some(smt.clone());
+                        }
+                    }
                 }
             }
             Instr::Jump(_, _, _) => {}
@@ -658,6 +827,15 @@ fn infer_bv_width(exp: &Exp<Name>, type_widths: &HashMap<Name, u32>) -> Option<u
         Exp::Unwrap(_, inner) => infer_bv_width(inner, type_widths),
         _ => None,
     }
+}
+
+fn int_literal_to_bv(n: i64, width: u32) -> String {
+    let unsigned = if n < 0 {
+        ((1i128 << width) + n as i128) as u128
+    } else {
+        n as u128
+    };
+    format!("(_ bv{} {})", unsigned, width)
 }
 
 /// Find the declared type for a variable in the path (from a preceding Decl instruction).
