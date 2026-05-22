@@ -1258,19 +1258,56 @@ fn emit_block_body_rule_inlined(
     writeln!(out, "   {STATE_TYPES}))")?;
     writeln!(out)?;
 
+    // Pre-scan: determine which instructions actually modify memory.
+    // Instructions whose mem_expr is "mem0" (identity) don't need a new
+    // mem variable — reusing the previous one eliminates trivial
+    // `(= memN memN-1)` equalities and reduces array-typed quantified
+    // variables, which is the main bottleneck for Z3/Spacer.
+    let mut mem_modifies = vec![false; n_instrs];
+    for (local_idx, global_idx) in block.instr_range.clone().enumerate() {
+        let instr = &func.instructions[global_idx];
+        let (opcode, _) = instruction_to_chc(instr)?;
+        if let Some(sem) = lookup_semantics(&opcode, semantics) {
+            mem_modifies[local_idx] = sem.mem_expr != "mem0";
+        } else {
+            mem_modifies[local_idx] = true;
+        }
+    }
+
+    // Build the mapping: for each instruction step i (0..=n_instrs),
+    // what is the actual mem variable index to use?
+    // mem_idx[0] = 0 (initial state), then only bumps when memory changes.
+    let mut mem_idx: Vec<usize> = Vec::with_capacity(n_instrs + 1);
+    mem_idx.push(0);
+    let mut next_mem = 1;
+    for i in 0..n_instrs {
+        if mem_modifies[i] {
+            mem_idx.push(next_mem);
+            next_mem += 1;
+        } else {
+            mem_idx.push(*mem_idx.last().unwrap());
+        }
+    }
     writeln!(out, "(rule")?;
     write!(out, "  (forall (")?;
+
+    // Emit quantified variables: regs0..regsN and pc0..pcN always get
+    // full ranges; mem variables only get as many as are actually needed.
+    let mut first = true;
     for i in 0..=n_instrs {
-        if i > 0 {
+        if !first {
             write!(out, "\n           ")?;
         }
-        emit_state_binding(
-            out,
-            &format!("regs{i}"),
-            &format!("mem{i}"),
-            &format!("pc{i}"),
-        )?;
+        first = false;
+        write!(out, "(regs{i} (Array (_ BitVec 5) (_ BitVec 64))) ")?;
+        // Only emit memJ binding if this step introduces a new mem variable
+        if i == 0 || mem_idx[i] != mem_idx[i - 1] {
+            write!(out, "(mem{} (Array (_ BitVec 64) (_ BitVec 8))) ", mem_idx[i])?;
+        }
+        write!(out, "(pc{i} (_ BitVec 64))")?;
     }
+    // If there are extra mem variables that weren't emitted above, emit them
+    // (shouldn't happen with the current logic, but defensive)
     writeln!(out, ")")?;
 
     writeln!(out, "    (=> (and")?;
@@ -1290,7 +1327,11 @@ fn emit_block_body_rule_inlined(
 
             let si = local_idx;
             let so = local_idx + 1;
-            let constraints = sem.instantiate(&operands, si, so);
+
+            // Use the compressed mem indices
+            let mi = mem_idx[si];
+            let mo = mem_idx[so];
+            let constraints = sem.instantiate_compressed(&operands, si, so, mi, mo);
 
             writeln!(out, "          ; {}", format_asm_instr(instr))?;
             for c in &constraints {
@@ -1299,10 +1340,11 @@ fn emit_block_body_rule_inlined(
         }
     }
 
+    let final_mem = mem_idx[n_instrs];
     writeln!(out, "        )")?;
     writeln!(
         out,
-        "        ({bb_name} regs0 mem0 pc0 regs{n_instrs} mem{n_instrs} pc{n_instrs}))))"
+        "        ({bb_name} regs0 mem0 pc0 regs{n_instrs} mem{final_mem} pc{n_instrs}))))"
     )?;
     writeln!(out)?;
 

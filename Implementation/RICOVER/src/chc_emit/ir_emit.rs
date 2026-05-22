@@ -210,37 +210,53 @@ impl InlinedSemantics {
     ///
     /// Returns three SMT equality constraints:
     ///   `(= regs{so} <expr>)`, `(= mem{so} <expr>)`, `(= pc{so} <expr>)`
-    pub fn instantiate(&self, operands: &[String], si: usize, so: usize) -> [String; 3] {
+    pub fn instantiate(&self, operands: &[String], si: usize, so: usize) -> Vec<String> {
+        self.instantiate_compressed(operands, si, so, si, so)
+    }
+
+    /// Like `instantiate`, but with separate memory variable indices.
+    ///
+    /// When `mi == mo`, the instruction doesn't modify memory, so the
+    /// memory constraint `(= memN memN)` is omitted entirely — removing
+    /// a trivial equality over array-typed variables that Z3/Spacer
+    /// otherwise has to reason about.
+    pub fn instantiate_compressed(
+        &self,
+        operands: &[String],
+        si: usize,
+        so: usize,
+        mi: usize,
+        mo: usize,
+    ) -> Vec<String> {
         let regs_in = format!("regs{}", si);
-        let mem_in = format!("mem{}", si);
+        let mem_in = format!("mem{}", mi);
         let pc_in = format!("pc{}", si);
 
-        let mut exprs = [
-            self.regs_expr.clone(),
-            self.mem_expr.clone(),
-            self.pc_expr.clone(),
-        ];
+        let mut regs_e = self.regs_expr.clone();
+        let mut mem_e = self.mem_expr.clone();
+        let mut pc_e = self.pc_expr.clone();
 
-        for expr in &mut exprs {
+        for expr in [&mut regs_e, &mut mem_e, &mut pc_e] {
             *expr = expr.replace("regs0", &regs_in)
                         .replace("mem0", &mem_in)
                         .replace("pc0", &pc_in);
         }
 
-        // Replace parameters in reverse order to avoid p1 matching inside p10
         for i in (0..self.n_params).rev() {
             let from = format!("p{}", i);
             let to = &operands[i];
-            for expr in &mut exprs {
+            for expr in [&mut regs_e, &mut mem_e, &mut pc_e] {
                 *expr = expr.replace(&from, to);
             }
         }
 
-        [
-            format!("(= regs{} {})", so, exprs[0]),
-            format!("(= mem{} {})", so, exprs[1]),
-            format!("(= pc{} {})", so, exprs[2]),
-        ]
+        let mut constraints = Vec::with_capacity(3);
+        constraints.push(format!("(= regs{} {})", so, regs_e));
+        if mi != mo {
+            constraints.push(format!("(= mem{} {})", mo, mem_e));
+        }
+        constraints.push(format!("(= pc{} {})", so, pc_e));
+        constraints
     }
 }
 
