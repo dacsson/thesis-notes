@@ -429,15 +429,173 @@ pub fn parse_ir(contents: &str) -> Result<IslaIRModel<'_>> {
 
 Читать это правило следует так: «Начиная из состояния `(regs0, mem0, pc0)`, исполнение `addi` с операндами `imm=p0, rs1=p1, rd=p2` приводит к состоянию `(regs1, mem1, pc1)`, где регистр `rd` получает значение `rs1 + sign_extend(imm)`, память не изменяется, а PC увеличивается на 4». Тело правила было механически получено из Sail-клоза через Isla IR - оно не написано вручную.
 
-Далее по конвейру, чтобы уменьшить нагрузку на решатель происходить инлайнинг инструкций, что позволяет встроить раскрытие инструкции в функцию непосредственно, не создавая новое отношение.
+**Инлайнинг семантики инструкций.** Команда `translate-ir` эмитирует для каждой инструкции отдельное CHC-отношение (`declare-rel` + `rule`), как показано в листинге 3.4. При формировании запроса эквивалентности (`check-equiv`) тело каждого блока могло бы вызывать эти отношения:
+
+```smt2
+; вариант с вызовом отношения (НЕ используется в check-equiv):
+(addi regs0 mem0 pc0 regs1 mem1 pc1 (_ bv4064 12) reg_sp reg_sp)
+(store_8 regs1 mem1 pc1 regs2 mem2 pc2 (_ bv24 12) reg_ra reg_sp)
+```
+
+Вместо этого `check-equiv` применяет прямое встраивание: тело каждого правила блока содержит три равенства-ограничения непосредственно, без ссылки на инструкционные отношения. Такой подход сокращает глубину CHC-системы с двух уровней (инструкционные отношения → программные отношения) до одного (только блочные и композиционные отношения), что упрощает задачу поиска индуктивного инварианта алгоритмом Spacer.
+
+Технически инлайнинг реализован через структуру `InlinedSemantics` (листинг 3.5а) — три строковых шаблона, хранящих SMT-выражения для нового регистрового файла, памяти и PC.
+
+**Листинг 3.5а — Структура InlinedSemantics и метод instantiate_compressed (ir_emit.rs, Rust)**
+
+```rust
+pub(crate) struct InlinedSemantics {
+    /// Шаблон для regs_out. Содержит "regs0" и "p0".."pN" (параметры инструкции).
+    /// Пример для addi: "(set_reg regs0 p2 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0)))"
+    /// Пример для sd:   "regs0"  (инструкция-сохранение не изменяет регистры)
+    pub regs_expr: String,
+    /// Шаблон для mem_out. "mem0" если память не меняется, иначе — выражение write_mem_*.
+    pub mem_expr: String,
+    /// Шаблон для pc_out. Обычно "(bvadd pc0 (_ bv4 64))".
+    pub pc_expr: String,
+    pub n_params: usize,
+}
+
+impl InlinedSemantics {
+    /// Подставляет конкретные операнды и индексы состояний в шаблоны.
+    /// mi/mo — индексы входной/выходной переменной памяти (могут совпадать,
+    /// если инструкция не пишет память — тогда ограничение (= mem_mo ...) пропускается).
+    pub fn instantiate_compressed(
+        &self, operands: &[String], si: usize, so: usize, mi: usize, mo: usize,
+    ) -> Vec<String> {
+        // заменяем regs0→regsN, mem0→memM, pc0→pcN, p0..pK → конкретные операнды
+        let mut regs_e = self.regs_expr.replace("regs0", &format!("regs{si}"));
+        let mut mem_e  = self.mem_expr .replace("mem0",  &format!("mem{mi}"));
+        let mut pc_e   = self.pc_expr  .replace("pc0",   &format!("pc{si}"));
+        for i in (0..self.n_params).rev() {
+            for expr in [&mut regs_e, &mut mem_e, &mut pc_e] {
+                *expr = expr.replace(&format!("p{i}"), &operands[i]);
+            }
+        }
+        let mut out = vec![
+            format!("(= regs{so} {regs_e})"),
+            format!("(= pc{so} {pc_e})"),
+        ];
+        if mi != mo { out.insert(1, format!("(= mem{mo} {mem_e})")); }
+        out
+    }
+}
+```
+
+При построении правила блока `emit_block_body_rule_inlined` вызывает `instantiate_compressed` для каждой инструкции: результирующие три строки добавляются непосредственно в тело `(and ...)`. Когда `mi == mo` (инструкция не изменяет память), ограничение `(= memN memN)` опускается — это и есть оптимизация устранения переменных памяти, совмещённая с инлайнингом в одном проходе.
 
 **Покрытие инструкций.** Из 746 вариантов в полном Isla IR `rv64d.ir` успешно транслируются 199. Покрытые инструкции включают полный профиль RV64IM: ITYPE (addi/addiw/andi/ori/xori/slti/sltiu), RTYPE (add/sub/and/or/xor + W-варианты, сдвиги), LOAD (lb/lbu/lh/lhu/lw/lwu/ld), STORE (sb/sh/sw/sd), BRANCH (beq/bne/blt/bge/bltu/bgeu), JAL, JALR, LUI, MUL/MULH/DIV/REM и их варианты. Остальные 547 относятся к расширениям с плавающей точкой (F, D, H), векторным (V), криптографическим (K) и привилегированным (M/S) инструкциям - для целочисленных программ, генерируемых Csmith, все используемые инструкции покрыты.
+
+**Структура модуля `chc_emit`.** Формирование SMT-LIB2-вывода сосредоточено в модуле `src/chc_emit/`, организованном в виде восьми специализированных подмодулей (листинг 3.8).
+
+**Листинг 3.8 — Объявление подмодулей `chc_emit` (src/chc_emit/mod.rs, Rust)**
+
+```rust
+mod format;            // текстовое представление SMT-выражений
+mod smt;               // трансляция Isla IR Exp → SMT-строка
+mod known_calls;       // классификация известных Sail вызовов (rX, wX, EXTS, EXTZ…)
+mod variant_discovery; // обнаружение вариантов execute в IR-дереве
+mod ir_translate;      // PathTranslation: обход пути варианта → SMT-ограничения
+mod ir_emit;           // InlinedSemantics: шаблоны ограничений для инлайнинга
+mod asm_emit;          // emit_program_rule_inlined: правила блоков и CFG-композиции
+mod equiv;             // emit_equivalence_query: сборка полного .smt2 запроса
+
+pub use ir_emit::emit_instruction_chc;
+pub use equiv::emit_equivalence_query;
+```
+
+Ключевой поток данных через модули: `variant_discovery` находит все пути выполнения в IR для каждого варианта инструкции → `ir_translate` обходит каждый путь и строит структуру `PathTranslation`, накапливающую параметры инструкции (`params`), выражение нового регистрового файла (`reg_write`), финальное выражение памяти (`mem_expr`) и выражение PC (`pc_expr`) → `ir_emit` преобразует `PathTranslation` в `InlinedSemantics` — готовые SMT-шаблоны с именованными слотами для операндов → `asm_emit` применяет шаблоны к конкретным ассемблерным операндам при построении правил блоков. Функция `emit_equivalence_query` в `equiv.rs` является точкой сборки: она последовательно записывает стандартную библиотеку, вызывает `emit_program_rule_inlined` для каждой из двух функций, добавляет предикат `obs_addr` и шесть правил `bad` с финальным `(query bad)`.
 
 ### 3.3 Разбор RISC-V ассемблера и формирование запроса (check-equiv)
 
 Команда `check-equiv` принимает два ассемблерных файла, имя функции, путь к `.ir` и выходной файл.
 
 **Модуль asm_parse.rs.** Разборщик читает GAS-совместимые `.s` файлы и строит для каждой функции список структурированных инструкций. Поддерживаются базовые инструкции RV64GC, псевдоинструкции (`ret` в `jalr x0, 0(ra)`, `mv` в `addi rd, rs, 0`, `li`, `snez`, `zext.b`, `lui`) и сжатые инструкции (`c.addi`, `c.li`, `c.mv`, `c.ld`, `c.sd`, `c.beqz`, `c.bnez`), раскрываемые в базовые при разборе.
+
+Разбор основан на пяти структурах данных, отображающих элементы ассемблерного текста на типизированные объекты Rust (листинг 3.9).
+
+**Листинг 3.9 — Структуры данных модуля asm_parse.rs (Rust)**
+
+```rust
+pub struct AsmInstruction {
+    pub opcode: String,
+    pub operands: Vec<Operand>,
+}
+
+pub enum Operand {
+    Reg(String),                          // регистр: "sp", "a0", "ra"
+    Imm(i64),                             // непосредственный операнд: -32, 24
+    MemRef { offset: i64, base: String }, // ссылка на память: -20(s0), 24(sp)
+    Label(String),                        // цель ветвления: ".LBB0_2"
+}
+
+pub struct AsmFunction {
+    pub name: String,
+    pub instructions: Vec<AsmInstruction>,
+    pub labels: HashMap<String, usize>,   // имя метки → индекс инструкции
+}
+
+pub struct BasicBlock {
+    pub id: usize,
+    pub instr_range: Range<usize>,        // диапазон инструкций блока (без терминатора)
+    pub terminator: Terminator,
+}
+
+pub enum Terminator {
+    Branch {
+        branch_instr_idx: usize,  // индекс инструкции ветвления
+        taken_block: usize,       // блок назначения при выполнении условия
+        fallthrough_block: usize, // блок назначения при невыполнении
+    },
+    Fallthrough(usize),
+    Exit,
+}
+```
+
+Функция `parse_asm` сканирует текст построчно: при нахождении метки `function_name:` начинает сбор инструкций; при встрече следующей внешней метки (без точки) завершает разбор; внутрифункциональные метки вида `.LBB0_2:` записываются в `labels` с текущим индексом инструкции и впоследствии используются функцией `build_cfg` для выявления границ блоков.
+
+Функция `instruction_to_chc` переводит каждую инструкцию в имя соответствующего CHC-правила и список SMT-операндов. Порядок операндов определяется порядком полей в кортеже Sail для каждого класса инструкций (листинг 3.10).
+
+**Листинг 3.10 — Отображение ассемблерных инструкций в SMT-операнды (asm_emit.rs, Rust)**
+
+```rust
+match op {
+    // I-type: addi rd, rs1, imm → (imm_bv12, rs1_idx, rd_idx)
+    "addi" | "addiw" | "andi" | "ori" | "xori" | "slti" | "sltiu" => {
+        let rd  = reg_to_smt(&instr.operands[0])?;
+        let rs1 = reg_to_smt(&instr.operands[1])?;
+        let imm = imm_to_bv12(imm_val);
+        Ok((op.to_string(), vec![imm, rs1, rd]))
+    }
+    // Store: sd rs2, off(base) → (off_bv12, rs2_idx, base_idx)
+    // Порядок (imm, rs2, rs1=base) соответствует Sail-кортежу STYPE
+    "sb" | "sh" | "sw" | "sd" => {
+        let rs2  = reg_to_smt(rs2_name)?;
+        let base = reg_to_smt(base_name)?;
+        Ok((op.to_string(), vec![imm_to_bv12(offset), rs2, base]))
+    }
+    // Load: ld rd, off(base) → (off_bv12, base_idx, rd_idx)
+    "lb" | "lbu" | "lh" | "lhu" | "lw" | "lwu" | "ld" => {
+        let rd   = reg_to_smt(rd_name)?;
+        let base = reg_to_smt(base_name)?;
+        Ok((op.to_string(), vec![imm_to_bv12(offset), base, rd]))
+    }
+    // R-type: add rd, rs1, rs2 → (rs2_idx, rs1_idx, rd_idx)
+    // Порядок (rs2, rs1, rd) соответствует Sail-кортежу RTYPE
+    "add" | "sub" | "and" | "or" | "xor" | "slt" | "sltu" |
+    "sll" | "srl" | "sra" | "addw" | "subw" | "mul" | ... => {
+        let rd  = reg_to_smt(&instr.operands[0])?;
+        let rs1 = reg_to_smt(&instr.operands[1])?;
+        let rs2 = reg_to_smt(&instr.operands[2])?;
+        Ok((op.to_string(), vec![rs2, rs1, rd]))
+    }
+    // Псевдоинструкция: ret = jalr x0, 0(ra)
+    "ret" => Ok(("jalr".to_string(),
+                 vec!["(_ bv0 12)".into(), "reg_ra".into(), "reg_zero".into()])),
+}
+```
+
+Несовпадение порядка операндов с кортежем Sail не приводит к ошибке компилятора — решатель применит семантически корректную формулу к неправильным аргументам и вернёт ложный `unsat`. Именно поэтому все новые инструкции верифицируются на примерах с заранее известным результатом.
 
 **Цепочка состояний.** Формирование CHC-запроса - это связывание всех инструкций функции через промежуточные переменные состояния:
 
@@ -447,31 +605,87 @@ $$
 
 где $n$ - количество инструкций функции; каждая тройка $(\text{regs}_i, \text{mem}_i, \text{pc}_i)$ - промежуточное состояние машины после $i$-й инструкции.
 
-Итоговое CHC-правило для функции $P$ из $n$ инструкций показано в листинге 3.5.
+Итоговое CHC-правило для блока функции формируется с инлайнингом семантики инструкций — без промежуточных CHC-отношений. Листинг 3.5 показывает фактически сгенерированное RICOVER правило для блока `func_361_bb0` из бенчмарка Csmith (функция `src`, 10 инструкций, 1 базовый блок). Инструкция `instcombine` из LLVM удаляет два мёртвых сохранения `sw`/`sh`, оставляя 8-инструкционную версию `func_362`.
 
-**Листинг 3.5 - Фрагмент CHC-правила функции foo1 (SMT-LIB2)**
+**Листинг 3.5 — Сгенерированное CHC-правило func_361_bb0 (SMT-LIB2, вывод RICOVER)**
 
 ```smt2
-(=> (and
-      ; addi sp, sp, -32
-      (addi regs0 mem0 pc0 regs1 mem1 pc1
-            (_ bv4064 12) reg_sp reg_sp)
-      ; sd ra, 24(sp)
-      (sd   regs1 mem1 pc1 regs2 mem2 pc2
-            (_ bv24 12) reg_sp reg_ra)
-      ; ... (промежуточные инструкции) ...
-      ; ld ra, 24(sp)
-      (load regs12 mem12 pc12 regs13 mem13 pc13
-            (_ bv24 12) reg_sp reg_ra)
-      ; addi sp, sp, 32
-      (addi regs13 mem13 pc13 regs14 mem14 pc14
-            (_ bv32 12) reg_sp reg_sp)
-      ; ret
-      (ret  regs14 mem14 pc14 regs15 mem15 pc15))
-    (foo1 regs0 mem0 pc0 regs15 mem15 pc15))
+(declare-rel func_361_bb0
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall
+    ;; 11 переменных регистров regs0..regs10, но только 5 переменных памяти mem0..mem4:
+    ;; инструкции, не изменяющие память, не получают новой переменной memN
+    ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+     (regs1 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc1 (_ BitVec 64))
+     (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (mem1 (Array (_ BitVec 64) (_ BitVec 8))) (pc2 (_ BitVec 64))
+     (regs3 (Array (_ BitVec 5) (_ BitVec 64))) (mem2 (Array (_ BitVec 64) (_ BitVec 8))) (pc3 (_ BitVec 64))
+     (regs4 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc4 (_ BitVec 64))
+     (regs5 (Array (_ BitVec 5) (_ BitVec 64))) (mem3 (Array (_ BitVec 64) (_ BitVec 8))) (pc5 (_ BitVec 64))
+     (regs6 (Array (_ BitVec 5) (_ BitVec 64))) (mem4 (Array (_ BitVec 64) (_ BitVec 8))) (pc6 (_ BitVec 64))
+     (regs7 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc7 (_ BitVec 64))
+     (regs8 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc8 (_ BitVec 64))
+     (regs9 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc9 (_ BitVec 64))
+     (regs10 (Array (_ BitVec 5) (_ BitVec 64)))                                           (pc10 (_ BitVec 64)))
+  (=> (and
+        ; addi sp, sp, -32  [память не изменяется → новой переменной mem нет]
+        (= regs1 (set_reg regs0 reg_sp (bvadd (get_reg regs0 reg_sp)
+                                              ((_ sign_extend 52) (_ bv4064 12)))))
+        (= pc1 (bvadd pc0 (_ bv4 64)))
+        ; sd ra, 24(sp)  [запись в память → вводится mem1]
+        (= regs2 regs1)
+        (= mem1 (write_mem_dword mem0 (bvadd (get_reg regs1 reg_sp)
+                                             ((_ sign_extend 52) (_ bv24 12)))
+                                     ((_ extract 63 0) (get_reg regs1 reg_ra))))
+        (= pc2 (bvadd pc1 (_ bv4 64)))
+        ; sd s0, 16(sp)  [запись → mem2]
+        (= regs3 regs2)
+        (= mem2 (write_mem_dword mem1 (bvadd (get_reg regs2 reg_sp)
+                                             ((_ sign_extend 52) (_ bv16 12)))
+                                     ((_ extract 63 0) (get_reg regs2 reg_s0))))
+        (= pc3 (bvadd pc2 (_ bv4 64)))
+        ; addi s0, sp, 32  [память не изменяется]
+        (= regs4 (set_reg regs3 reg_s0 (bvadd (get_reg regs3 reg_sp)
+                                              ((_ sign_extend 52) (_ bv32 12)))))
+        (= pc4 (bvadd pc3 (_ bv4 64)))
+        ; sw a0, 12(sp)  [запись → mem3; мёртвое сохранение, удалённое instcombine]
+        (= regs5 regs4)
+        (= mem3 (write_mem_word mem2 (bvadd (get_reg regs4 reg_sp)
+                                            ((_ sign_extend 52) (_ bv12 12)))
+                                    ((_ zero_extend 32) ((_ extract 31 0) (get_reg regs4 reg_a0)))))
+        (= pc5 (bvadd pc4 (_ bv4 64)))
+        ; sh a1, 10(sp)  [запись → mem4; мёртвое сохранение]
+        (= regs6 regs5)
+        (= mem4 (write_mem_half mem3 (bvadd (get_reg regs5 reg_sp)
+                                            ((_ sign_extend 52) (_ bv10 12)))
+                                    ((_ zero_extend 48) ((_ extract 15 0) (get_reg regs5 (_ bv11 5))))))
+        (= pc6 (bvadd pc5 (_ bv4 64)))
+        ; ld ra, 24(sp)  [чтение из mem4; новая переменная памяти не нужна]
+        (= regs7 (set_reg regs6 reg_ra ((_ sign_extend 0)
+                  (mem_read_8 mem4 (bvadd (get_reg regs6 reg_sp) ((_ sign_extend 52) (_ bv24 12)))))))
+        (= pc7 (bvadd pc6 (_ bv4 64)))
+        ; ld s0, 16(sp)  [чтение из mem4]
+        (= regs8 (set_reg regs7 reg_s0 ((_ sign_extend 0)
+                  (mem_read_8 mem4 (bvadd (get_reg regs7 reg_sp) ((_ sign_extend 52) (_ bv16 12)))))))
+        (= pc8 (bvadd pc7 (_ bv4 64)))
+        ; addi sp, sp, 32  [память не изменяется]
+        (= regs9 (set_reg regs8 reg_sp (bvadd (get_reg regs8 reg_sp)
+                                              ((_ sign_extend 52) (_ bv32 12)))))
+        (= pc9 (bvadd pc8 (_ bv4 64)))
+        ; ret = jalr x0, 0(ra)
+        (= regs10 (set_reg regs9 reg_zero (bvadd pc9 (_ bv4 64))))
+        (= pc10 (concat ((_ extract 63 1)
+                         (bvadd (get_reg regs9 reg_ra) ((_ sign_extend 52) (_ bv0 12))))
+                        (_ bv0 1)))
+      )
+      (func_361_bb0 regs0 mem0 pc0 regs10 mem4 pc10))))
 ```
 
-Здесь `bv4064` - 12-битное дополнение до двух числа `-32` (поскольку $4096 - 32 = 4064$). Значения операндов подставляются из разобранной инструкции в виде битовекторных литералов.
+В блоке `forall` видна оптимизация устранения переменных памяти: из 10 инструкций лишь 4 (`sd`, `sd`, `sw`, `sh`) записывают память — вводятся переменные `mem1`–`mem4`. Инструкции `addi`, `ld` и `ret` не получают собственной переменной `memN`. Константа `(_ bv4064 12)` — 12-битное дополнение до двух для `-32` (поскольку $4096 - 32 = 4064$).
+
+Оптимизированная версия `func_362` (8 инструкций, `sw`/`sh` удалены instcombine) содержит только `mem0`–`mem2`: оба мёртвых сохранения исчезли вместе со своими переменными памяти. CHC-решатель Z3 отвечает `unsat` за 27 секунд: мёртвые записи выполнялись в приватный фрейм $[\text{sp}_0 - 32, \text{sp}_0)$, который исключён из $\text{ObsMem}$, и ABI-видимые регистры (`a0`, `ra`, `sp`, `s0`) совпадают в обоих вариантах.
 
 ### 3.4 Стандартная библиотека CHC (stdlib.smt2)
 
@@ -537,6 +751,88 @@ $$
 ```
 
 Предикат `obs-addr` выводим тогда и только тогда, когда адрес `addr` находится вне приватного фрейма `[sp0 - N, sp0)`, то есть является наблюдаемым. Если `bad` выводимо - найден контрпример; если нет - обе программы семантически эквивалентны относительно $\simeq_{\text{proj}}$.
+
+### 3.6 Кодирование ветвлений и граф потока управления
+
+Функции с условными переходами требуют многоблочного CHC-кодирования. RICOVER строит граф потока управления (CFG) и кодирует его через два слоя CHC-отношений.
+
+**Построение CFG.** Функция `build_cfg` в `asm_parse.rs` делит функцию на базовые блоки: границы блоков проставляются на начало функции, на инструкцию-цель каждого перехода и на инструкцию сразу после каждой ветки. Для каждого блока определяется один из трёх терминаторов: `Branch` (условный переход с адресом обоих путей), `Fallthrough` (непосредственный переход к следующему блоку) и `Exit` (блок заканчивается инструкцией `ret`).
+
+**Два слоя CHC-отношений.** Для каждого базового блока `bb<N>` функции `f` эмитируются:
+
+1. *Тело блока* — `f_bb<N>(state_in, state_out)`: цепочка инлайн-ограничений для инструкций блока (без инструкции-терминатора);
+2. *Композиция* — `f_from_bb<N>(state_in, state_out)`: описывает все пути выполнения от входа в блок `bb<N>` до завершения функции. Для входного блока (`bb0`) эта функция именуется просто `f` и является функциональным резюме всей функции.
+
+Такая структура позволяет естественно моделировать обратные рёбра (циклы) через рекурсивные CHC-правила: цикл-заголовок получает рекурсивное правило для `f_from_bb<N>`, а CHC-решатель находит индуктивный инвариант через фиксированную точку.
+
+**Пример с ветвлением: бенчмарк PR44306.** Рассмотрим функцию `src`:
+
+```asm
+src:
+    lw   a3, 0(a2)       ; bb0: загрузка из памяти
+    lw   a4, 0(a1)       ; bb0: загрузка из памяти
+    blt  a3, a4, .LBB0_2 ; bb0: терминатор — условный переход
+    mv   a1, a2          ; bb1: fallthrough — пересылка регистра
+.LBB0_2:
+    ld   a1, 0(a1)       ; bb2: загрузка двойного слова
+    sd   a1, 0(a0)       ; bb2: сохранение в память
+    ret                  ; bb2: выход
+```
+
+CFG: `bb0 → (blt взята) → bb2 [exit]`; `bb0 → (blt не взята) → bb1 → bb2 [exit]`.
+
+Функция `build_cfg` разделяет функцию на три блока. `bb0` содержит две инструкции `lw` (тело) и ветку `blt` (терминатор); `bb1` — одну инструкцию `mv` (терминатор `Fallthrough(2)`); `bb2` — три инструкции `ld`, `sd`, `ret` (терминатор `Exit`). Листинг 3.11 показывает фактически сгенерированные правила CFG-композиции.
+
+**Листинг 3.11 — Правила CFG-композиции функции src из PR44306 (SMT-LIB2)**
+
+```smt2
+;; Предварительное объявление всех отношений (Z3 требует объявления до первого использования)
+(declare-rel PR443061       ((Array ...) (Array ...) (_ BitVec 64)
+                             (Array ...) (Array ...) (_ BitVec 64)))
+(declare-rel PR443061_from_bb1  (...))
+(declare-rel PR443061_from_bb2  (...))
+
+;; Выходной блок bb2: from_bb2 = тело bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...) (regs1 ...) (mem1 ...) (pc1 ...))
+    (=> (PR443061_bb2 regs0 mem0 pc0 regs1 mem1 pc1)
+        (PR443061_from_bb2 regs0 mem0 pc0 regs1 mem1 pc1))))
+
+;; Блок bb1 (fallthrough): тело bb1, затем from_bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=> (and (PR443061_bb1 regs0 mem0 pc0 regs1 mem1 pc1)
+             (PR443061_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061_from_bb1 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+;; Входной блок bb0, ветвь взята (blt a3, a4): тело bb0 → from_bb2
+; taken: blt a3, a4, .LBB0_2 → bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=> (and (PR443061_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5)))
+             (PR443061_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+;; Входной блок bb0, ветвь не взята: тело bb0 → from_bb1
+; not-taken: fallthrough → bb1
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=> (and (PR443061_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (not (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5))))
+             (PR443061_from_bb1 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061 regs0 mem0 pc0 regs2 mem2 pc2))))
+```
+
+Условие ветвления `(bvslt (get_reg regs1 ...) (get_reg regs1 ...))` читает регистры из состояния **после** выполнения тела блока (`regs1`), а не из входного состояния (`regs0`): сначала исполняются инструкции-данные блока, затем вычисляется условие перехода. Это соответствует семантике инструкции `blt`: условие проверяется на актуальных значениях регистров в момент ветвления.
+
+Все `declare-rel` эмитируются до всех `rule` — это требование Z3 Fixedpoint API: при обработке правила каждый предикат, используемый в теле, уже должен быть объявлен. `emit_composition_rules` поэтому делает два прохода: сначала объявляет все отношения, затем эмитирует правила.
 
 ---
 
