@@ -191,6 +191,224 @@ Results (100 programs, seeds 300–399, instcombine pass, 300s Z3 timeout):
 ### Recommendations
 
 1. **Fix `sext.w`/`neg`/`not`/`seqz`/`nop`** pseudo-instruction expansions in `asm_emit.rs` — trivial, removes one error class.
-2. **Add `call` to the `has_relocation` filter** in the e2e script so call-bearing functions are skipped cleanly rather than erroring inside RICOVER.
+2. ~~**Add `call` to the `has_relocation` filter**~~ **Done (22 May).** `call` is now filtered in `has_relocation` in `riscv_opt_diff.py`.
 3. **For thesis evaluation**: use `--no-arrays --no-structs --no-pointers --no-safe-math --no-global-variables` csmith flags with 300s Z3 timeout. This combination produces a 70% solve rate on small random functions — strong evidence that the approach generalizes beyond handcrafted inputs.
 4. **To improve csmith yield further**: (a) try Eldarica as alternative CHC solver; (b) detect stack-only functions and skip observable memory comparison entirely; (c) filter to ≤15 source instructions for reliable solving.
+
+---
+
+## All-passes sweep — 22 May 2026 (post-inlining)
+
+After the "inline instruction rules" optimization (`b59a62a`), re-ran csmith with all 9 default pass pipelines and the simplified csmith flags (now baked into `csmith_ricover_e2e.py`).
+
+### Changes applied before this run
+
+1. **Csmith flags baked into e2e script.** `--no-safe-math --no-arrays --no-structs --no-pointers` added to `generate_csmith()` in `csmith_ricover_e2e.py` (previously only used manually).
+2. **`call` added to relocation filter.** `has_relocation()` in `riscv_opt_diff.py` now checks for `call ` instructions, so functions with calls are skipped cleanly instead of erroring inside RICOVER.
+
+### Csmith flag effects on `call` instructions
+
+Even with `--no-safe-math`, csmith functions still call each other in assembly (inter-function calls). The `--no-safe-math` flag removes `safe_*` wrapper calls, but does not eliminate all `call` instructions. Measurements at seed 42:
+
+| Flags | `call` instrs in assembly |
+|-------|:-------------------------:|
+| `--no-pointers` (with arrays, structs) | 86 |
+| `--no-pointers --no-arrays` | 29 |
+| `--no-pointers --no-arrays --no-structs` | 15 |
+
+Relaxing `--no-arrays --no-structs` does **not** introduce more calls per se — it makes functions more complex (more memory operations), which increases Z3 array theory complexity and causes more timeouts. The `call` filter handles both cases.
+
+### Results (4 programs completed, 9 pipelines each, 300s Z3 timeout)
+
+| Program | Function | src→tgt instrs | Passes tested | Result |
+|---------|----------|:--------------:|:-------------:|--------|
+| prog_0 | *(none)* | — | 9 | All functions had relocations |
+| prog_1 | func_1 | 15→9 | 9 | **9/9 EQUIV** |
+| prog_2 | func_1 | 30→9 | 9 | **9/9 EQUIV** |
+| prog_3 | func_16 | 15→9 | 6 | **6/6 EQUIV** (run killed) |
+
+**24/24 tested = EQUIV (unsat), 0 sat, 0 timeouts.** No timeouts is notable — the previous instcombine-only run had 2/10 timeouts. The inlining optimization may have improved Z3 solve times, or these particular functions were easier.
+
+### Why no `sat` results
+
+With the simplified csmith flags, all 9 passes produce the same optimization on these simple functions (constant folding / dead store elimination). The passes don't diverge from each other because the code is too simple for pass-specific transformations (GVN, LICM, loop unroll) to fire differently.
+
+To find `sat` results, options are:
+1. **Use known LLVM miscompile reproductions** (Alive2/bugzilla) as inputs — the existing `benchmark/supported/` benchmarks already do this
+2. **Mutation testing** — take verified-equivalent pairs, mutate one instruction in the optimized side, confirm RICOVER detects the divergence
+3. **Relax csmith flags** (allow arrays/structs) — more complex code, but more Z3 timeouts
+
+### How to reproduce
+
+```bash
+cd Scripts
+bash run_csmith_all_passes.sh      # all 9 pipelines × 10 programs
+bash run_csmith_instcombine.sh     # instcombine only × 20 programs
+bash run_csmith_aggressive.sh      # simplifycfg + gvn + dse × 20 programs
+bash run_csmith_loops.sh           # loop passes × 20 programs
+```
+
+All scripts use `csmith_ricover_e2e.py` with 300s Z3 timeout and max 50 source instructions.
+
+---
+
+## Relaxed flags experiment — 22–23 May 2026
+
+Relaxed csmith flags from `--no-safe-math --no-arrays --no-structs --no-pointers` to `--no-safe-math --no-pointers` (allowing arrays and structs). Goal: produce more complex code where different LLVM passes diverge, increasing the chance of `sat` results.
+
+### Motivation
+
+With simplified flags, all 9 passes produced identical optimizations on simple register-only code — 24/24 EQUIV, no divergence between passes. By allowing arrays and structs, functions have richer memory behaviour (struct field access, array indexing), which:
+- Gives DSE, GVN, LICM more to work with (different passes may transform differently)
+- Increases Z3 array theory complexity (more timeouts at short timeouts)
+
+### What changed in the scripts
+
+`csmith_ricover_e2e.py` `generate_csmith()`:
+```python
+# Simplified (previous):
+cmd = [..., "--no-safe-math", "--no-arrays", "--no-structs", "--no-pointers"]
+# Relaxed (current):
+cmd = [..., "--no-safe-math", "--no-pointers"]
+```
+
+`riscv_opt_diff.py` `has_relocation()` — added `call` filtering (done earlier, still in effect):
+```python
+or i.strip().startswith('call ')
+```
+
+### Run 1: relaxed flags, 300s timeout, max 50 instructions (1 program completed)
+
+```bash
+python3 csmith_ricover_e2e.py -n 10 --z3-timeout 300 --max-instrs 50 \
+    -o /tmp/ricover_csmith_relaxed_20260522_222831
+```
+
+| Function | src→tgt | Pipeline | Result | Notes |
+|----------|:-------:|----------|:------:|-------|
+| func_55 | 18→10 | instcombine through loop-unroll (8 passes) | **8/8 EQUIV** | |
+| func_136 | 33→15 | instcombine, simplifycfg, gvn, licm, indvars, loop-rotate, loop-unroll | **7/7 TIMEOUT** | 33 src instrs too heavy |
+| func_136 | 33→10 | **dse** | **sat** | DSE eliminated a dead store to a struct passed by value |
+
+**The `sat` result (func_136, DSE pass):** The C function takes `struct S0 p_139` by value, modifies `p_139.f0` (a dead store to the local copy), and returns a local constant. DSE correctly eliminates the `p_139.f0 |= ...` dead store. In assembly, however, the base version writes to the struct's memory via `sb a1, 0(a2)` (where `a2` is the caller-provided pointer to the by-value struct copy). This address is outside the function's own stack frame `[sp0 - 64, sp0)`, so RICOVER considers it observable memory and reports a divergence.
+
+**Classification: false positive.** The write is to a by-value struct copy that the caller will never read again. Both versions are semantically equivalent from C's perspective. This is a known limitation: RICOVER's memory observation model treats all memory outside the function's private stack frame as observable, but the RISC-V calling convention places by-value struct copies on the *caller's* stack, making dead stores to them appear as observable side effects.
+
+The sat benchmark is saved at `TestSuite/csmith/func_136_Obase_vs_dse.s` with the C source at `TestSuite/csmith/func_136_dse_sat.c`.
+
+### Run 2: relaxed flags, 60s timeout, max 20 instructions (3 programs, aborted)
+
+```bash
+python3 csmith_ricover_e2e.py -n 20 --z3-timeout 60 --max-instrs 20 \
+    -o /tmp/ricover_csmith_relaxed_fast_20260522_232216
+```
+
+| Result | Count |
+|--------|:-----:|
+| EQUIV | 18 |
+| TIMEOUT | 21 |
+
+60s was insufficient — functions with struct/array memory ops need longer solve times. Over half timed out, including 13-instruction functions. Run aborted.
+
+### Run 3: relaxed flags, 300s timeout, max 20 instructions (10 programs completed)
+
+```bash
+python3 csmith_ricover_e2e.py -n 20 --z3-timeout 300 --max-instrs 20 \
+    -o /tmp/ricover_csmith_relaxed_300s_20260522_235632
+```
+
+| Function | src→tgt | Passes tested | Result |
+|----------|:-------:|:-------------:|--------|
+| func_11 | 19→9 | 9 | **9/9 EQUIV** |
+| func_22 | 12→10 | 9 | **9/9 EQUIV** |
+| func_30 | 12→10 | 9 | **9/9 EQUIV** |
+| func_47 | 13→10 | 9 | **9/9 EQUIV** |
+| func_5 | 16→9 | 4 | **4/4 EQUIV** (run aborted during prog 9) |
+
+**40/40 tested = EQUIV, 0 sat, 0 timeouts.** The 300s timeout solved everything at ≤20 instructions, including the functions that timed out at 60s. All 9 passes produced equivalent results — even with structs and arrays, the code was simple enough that passes didn't diverge.
+
+### Comparison across all runs
+
+| Run | Csmith flags | Timeout | Max instrs | Programs | Tested | EQUIV | SAT | TIMEOUT |
+|-----|-------------|:-------:|:----------:|:--------:|:------:|:-----:|:---:|:-------:|
+| Simplified, all passes | no-arrays/structs/pointers | 300s | 50 | 4 | 24 | **24** | 0 | 0 |
+| Relaxed, all passes | no-pointers only | 300s | 50 | 1 | 16 | 8 | **1** | 7 |
+| Relaxed, all passes | no-pointers only | 60s | 20 | 3 | 39 | 18 | 0 | 21 |
+| Relaxed, all passes | no-pointers only | 300s | 20 | 10 | 40 | **40** | 0 | 0 |
+
+### Key findings
+
+1. **300s Z3 timeout is essential** for struct/array-bearing code. At 60s, over half of functions time out; at 300s, everything ≤20 instructions solves.
+2. **Relaxing `--no-arrays --no-structs` does not produce more `sat` results** on small functions (≤20 instrs). All passes produce identical optimizations. The one `sat` (func_136, 33 instrs) was a false positive from the by-value struct limitation.
+3. **The bottleneck for finding real `sat` results is not csmith flags** — it's that LLVM's passes are correct. Real miscompiles are rare and would require either (a) known-buggy LLVM versions, (b) mutation testing, or (c) much larger test volumes.
+4. **By-value struct dead stores are a known false-positive class.** Functions that take structs by value and modify fields without returning them will produce `sat` under DSE because the store is to caller-owned memory that RICOVER considers observable.
+
+### How to reproduce end-to-end
+
+**Prerequisites:**
+- `~/Tools/csmith/src/csmith` — Csmith random program generator
+- `~/Tools/llvm-project/build/bin/{clang,opt,llc}` — RISC-V cross-compiler and opt tools
+- `~/Tools/csmith/runtime/` — Csmith headers
+- `/usr/riscv64-linux-gnu` — RISC-V sysroot
+- Z3 solver on PATH
+- RICOVER built (`cargo build` in `Implementation/RICOVER`)
+
+**Step 1: Run the e2e pipeline**
+
+```bash
+cd Scripts
+
+# All 9 default passes, 10 programs, 300s Z3 timeout, max 20 src instructions
+python3 csmith_ricover_e2e.py \
+    -n 10 \
+    --z3-timeout 300 \
+    --max-instrs 20 \
+    -o /tmp/ricover_csmith_run
+
+# Or use one of the shell wrapper scripts:
+bash run_csmith_all_passes.sh      # all 9 pipelines × 10 programs
+bash run_csmith_instcombine.sh     # instcombine only × 20 programs
+bash run_csmith_aggressive.sh      # simplifycfg + gvn + dse × 20 programs
+bash run_csmith_loops.sh           # loop passes × 20 programs
+```
+
+**Step 2: Check results**
+
+```bash
+# Structured JSON results
+cat /tmp/ricover_csmith_run/results.json | python3 -m json.tool
+
+# Quick summary from terminal output
+grep -E "EQUIV|DIFF|TIMEOUT" /tmp/ricover_csmith_run/*.log
+```
+
+**Step 3: Inspect a specific sat result**
+
+```bash
+# Look at the ricover-format assembly
+cat /tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s
+
+# Re-run RICOVER + Z3 manually
+cd Implementation/RICOVER
+cargo run -q -- check-equiv \
+    --before /tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s \
+    --after  /tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s \
+    --before-fn src --after-fn tgt \
+    -f func_136 --ir snapshot/rv64d.ir \
+    -o /tmp/func_136.smt2
+z3 -T:300 /tmp/func_136.smt2
+```
+
+**Pipeline internals** (what `csmith_ricover_e2e.py` does):
+
+```
+csmith --no-safe-math --no-pointers --no-global-variables
+  → program.c
+  → clang -O0 -Xclang -disable-O0-optnone -emit-llvm -S → base.ll
+  → llc -O1 → base.s
+  → opt -passes='<pipeline>' -S → opt.ll → llc -O1 → opt.s
+  → per-function diff (skip: call, relocations, >max-instrs, identical)
+  → generate ricover .s file (src: base, tgt: opt)
+  → RICOVER check-equiv → .smt2
+  → z3 -T:<timeout> → sat/unsat/timeout
+```

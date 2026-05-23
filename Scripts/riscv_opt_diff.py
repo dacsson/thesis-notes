@@ -334,6 +334,7 @@ def generate_traditional_diff(
 
 def has_relocation(instructions: List[str]) -> bool:
     return any('%pcrel' in i or 'auipc' in i or '%hi(' in i or '%lo(' in i
+              or i.strip().startswith('call ')
               for i in instructions)
 
 

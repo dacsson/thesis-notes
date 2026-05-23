@@ -99,7 +99,8 @@ def run(cmd: List[str], timeout: int = 60, **kw) -> subprocess.CompletedProcess:
 
 
 def generate_csmith(csmith: Path, outfile: Path, seed: Optional[int] = None) -> bool:
-    cmd = [str(csmith), "--no-checksum", "--no-argc", "--no-global-variables"]
+    cmd = [str(csmith), "--no-checksum", "--no-argc", "--no-global-variables",
+           "--no-safe-math", "--no-pointers"]
     if seed is not None:
         cmd += ["--seed", str(seed)]
     try:
