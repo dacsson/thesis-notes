@@ -1,0 +1,27 @@
+# ==================================================
+# Ricover Format File
+# ==================================================
+# Source file: ../TestSuite/randprog/program_01.c
+# Function: func_01930654_block4
+# Comparison: O0 vs O3
+# Instructions in src (O0): 6
+# Instructions in tgt (O3): 3
+# ==================================================
+
+# Function: src (O0 version)
+.globl src
+src:
+    sw a0, 12(sp)
+    j .LBB1_3
+    lw a0, 12(sp)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+
+
+# Function: tgt (O3 version)
+.globl tgt
+tgt:
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16

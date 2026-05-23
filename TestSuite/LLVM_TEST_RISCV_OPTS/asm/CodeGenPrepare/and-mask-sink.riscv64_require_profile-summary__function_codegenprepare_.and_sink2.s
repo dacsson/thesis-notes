@@ -1,0 +1,71 @@
+# Source: CodeGenPrepare/and-mask-sink.riscv64_require_profile-summary__function_codegenprepare_.ll
+# Function: and_sink2
+# src = pre-opt (and_sink2), tgt = post-opt (and_sink2)
+# Triple: riscv64, Attrs: none
+#
+
+                                        # -- End function
+	.globl	src                             # -- Begin function src
+	.p2align	2
+	.type	src,@function
+src:                                    # @src
+	.cfi_startproc
+# %bb.0:
+	addi	sp, sp, -16
+	.cfi_def_cfa_offset 16
+	lui	a1, 1
+	addi	a1, a1, -2047
+	and	a0, a0, a1
+	sd	a0, 8(sp)                       # 8-byte Folded Spill
+	j	.LBB1_1
+.LBB1_1:                                # %bb0
+                                        # =>This Inner Loop Header: Depth=1
+	ld	a0, 8(sp)                       # 8-byte Folded Reload
+	sext.w	a0, a0
+	lui	a2, %hi(A)
+	li	a1, 0
+	sw	a1, %lo(A)(a2)
+	beqz	a0, .LBB1_1
+	j	.LBB1_2
+.LBB1_2:                                # %bb2
+	li	a0, 0
+	addi	sp, sp, 16
+	.cfi_def_cfa_offset 0
+	ret
+.Lfunc_end1:
+	.size	src, .Lfunc_end1-src
+	.cfi_endproc
+                                        # -- End function
+
+                                        # -- End function
+	.globl	tgt                             # -- Begin function tgt
+	.p2align	2
+	.type	tgt,@function
+tgt:                                    # @tgt
+	.cfi_startproc
+# %bb.0:
+	addi	sp, sp, -16
+	.cfi_def_cfa_offset 16
+	lui	a1, 1
+	addi	a1, a1, -2047
+	and	a0, a0, a1
+	sd	a0, 8(sp)                       # 8-byte Folded Spill
+	j	.LBB1_1
+.LBB1_1:                                # %bb0
+                                        # =>This Inner Loop Header: Depth=1
+	ld	a0, 8(sp)                       # 8-byte Folded Reload
+	sext.w	a0, a0
+	lui	a2, %hi(A)
+	li	a1, 0
+	sw	a1, %lo(A)(a2)
+	beqz	a0, .LBB1_1
+	j	.LBB1_2
+.LBB1_2:                                # %bb2
+	li	a0, 0
+	addi	sp, sp, 16
+	.cfi_def_cfa_offset 0
+	ret
+.Lfunc_end1:
+	.size	tgt, .Lfunc_end1-tgt
+	.cfi_endproc
+                                        # -- End function

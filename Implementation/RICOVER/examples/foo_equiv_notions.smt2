@@ -37,7 +37,7 @@
 
 (define-fun set_reg ((regs (Array (_ BitVec 5) (_ BitVec 64)))
                      (idx (_ BitVec 5))
-                     (val (_ BitVec 64))) (Array (_ BitVec 5) (_ BitVec 64))
+                     (val (_ BitVec 64))) (Array (_ BitVec 5) (_ BitVec  64))
   (ite (= idx (_ bv0 5))
        regs
        (store regs idx val)))

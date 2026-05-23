@@ -1,0 +1,394 @@
+# Diff between O0 and O3
+# Base assembly: ../TestSuite/randprog/diff/program_01_O0.s
+# Compared assembly: ../TestSuite/randprog/diff/program_01_O3.s
+
+# Function: DEPTH
+============================================================
+# (empty function)
+
+# Function: DumbHash
+============================================================
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    sd a0, 8(sp)
+    sw a1, 4(sp)
+    ld a2, 8(sp)
+    auipc a0, %pcrel_hi(context)
+    addi a1, a0, %pcrel_lo(.Lpcrel_hi0)
+    ld a0, 0(a1)
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    auipc a1, %pcrel_hi(context)
+    ld a2, %pcrel_lo(.Lpcrel_hi0)(a1)
+
+############################################################
+
+############################################################
+# DIFF BLOCK (DELETE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    sd a0, 0(a1)
+    ld a0, 0(a1)
+
+# WITH O3: {empty}
+
+############################################################
+
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    sd a0, 0(a1)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    sd a0, %pcrel_lo(.Lpcrel_hi0)(a1)
+
+############################################################
+
+# Function: context
+============================================================
+# (empty function)
+
+# Function: func_01930654
+============================================================
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    auipc a0, %pcrel_hi(DEPTH)
+    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
+    ld a1, 0(a0)
+    li a0, 4
+    blt a0, a1, .LBB1_2
+    j .LBB1_1
+    auipc a0, %pcrel_hi(DEPTH)
+    addi a1, a0, %pcrel_lo(.Lpcrel_hi2)
+    sd a1, 0(sp)
+    ld a0, 0(a1)
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    addi sp, sp, -16
+    sd ra, 8(sp)
+    sd s0, 0(sp)
+    auipc s0, %pcrel_hi(DEPTH)
+    ld a0, %pcrel_lo(.Lpcrel_hi1)(s0)
+    li a1, 5
+    bge a0, a1, .LBB1_2
+
+############################################################
+
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    sd a0, 0(a1)
+    lui a0, 11
+    addi a0, a0, 1260
+    sh a0, 10(sp)
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    sd a0, %pcrel_lo(.Lpcrel_hi1)(s0)
+
+############################################################
+
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    ld a1, 0(sp)
+    sh a0, 10(sp)
+    ld a0, 0(a1)
+    addi a0, a0, -1
+    sd a0, 0(a1)
+    lhu a0, 10(sp)
+    sw a0, 12(sp)
+    j .LBB1_3
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    ld a1, %pcrel_lo(.Lpcrel_hi1)(s0)
+    slli a0, a0, 48
+    addi a1, a1, -1
+    sd a1, %pcrel_lo(.Lpcrel_hi1)(s0)
+    srli a0, a0, 48
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+    ret
+
+############################################################
+
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    sw a0, 12(sp)
+    j .LBB1_3
+    lw a0, 12(sp)
+    ld ra, 24(sp)
+    ld s0, 16(sp)
+    addi sp, sp, 32
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    ld ra, 8(sp)
+    ld s0, 0(sp)
+    addi sp, sp, 16
+
+############################################################
+
+# Function: main
+============================================================
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    addi sp, sp, -48
+    sd ra, 40(sp)
+    sd s0, 32(sp)
+    addi s0, sp, 48
+    li a2, 0
+    sd a2, 8(sp)
+    sw a2, 28(sp)
+    sw a0, 24(sp)
+    sd a1, 16(sp)
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    addi sp, sp, -16
+    sd ra, 8(sp)
+
+############################################################
+
+############################################################
+# DIFF BLOCK (INSERT)
+############################################################
+
+# WITH O0: {empty}
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    ld a1, %pcrel_lo(.Lpcrel_hi2)(a0)
+    auipc a0, %pcrel_hi(.L.str)
+
+############################################################
+
+############################################################
+# DIFF BLOCK (DELETE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    ld a1, 0(a0)
+    auipc a0, %pcrel_hi(.L.str)
+    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
+
+# WITH O3: {empty}
+
+############################################################
+
+############################################################
+# DIFF BLOCK (REPLACE)
+############################################################
+
+# WITH O0:
+# {sequence of asm instructions before opt}
+    ld a0, 8(sp)
+    ld ra, 40(sp)
+    ld s0, 32(sp)
+    addi sp, sp, 48
+
+# WITH O3:
+# {sequence of changed instructions after opt}
+    li a0, 0
+    ld ra, 8(sp)
+    addi sp, sp, 16
+
+############################################################
+
+============================================================
+# Traditional Side-by-Side Diff
+#===========================================================
+# diff -y ../TestSuite/randprog/diff/program_01_O0.s ../TestSuite/randprog/diff/program_01_O3.s
+#===========================================================
+
+	.attribute	4, 16						.attribute	4, 16
+	.attribute	5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0		.attribute	5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0
+	.file	"program_01.c"						.file	"program_01.c"
+	.text								.text
+	.globl	DumbHash                        # -- Begin fu		.globl	DumbHash                        # -- Begin fu
+	.p2align	1						.p2align	1
+	.type	DumbHash,@function					.type	DumbHash,@function
+DumbHash:                               # @DumbHash		DumbHash:                               # @DumbHash
+# %bb.0:							# %bb.0:
+	addi	sp, sp, -32				      <
+	sd	ra, 24(sp)                      # 8-byte Fold <
+	sd	s0, 16(sp)                      # 8-byte Fold <
+	addi	s0, sp, 32				      <
+	sd	a0, 8(sp)				      <
+	sw	a1, 4(sp)				      <
+	ld	a2, 8(sp)				      <
+.Lpcrel_hi0:							.Lpcrel_hi0:
+	auipc	a0, %pcrel_hi(context)			      |		auipc	a1, %pcrel_hi(context)
+	addi	a1, a0, %pcrel_lo(.Lpcrel_hi0)		      |		ld	a2, %pcrel_lo(.Lpcrel_hi0)(a1)
+	ld	a0, 0(a1)				      <
+	add	a0, a0, a2						add	a0, a0, a2
+	sd	a0, 0(a1)				      <
+	ld	a0, 0(a1)				      <
+	lui	a2, 338043						lui	a2, 338043
+	slli	a2, a2, 1						slli	a2, a2, 1
+	addi	a2, a2, -1296						addi	a2, a2, -1296
+	xor	a0, a0, a2						xor	a0, a0, a2
+	sd	a0, 0(a1)				      |		sd	a0, %pcrel_lo(.Lpcrel_hi0)(a1)
+	ld	ra, 24(sp)                      # 8-byte Fold <
+	ld	s0, 16(sp)                      # 8-byte Fold <
+	addi	sp, sp, 32				      <
+	ret								ret
+.Lfunc_end0:							.Lfunc_end0:
+	.size	DumbHash, .Lfunc_end0-DumbHash				.size	DumbHash, .Lfunc_end0-DumbHash
+                                        # -- End function	                                        # -- End function
+	.globl	func_01930654                   # -- Begin fu		.globl	func_01930654                   # -- Begin fu
+	.p2align	1						.p2align	1
+	.type	func_01930654,@function					.type	func_01930654,@function
+func_01930654:                          # @func_01930654	func_01930654:                          # @func_01930654
+# %bb.0:							# %bb.0:
+	addi	sp, sp, -32				      |		addi	sp, sp, -16
+	sd	ra, 24(sp)                      # 8-byte Fold |		sd	ra, 8(sp)                       # 8-byte Fold
+	sd	s0, 16(sp)                      # 8-byte Fold |		sd	s0, 0(sp)                       # 8-byte Fold
+	addi	s0, sp, 32				      <
+.Lpcrel_hi1:							.Lpcrel_hi1:
+	auipc	a0, %pcrel_hi(DEPTH)			      |		auipc	s0, %pcrel_hi(DEPTH)
+	addi	a0, a0, %pcrel_lo(.Lpcrel_hi1)		      |		ld	a0, %pcrel_lo(.Lpcrel_hi1)(s0)
+	ld	a1, 0(a0)				      |		li	a1, 5
+	li	a0, 4					      |		bge	a0, a1, .LBB1_2
+	blt	a0, a1, .LBB1_2				      |	# %bb.1:
+	j	.LBB1_1					      <
+.LBB1_1:						      <
+.Lpcrel_hi2:						      <
+	auipc	a0, %pcrel_hi(DEPTH)			      <
+	addi	a1, a0, %pcrel_lo(.Lpcrel_hi2)		      <
+	sd	a1, 0(sp)                       # 8-byte Fold <
+	ld	a0, 0(a1)				      <
+	addi	a0, a0, 1						addi	a0, a0, 1
+	sd	a0, 0(a1)				      |		sd	a0, %pcrel_lo(.Lpcrel_hi1)(s0)
+	lui	a0, 11					      <
+	addi	a0, a0, 1260				      <
+	sh	a0, 10(sp)				      <
+	call	func_01930654						call	func_01930654
+	ld	a1, 0(sp)                       # 8-byte Fold |		ld	a1, %pcrel_lo(.Lpcrel_hi1)(s0)
+	sh	a0, 10(sp)				      |		slli	a0, a0, 48
+	ld	a0, 0(a1)				      |		addi	a1, a1, -1
+	addi	a0, a0, -1				      |		sd	a1, %pcrel_lo(.Lpcrel_hi1)(s0)
+	sd	a0, 0(a1)				      |		srli	a0, a0, 48
+	lhu	a0, 10(sp)				      |		ld	ra, 8(sp)                       # 8-byte Fold
+	sw	a0, 12(sp)				      |		ld	s0, 0(sp)                       # 8-byte Fold
+	j	.LBB1_3					      |		addi	sp, sp, 16
+							      >		ret
+.LBB1_2:							.LBB1_2:
+	lui	a0, 641111						lui	a0, 641111
+	addi	a0, a0, -2028						addi	a0, a0, -2028
+	sw	a0, 12(sp)				      |		ld	ra, 8(sp)                       # 8-byte Fold
+	j	.LBB1_3					      |		ld	s0, 0(sp)                       # 8-byte Fold
+.LBB1_3:						      |		addi	sp, sp, 16
+	lw	a0, 12(sp)				      <
+	ld	ra, 24(sp)                      # 8-byte Fold <
+	ld	s0, 16(sp)                      # 8-byte Fold <
+	addi	sp, sp, 32				      <
+	ret								ret
+.Lfunc_end1:							.Lfunc_end1:
+	.size	func_01930654, .Lfunc_end1-func_01930654		.size	func_01930654, .Lfunc_end1-func_01930654
+                                        # -- End function	                                        # -- End function
+	.globl	main                            # -- Begin fu		.globl	main                            # -- Begin fu
+	.p2align	1						.p2align	1
+	.type	main,@function						.type	main,@function
+main:                                   # @main			main:                                   # @main
+# %bb.0:							# %bb.0:
+	addi	sp, sp, -48				      |		addi	sp, sp, -16
+	sd	ra, 40(sp)                      # 8-byte Fold |		sd	ra, 8(sp)                       # 8-byte Fold
+	sd	s0, 32(sp)                      # 8-byte Fold <
+	addi	s0, sp, 48				      <
+	li	a2, 0					      <
+	sd	a2, 8(sp)                       # 8-byte Fold <
+	sw	a2, 28(sp)				      <
+	sw	a0, 24(sp)				      <
+	sd	a1, 16(sp)				      <
+	call	func_01930654						call	func_01930654
+.Lpcrel_hi3:						      |	.Lpcrel_hi2:
+	auipc	a0, %pcrel_hi(context)					auipc	a0, %pcrel_hi(context)
+	addi	a0, a0, %pcrel_lo(.Lpcrel_hi3)		      |		ld	a1, %pcrel_lo(.Lpcrel_hi2)(a0)
+	ld	a1, 0(a0)				      |	.Lpcrel_hi3:
+.Lpcrel_hi4:						      <
+	auipc	a0, %pcrel_hi(.L.str)					auipc	a0, %pcrel_hi(.L.str)
+	addi	a0, a0, %pcrel_lo(.Lpcrel_hi4)		      |		addi	a0, a0, %pcrel_lo(.Lpcrel_hi3)
+	call	printf							call	printf
+	ld	a0, 8(sp)                       # 8-byte Fold |		li	a0, 0
+	ld	ra, 40(sp)                      # 8-byte Fold |		ld	ra, 8(sp)                       # 8-byte Fold
+	ld	s0, 32(sp)                      # 8-byte Fold |		addi	sp, sp, 16
+	addi	sp, sp, 48				      <
+	ret								ret
+.Lfunc_end2:							.Lfunc_end2:
+	.size	main, .Lfunc_end2-main					.size	main, .Lfunc_end2-main
+                                        # -- End function	                                        # -- End function
+	.type	context,@object                 # @context		.type	context,@object                 # @context
+	.bss								.bss
+	.globl	context							.globl	context
+	.p2align	3, 0x0						.p2align	3, 0x0
+context:							context:
+	.quad	0                               # 0x0			.quad	0                               # 0x0
+	.size	context, 8						.size	context, 8
+
+	.type	DEPTH,@object                   # @DEPTH		.type	DEPTH,@object                   # @DEPTH
+	.globl	DEPTH							.globl	DEPTH
+	.p2align	3, 0x0						.p2align	3, 0x0
+DEPTH:								DEPTH:
+	.quad	0                               # 0x0			.quad	0                               # 0x0
+	.size	DEPTH, 8						.size	DEPTH, 8
+
+	.type	.L.str,@object                  # @.str			.type	.L.str,@object                  # @.str
+	.section	.rodata.str1.1,"aMS",@progbits,1		.section	.rodata.str1.1,"aMS",@progbits,1
+.L.str:								.L.str:
+	.asciz	"%d\n"							.asciz	"%d\n"
+	.size	.L.str, 4						.size	.L.str, 4
+
+	.ident	"clang version 23.0.0git (https://github.com/		.ident	"clang version 23.0.0git (https://github.com/
+	.section	".note.GNU-stack","",@progbits			.section	".note.GNU-stack","",@progbits
+	.addrsig							.addrsig
+	.addrsig_sym func_01930654			      <
+	.addrsig_sym printf				      <
+	.addrsig_sym context				      <
+	.addrsig_sym DEPTH				      <
+
+============================================================
