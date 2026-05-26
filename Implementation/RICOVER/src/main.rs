@@ -78,9 +78,21 @@ fn main() -> Result<()> {
             prog2.name = format!("{function}2");
             let ir_contents = ricover::isla_ir::read_ir_file(&ir)?;
             let model = ricover::isla_ir::parse_ir(&ir_contents)?;
+            let mem1 = ricover::asm_parse::count_mem_ops(&prog1);
+            let mem2 = ricover::asm_parse::count_mem_ops(&prog2);
             let query = ricover::chc_emit::emit_equivalence_query(&prog1, &prog2, &function, Some(&model))?;
             std::fs::write(&output, query)?;
             println!("Wrote equivalence query to {}", output.display());
+            println!(
+                "  before: {} instrs ({} mem ops), after: {} instrs ({} mem ops)",
+                prog1.instructions.len(), mem1, prog2.instructions.len(), mem2
+            );
+            if mem1 > 12 {
+                eprintln!(
+                    "warning: {} has {} memory ops — solver may timeout (practical limit ~12)",
+                    before_label, mem1
+                );
+            }
         }
     }
 

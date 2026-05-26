@@ -84,8 +84,9 @@ def emit_query(bench_path: Path, out_smt: Path):
     return True
 
 
-def run_z3(smt_file: Path, timeout: int) -> str:
-    cmd = ["z3", f"-T:{timeout}", str(smt_file)]
+def run_z3(smt_file: Path, timeout: int, extra_flags: list = None) -> str:
+    flags = extra_flags or []
+    cmd = ["z3", f"-T:{timeout}"] + flags + [str(smt_file)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     for line in r.stdout.splitlines():
         if line.strip() in ("sat", "unsat", "unknown", "timeout"):
@@ -100,6 +101,8 @@ def main():
         "--timeout", type=int, default=60, help="z3 timeout in seconds (default: 60)"
     )
     parser.add_argument("--keep", action="store_true", help="Keep generated .smt2 file")
+    parser.add_argument("--z3-flags", nargs="+", metavar="FLAG", default=[],
+                        help="Extra Z3/Spacer flags (e.g. fp.spacer.global=true)")
     args = parser.parse_args()
 
     bench = args.file.resolve()
@@ -140,8 +143,10 @@ def main():
     print(f"ok → {out_smt}")
 
     # Solve
+    if args.z3_flags:
+        print(f"Z3 flags: {' '.join(args.z3_flags)}")
     print(f"Running z3 (timeout {args.timeout}s)...", end=" ", flush=True)
-    result = run_z3(out_smt, args.timeout)
+    result = run_z3(out_smt, args.timeout, args.z3_flags)
     print(result)
     print()
 

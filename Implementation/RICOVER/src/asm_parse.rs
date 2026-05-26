@@ -69,6 +69,46 @@ pub fn is_branch(opcode: &str) -> bool {
     )
 }
 
+pub fn is_memory_op(opcode: &str) -> bool {
+    matches!(
+        opcode,
+        "lb" | "lbu" | "lh" | "lhu" | "lw" | "lwu" | "ld"
+            | "sb" | "sh" | "sw" | "sd"
+            | "c.lw" | "c.lwsp" | "c.ld" | "c.ldsp" | "c.lh" | "c.lhu" | "c.lbu"
+            | "c.sw" | "c.swsp" | "c.sd" | "c.sdsp" | "c.sh" | "c.sb"
+    )
+}
+
+pub fn count_mem_ops(func: &AsmFunction) -> usize {
+    func.instructions.iter().filter(|i| is_memory_op(&i.opcode)).count()
+}
+
+pub fn is_store(opcode: &str) -> bool {
+    matches!(
+        opcode,
+        "sb" | "sh" | "sw" | "sd"
+            | "c.sw" | "c.swsp" | "c.sd" | "c.sdsp" | "c.sh" | "c.sb"
+    )
+}
+
+pub fn is_load(opcode: &str) -> bool {
+    matches!(
+        opcode,
+        "lb" | "lbu" | "lh" | "lhu" | "lw" | "lwu" | "ld"
+            | "c.lw" | "c.lwsp" | "c.ld" | "c.ldsp" | "c.lh" | "c.lhu" | "c.lbu"
+    )
+}
+
+pub fn mem_op_width(opcode: &str) -> Option<u8> {
+    match opcode {
+        "lb" | "lbu" | "sb" | "c.lbu" | "c.sb" => Some(1),
+        "lh" | "lhu" | "sh" | "c.lh" | "c.lhu" | "c.sh" => Some(2),
+        "lw" | "lwu" | "sw" | "c.lw" | "c.lwsp" | "c.sw" | "c.swsp" => Some(4),
+        "ld" | "sd" | "c.ld" | "c.ldsp" | "c.sd" | "c.sdsp" => Some(8),
+        _ => None,
+    }
+}
+
 /// Return true if the opcode is an unconditional jump (no fallthrough).
 pub fn is_unconditional_jump(opcode: &str) -> bool {
     matches!(opcode, "j" | "c.j")

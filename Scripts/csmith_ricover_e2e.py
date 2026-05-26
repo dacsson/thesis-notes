@@ -25,8 +25,9 @@ import argparse
 import subprocess
 import sys
 import json
+import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -87,6 +88,12 @@ def parse_args():
                    help="Include csmith helper functions (safe_*, crc*, platform_*)")
     p.add_argument("--max-instrs", type=int, default=200,
                    help="Skip functions with more than N instructions in src (default: 200)")
+    p.add_argument("--max-mem-ops", type=int, default=None,
+                   help="Skip functions with more than N memory ops in src (default: no limit)")
+    p.add_argument("--z3-flags", nargs="+", metavar="FLAG", default=[],
+                   help="Extra Z3/Spacer flags (e.g. fp.spacer.global=true)")
+    p.add_argument("--relaxed", action="store_true",
+                   help="Relaxed csmith flags: allow pointers (keeps --no-safe-math)")
     p.add_argument("--csmith", type=Path, default=CSMITH)
     p.add_argument("--clang", type=Path, default=CLANG)
     p.add_argument("--opt", type=Path, default=OPT)
@@ -98,9 +105,12 @@ def run(cmd: List[str], timeout: int = 60, **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw)
 
 
-def generate_csmith(csmith: Path, outfile: Path, seed: Optional[int] = None) -> bool:
+def generate_csmith(csmith: Path, outfile: Path, seed: Optional[int] = None,
+                    relaxed: bool = False) -> bool:
     cmd = [str(csmith), "--no-checksum", "--no-argc", "--no-global-variables",
-           "--no-safe-math", "--no-pointers"]
+           "--no-safe-math"]
+    if not relaxed:
+        cmd += ["--no-pointers"]
     if seed is not None:
         cmd += ["--seed", str(seed)]
     try:
@@ -196,17 +206,32 @@ def run_ricover(bench_s: Path, func_name: str, out_smt: Path) -> Optional[str]:
         return "ricover-timeout"
 
 
-def run_z3(smt_file: Path, timeout: int) -> str:
-    cmd = ["z3", f"-T:{timeout}", str(smt_file)]
+MEM_OPS = {"lb", "lbu", "lh", "lhu", "lw", "lwu", "ld", "sb", "sh", "sw", "sd"}
+
+
+def count_mem_ops(instrs: List[str]) -> int:
+    count = 0
+    for line in instrs:
+        parts = line.strip().split()
+        if parts and parts[0] in MEM_OPS:
+            count += 1
+    return count
+
+
+def run_z3(smt_file: Path, timeout: int, extra_flags: List[str] = None) -> Tuple[str, float]:
+    flags = extra_flags or []
+    cmd = ["z3", f"-T:{timeout}"] + flags + [str(smt_file)]
+    t0 = time.time()
     try:
         r = run(cmd, timeout=timeout + 10)
+        elapsed = time.time() - t0
         for line in r.stdout.splitlines():
             v = line.strip()
             if v in ("sat", "unsat", "unknown", "timeout"):
-                return v
-        return f"error: {r.stdout[:120]}"
+                return v, elapsed
+        return f"error: {r.stdout[:120]}", elapsed
     except subprocess.TimeoutExpired:
-        return "timeout"
+        return "timeout", time.time() - t0
 
 
 def process_one_program(
@@ -229,7 +254,7 @@ def process_one_program(
     print(f"{'='*60}")
 
     print("  Generating csmith program...", end=" ", flush=True)
-    if not generate_csmith(args.csmith, c_file, seed):
+    if not generate_csmith(args.csmith, c_file, seed, relaxed=args.relaxed):
         return results
     print("ok")
 
@@ -292,6 +317,10 @@ def process_one_program(
                 skip_count += 1
                 continue
 
+            if args.max_mem_ops is not None and count_mem_ops(src) > args.max_mem_ops:
+                skip_count += 1
+                continue
+
             diff_count += 1
             generate_ricover_file(
                 fname, src, tgt, pipe_name, str(pipe_dir),
@@ -302,17 +331,24 @@ def process_one_program(
 
             ricover_status = run_ricover(bench_s, fname, smt_file)
             z3_result = "skipped"
+            z3_time = 0.0
             if ricover_status and ricover_status.startswith("ok") and smt_file.exists():
-                z3_result = run_z3(smt_file, args.z3_timeout)
+                z3_result, z3_time = run_z3(smt_file, args.z3_timeout, args.z3_flags)
 
+            mem_src = count_mem_ops(src)
+            mem_tgt = count_mem_ops(tgt)
             result = {
                 "program": prog_idx,
                 "pipeline": pipe_name,
                 "function": fname,
                 "src_instrs": len(src),
                 "tgt_instrs": len(tgt),
+                "mem_ops_src": mem_src,
+                "mem_ops_tgt": mem_tgt,
                 "ricover": ricover_status,
                 "z3": z3_result,
+                "z3_time": round(z3_time, 1),
+                "z3_flags": args.z3_flags,
                 "file": str(bench_s),
             }
             results.append(result)
@@ -323,7 +359,7 @@ def process_one_program(
                 "timeout": "TIMEOUT",
                 "unknown": "UNKNOWN",
             }.get(z3_result, z3_result.upper())
-            print(f"    {fname}: {len(src)}→{len(tgt)} instrs | {status_icon}")
+            print(f"    {fname}: {len(src)}→{len(tgt)} instrs, {mem_src}/{mem_tgt} mem ops | {status_icon} ({z3_time:.1f}s)")
 
         if diff_count == 0:
             print(f"  No differing functions (skipped {skip_count} with relocations)")
@@ -356,11 +392,47 @@ def print_summary(all_results: List[dict]):
         if status not in ("unsat", "sat", "timeout", "unknown", "skipped"):
             print(f"  {status:10s}: {len(by_z3[status])}")
 
+    solved = [r for r in all_results if r["z3"] in ("sat", "unsat")]
+    if solved:
+        times = sorted(r["z3_time"] for r in solved)
+        print(f"\n--- Solve time stats (sat+unsat, n={len(solved)}) ---")
+        print(f"  median: {times[len(times)//2]:.1f}s")
+        print(f"  p90:    {times[int(len(times)*0.9)]:.1f}s")
+        print(f"  max:    {times[-1]:.1f}s")
+
+    by_pipeline = {}
+    for r in all_results:
+        by_pipeline.setdefault(r["pipeline"], []).append(r)
+    if len(by_pipeline) > 1:
+        print(f"\n--- Per-pipeline breakdown ---")
+        for pipe, rs in sorted(by_pipeline.items()):
+            n_unsat = sum(1 for r in rs if r["z3"] == "unsat")
+            n_sat = sum(1 for r in rs if r["z3"] == "sat")
+            n_to = sum(1 for r in rs if r["z3"] == "timeout")
+            print(f"  {pipe:20s}: {len(rs)} tested, {n_unsat} unsat, {n_sat} sat, {n_to} timeout")
+
+    tested = [r for r in all_results if r["z3"] != "skipped"]
+    if tested:
+        print(f"\n--- By memory ops (src) ---")
+        buckets = {}
+        for r in tested:
+            m = r.get("mem_ops_src", 0)
+            bucket = f"{(m // 3) * 3}-{(m // 3) * 3 + 2}"
+            buckets.setdefault(bucket, {"total": 0, "solved": 0, "timeout": 0})
+            buckets[bucket]["total"] += 1
+            if r["z3"] in ("sat", "unsat"):
+                buckets[bucket]["solved"] += 1
+            elif r["z3"] == "timeout":
+                buckets[bucket]["timeout"] += 1
+        for b in sorted(buckets.keys()):
+            s = buckets[b]
+            print(f"  {b:>5s} mem ops: {s['total']:3d} tested, {s['solved']:3d} solved, {s['timeout']:3d} timeout")
+
     if "sat" in by_z3:
         print(f"\n--- Potential divergences (sat) ---")
         for r in by_z3["sat"]:
             print(f"  prog={r['program']} pipe={r['pipeline']} func={r['function']} "
-                  f"({r['src_instrs']}→{r['tgt_instrs']} instrs)")
+                  f"({r['src_instrs']}→{r['tgt_instrs']} instrs, {r.get('mem_ops_src','?')}/{r.get('mem_ops_tgt','?')} mem ops)")
             print(f"    file: {r['file']}")
 
     errs = [r for r in all_results if r["z3"].startswith("error") or
@@ -412,6 +484,8 @@ def main():
     print(f"Output: {args.output_dir}")
     print(f"Pipelines: {', '.join(pipelines.keys())}")
     print(f"LLC opt level: O{args.llc_opt}")
+    if args.z3_flags:
+        print(f"Z3 flags: {' '.join(args.z3_flags)}")
 
     all_results = []
     for i in range(args.num_programs):

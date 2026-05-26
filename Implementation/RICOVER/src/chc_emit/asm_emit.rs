@@ -6,7 +6,8 @@ use anyhow::{Result, anyhow};
 use super::STATE_TYPES;
 use super::ir_emit::InlinedSemantics;
 use crate::asm_parse::{
-    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, reg_index,
+    AsmFunction, AsmInstruction, BasicBlock, Operand, Terminator, build_cfg, is_load, is_store,
+    mem_op_width, reg_index,
 };
 #[cfg(test)]
 use std::collections::HashSet;
@@ -1238,6 +1239,112 @@ fn lookup_semantics<'a>(
     semantics.get(mapped)
 }
 
+// ── Store-load forwarding ──────────────────────────────────────────────
+//
+// O0 code produces abundant store-then-reload patterns:
+//   sw a0, -20(s0)
+//   lw a0, -20(s0)       ← redundant: value is already in a0
+//
+// Each memory read generates an array-theory constraint that dominates
+// Z3/Spacer solve time. When we can prove a load re-reads what was just
+// stored, we replace the read_mem_* with a direct register expression,
+// eliminating one array constraint per forwarded load.
+
+struct StoreFact {
+    source_reg: String,
+    width: u8,
+}
+
+struct ForwardedLoad {
+    source_reg_smt: String,
+    load_width: u8,
+    sign_extends: bool,
+}
+
+fn extract_store_info(instr: &AsmInstruction) -> Option<(String, i64, String, u8)> {
+    let effective = expand_compressed(instr).unwrap_or_else(|| instr.clone());
+    let width = mem_op_width(&effective.opcode)?;
+    if !is_store(&effective.opcode) {
+        return None;
+    }
+    match effective.operands.as_slice() {
+        [Operand::Reg(rs), Operand::MemRef { offset, base }] => {
+            Some((rs.clone(), *offset, base.clone(), width))
+        }
+        _ => None,
+    }
+}
+
+fn extract_load_info(instr: &AsmInstruction) -> Option<(String, i64, String, u8, bool)> {
+    let effective = expand_compressed(instr).unwrap_or_else(|| instr.clone());
+    let width = mem_op_width(&effective.opcode)?;
+    if !is_load(&effective.opcode) {
+        return None;
+    }
+    let sign_extends = matches!(effective.opcode.as_str(), "lb" | "lh" | "lw" | "ld");
+    match effective.operands.as_slice() {
+        [Operand::Reg(rd), Operand::MemRef { offset, base }] => {
+            Some((rd.clone(), *offset, base.clone(), width, sign_extends))
+        }
+        _ => None,
+    }
+}
+
+fn dest_register(instr: &AsmInstruction) -> Option<String> {
+    let effective = expand_compressed(instr).unwrap_or_else(|| instr.clone());
+    let op = effective.opcode.as_str();
+    if is_store(op)
+        || crate::asm_parse::is_branch(op)
+        || crate::asm_parse::is_unconditional_jump(op)
+        || op == "ret"
+    {
+        return None;
+    }
+    match effective.operands.first() {
+        Some(Operand::Reg(r)) => Some(r.clone()),
+        _ => None,
+    }
+}
+
+fn make_forward_semantics(
+    source_reg_smt: &str,
+    load_width: u8,
+    sign_extends: bool,
+) -> InlinedSemantics {
+    let value_expr = match load_width {
+        8 => format!("(get_reg regs0 {})", source_reg_smt),
+        4 => {
+            let ext = if sign_extends { "sign_extend" } else { "zero_extend" };
+            format!(
+                "((_ {} 32) ((_ extract 31 0) (get_reg regs0 {})))",
+                ext, source_reg_smt
+            )
+        }
+        2 => {
+            let ext = if sign_extends { "sign_extend" } else { "zero_extend" };
+            format!(
+                "((_ {} 48) ((_ extract 15 0) (get_reg regs0 {})))",
+                ext, source_reg_smt
+            )
+        }
+        1 => {
+            let ext = if sign_extends { "sign_extend" } else { "zero_extend" };
+            format!(
+                "((_ {} 56) ((_ extract 7 0) (get_reg regs0 {})))",
+                ext, source_reg_smt
+            )
+        }
+        _ => unreachable!(),
+    };
+
+    InlinedSemantics {
+        regs_expr: format!("(set_reg regs0 p2 {})", value_expr),
+        mem_expr: "mem0".to_string(),
+        pc_expr: "(bvadd pc0 (_ bv4 64))".to_string(),
+        n_params: 3,
+    }
+}
+
 /// Emit the body rule for a single basic block with inlined instruction semantics.
 ///
 /// Instead of emitting relation calls like `(addi regs0 mem0 pc0 regs1 mem1 pc1 ...)`,
@@ -1258,19 +1365,53 @@ fn emit_block_body_rule_inlined(
     writeln!(out, "   {STATE_TYPES}))")?;
     writeln!(out)?;
 
-    // Pre-scan: determine which instructions actually modify memory.
-    // Instructions whose mem_expr is "mem0" (identity) don't need a new
-    // mem variable — reusing the previous one eliminates trivial
-    // `(= memN memN-1)` equalities and reduces array-typed quantified
-    // variables, which is the main bottleneck for Z3/Spacer.
+    // Pre-scan: determine which instructions actually modify memory,
+    // and identify redundant loads that can be forwarded from a preceding store.
     let mut mem_modifies = vec![false; n_instrs];
-    for (local_idx, global_idx) in block.instr_range.clone().enumerate() {
-        let instr = &func.instructions[global_idx];
-        let (opcode, _) = instruction_to_chc(instr)?;
-        if let Some(sem) = lookup_semantics(&opcode, semantics) {
-            mem_modifies[local_idx] = sem.mem_expr != "mem0";
-        } else {
-            mem_modifies[local_idx] = true;
+    let mut forwarded: HashMap<usize, ForwardedLoad> = HashMap::new();
+    {
+        let mut store_map: HashMap<(i64, String), StoreFact> = HashMap::new();
+
+        for (local_idx, global_idx) in block.instr_range.clone().enumerate() {
+            let instr = &func.instructions[global_idx];
+            let (opcode, _) = instruction_to_chc(instr)?;
+
+            if let Some(sem) = lookup_semantics(&opcode, semantics) {
+                mem_modifies[local_idx] = sem.mem_expr != "mem0";
+            } else {
+                mem_modifies[local_idx] = true;
+            }
+
+            // Store-load forwarding analysis
+            if let Some((src_reg, offset, base, width)) = extract_store_info(instr) {
+                store_map.insert(
+                    (offset, base.clone()),
+                    StoreFact { source_reg: src_reg, width },
+                );
+            } else if let Some((_, offset, base, load_width, sign_ext)) = extract_load_info(instr)
+            {
+                if let Some(fact) = store_map.get(&(offset, base)) {
+                    if fact.width == load_width {
+                        if let Ok(smt_reg) = reg_to_smt(&fact.source_reg) {
+                            forwarded.insert(
+                                local_idx,
+                                ForwardedLoad {
+                                    source_reg_smt: smt_reg,
+                                    load_width,
+                                    sign_extends: sign_ext,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Invalidate store facts whose base or source register was written.
+            if let Some(written) = dest_register(instr) {
+                store_map.retain(|(_off, base), fact| {
+                    *base != written && fact.source_reg != written
+                });
+            }
         }
     }
 
@@ -1319,21 +1460,29 @@ fn emit_block_body_rule_inlined(
             let instr = &func.instructions[global_idx];
             let (opcode, operands) = instruction_to_chc(instr)?;
 
-            let sem = lookup_semantics(&opcode, semantics)
-                .ok_or_else(|| anyhow!(
-                    "no inlined semantics for opcode '{}' (from '{}')",
-                    opcode, instr.opcode
-                ))?;
-
             let si = local_idx;
             let so = local_idx + 1;
-
-            // Use the compressed mem indices
             let mi = mem_idx[si];
             let mo = mem_idx[so];
-            let constraints = sem.instantiate_compressed(&operands, si, so, mi, mo);
 
-            writeln!(out, "          ; {}", format_asm_instr(instr))?;
+            let constraints = if let Some(fwd) = forwarded.get(&local_idx) {
+                let fwd_sem = make_forward_semantics(
+                    &fwd.source_reg_smt,
+                    fwd.load_width,
+                    fwd.sign_extends,
+                );
+                writeln!(out, "          ; {} [forwarded]", format_asm_instr(instr))?;
+                fwd_sem.instantiate_compressed(&operands, si, so, mi, mo)
+            } else {
+                let sem = lookup_semantics(&opcode, semantics)
+                    .ok_or_else(|| anyhow!(
+                        "no inlined semantics for opcode '{}' (from '{}')",
+                        opcode, instr.opcode
+                    ))?;
+                writeln!(out, "          ; {}", format_asm_instr(instr))?;
+                sem.instantiate_compressed(&operands, si, so, mi, mo)
+            };
+
             for c in &constraints {
                 writeln!(out, "          {}", c)?;
             }
@@ -1760,5 +1909,219 @@ mod tests {
         assert!(out.contains("bvslt"));
         // No ite — per-block encoding uses separate rules
         assert!(!out.contains("ite"));
+    }
+
+    fn make_test_semantics() -> HashMap<String, InlinedSemantics> {
+        let mut m = HashMap::new();
+        m.insert("addi".into(), InlinedSemantics {
+            regs_expr: "(set_reg regs0 p2 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0)))".into(),
+            mem_expr: "mem0".into(),
+            pc_expr: "(bvadd pc0 (_ bv4 64))".into(),
+            n_params: 3,
+        });
+        m.insert("jalr".into(), InlinedSemantics {
+            regs_expr: "(set_reg regs0 p2 (bvadd pc0 (_ bv4 64)))".into(),
+            mem_expr: "mem0".into(),
+            pc_expr: "(bvand (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0)) (bvnot (_ bv1 64)))".into(),
+            n_params: 3,
+        });
+        m.insert("store_4".into(), InlinedSemantics {
+            regs_expr: "regs0".into(),
+            mem_expr: "(write_mem_word mem0 (bvadd (get_reg regs0 p2) ((_ sign_extend 52) p0)) ((_ zero_extend 32) ((_ extract 31 0) (get_reg regs0 p1))))".into(),
+            pc_expr: "(bvadd pc0 (_ bv4 64))".into(),
+            n_params: 3,
+        });
+        m.insert("load_4_s".into(), InlinedSemantics {
+            regs_expr: "(set_reg regs0 p2 ((_ sign_extend 32) ((_ extract 31 0) (read_mem_word mem0 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0))))))".into(),
+            mem_expr: "mem0".into(),
+            pc_expr: "(bvadd pc0 (_ bv4 64))".into(),
+            n_params: 3,
+        });
+        m.insert("store_8".into(), InlinedSemantics {
+            regs_expr: "regs0".into(),
+            mem_expr: "(write_mem_dword mem0 (bvadd (get_reg regs0 p2) ((_ sign_extend 52) p0)) ((_ extract 63 0) (get_reg regs0 p1)))".into(),
+            pc_expr: "(bvadd pc0 (_ bv4 64))".into(),
+            n_params: 3,
+        });
+        m.insert("load_8_s".into(), InlinedSemantics {
+            regs_expr: "(set_reg regs0 p2 (read_mem_dword mem0 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0))))".into(),
+            mem_expr: "mem0".into(),
+            pc_expr: "(bvadd pc0 (_ bv4 64))".into(),
+            n_params: 3,
+        });
+        m
+    }
+
+    fn mk_store_w(rs: &str, off: i64, base: &str) -> AsmInstruction {
+        AsmInstruction {
+            opcode: "sw".into(),
+            operands: vec![
+                Operand::Reg(rs.into()),
+                Operand::MemRef { offset: off, base: base.into() },
+            ],
+        }
+    }
+
+    fn mk_load_w(rd: &str, off: i64, base: &str) -> AsmInstruction {
+        AsmInstruction {
+            opcode: "lw".into(),
+            operands: vec![
+                Operand::Reg(rd.into()),
+                Operand::MemRef { offset: off, base: base.into() },
+            ],
+        }
+    }
+
+    fn mk_store_d(rs: &str, off: i64, base: &str) -> AsmInstruction {
+        AsmInstruction {
+            opcode: "sd".into(),
+            operands: vec![
+                Operand::Reg(rs.into()),
+                Operand::MemRef { offset: off, base: base.into() },
+            ],
+        }
+    }
+
+    fn mk_load_d(rd: &str, off: i64, base: &str) -> AsmInstruction {
+        AsmInstruction {
+            opcode: "ld".into(),
+            operands: vec![
+                Operand::Reg(rd.into()),
+                Operand::MemRef { offset: off, base: base.into() },
+            ],
+        }
+    }
+
+    fn mk_addi(rd: &str, rs1: &str, imm: i64) -> AsmInstruction {
+        AsmInstruction {
+            opcode: "addi".into(),
+            operands: vec![
+                Operand::Reg(rd.into()),
+                Operand::Reg(rs1.into()),
+                Operand::Imm(imm),
+            ],
+        }
+    }
+
+    fn mk_ret() -> AsmInstruction {
+        AsmInstruction { opcode: "ret".into(), operands: vec![] }
+    }
+
+    fn emit_inlined_block(instrs: Vec<AsmInstruction>) -> String {
+        let sem = make_test_semantics();
+        let func = AsmFunction {
+            name: "test".into(),
+            instructions: instrs,
+            labels: HashMap::new(),
+        };
+        let cfg = build_cfg(&func).unwrap();
+        let mut out = String::new();
+        emit_block_body_rule_inlined("test", &cfg[0], &func, &sem, &mut out).unwrap();
+        out
+    }
+
+    #[test]
+    fn test_forward_sw_lw_same_reg() {
+        let out = emit_inlined_block(vec![
+            mk_store_w("a0", -20, "s0"),
+            mk_load_w("a0", -20, "s0"),
+            mk_ret(),
+        ]);
+        assert!(out.contains("[forwarded]"), "load should be forwarded");
+        assert!(
+            !out.contains("read_mem"),
+            "forwarded load must not read memory"
+        );
+        assert!(
+            out.contains("sign_extend 32"),
+            "sw/lw forwarding must sign-extend 32 bits"
+        );
+    }
+
+    #[test]
+    fn test_forward_sw_lw_diff_reg() {
+        let out = emit_inlined_block(vec![
+            mk_store_w("a0", -20, "s0"),
+            mk_load_w("a1", -20, "s0"),
+            mk_ret(),
+        ]);
+        assert!(out.contains("[forwarded]"));
+        assert!(!out.contains("read_mem"));
+        // Destination should be a1 (bv11 = register index 11)
+        assert!(out.contains("reg_a0"), "source should be a0");
+    }
+
+    #[test]
+    fn test_forward_sd_ld_identity() {
+        let out = emit_inlined_block(vec![
+            mk_store_d("ra", 24, "sp"),
+            mk_load_d("ra", 24, "sp"),
+            mk_ret(),
+        ]);
+        assert!(out.contains("[forwarded]"));
+        assert!(!out.contains("read_mem"));
+        // 64-bit same-reg: should be get_reg identity (no extract/extend)
+        assert!(
+            out.contains("(get_reg regs1 reg_ra)"),
+            "64-bit forwarding should be identity"
+        );
+    }
+
+    #[test]
+    fn test_no_forward_different_offset() {
+        let out = emit_inlined_block(vec![
+            mk_store_w("a0", -20, "s0"),
+            mk_load_w("a0", -24, "s0"),
+            mk_ret(),
+        ]);
+        assert!(
+            !out.contains("[forwarded]"),
+            "different offset must not forward"
+        );
+    }
+
+    #[test]
+    fn test_no_forward_base_reg_modified() {
+        let out = emit_inlined_block(vec![
+            mk_store_d("s0", 16, "sp"),
+            mk_addi("sp", "sp", 32),
+            mk_load_d("s0", 16, "sp"),
+            mk_ret(),
+        ]);
+        assert!(
+            !out.contains("[forwarded]"),
+            "base register modified → must not forward"
+        );
+    }
+
+    #[test]
+    fn test_no_forward_source_reg_modified() {
+        let out = emit_inlined_block(vec![
+            mk_store_d("s0", 16, "sp"),
+            mk_addi("s0", "s0", 32),
+            mk_load_d("s0", 16, "sp"),
+            mk_ret(),
+        ]);
+        assert!(
+            !out.contains("[forwarded]"),
+            "source register modified → must not forward"
+        );
+    }
+
+    #[test]
+    fn test_forward_overwrites_old_store() {
+        let out = emit_inlined_block(vec![
+            mk_store_w("a0", -20, "s0"),
+            mk_store_w("a1", -20, "s0"),
+            mk_load_w("a2", -20, "s0"),
+            mk_ret(),
+        ]);
+        assert!(out.contains("[forwarded]"));
+        // Should forward from a1, not a0
+        // a1 = register index 11 = (_ bv11 5)
+        assert!(
+            out.contains("(_ bv11 5)"),
+            "should forward from a1 (second store)"
+        );
     }
 }
