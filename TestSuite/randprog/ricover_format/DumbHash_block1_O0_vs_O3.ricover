@@ -1,0 +1,30 @@
+# ==================================================
+# Ricover Format File
+# ==================================================
+# Source file: ../TestSuite/randprog/program_01.c
+# Function: DumbHash_block1
+# Comparison: O0 vs O3
+# Instructions in src (O0): 10
+# Instructions in tgt (O3): 2
+# ==================================================
+
+# Function: src (O0 version)
+.globl src
+src:
+    addi sp, sp, -32
+    sd ra, 24(sp)
+    sd s0, 16(sp)
+    addi s0, sp, 32
+    sd a0, 8(sp)
+    sw a1, 4(sp)
+    ld a2, 8(sp)
+    auipc a0, %pcrel_hi(context)
+    addi a1, a0, %pcrel_lo(.Lpcrel_hi0)
+    ld a0, 0(a1)
+
+
+# Function: tgt (O3 version)
+.globl tgt
+tgt:
+    auipc a1, %pcrel_hi(context)
+    ld a2, %pcrel_lo(.Lpcrel_hi0)(a1)

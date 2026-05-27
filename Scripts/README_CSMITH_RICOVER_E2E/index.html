@@ -1,0 +1,3613 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../QUICK_START_RISCV_OPT_DIFF/">
+      
+      
+        <link rel="next" href="../README_RISCV_OPT_DIFF/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>csmith_ricover_e2e.py - Safonov ITMO Thesis Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#csmith_ricover_e2epy" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-header__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Safonov ITMO Thesis Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              csmith_ricover_e2e.py
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-nav__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Safonov ITMO Thesis Notes
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROJECT_MEMORY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Days
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Days
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/16%20April.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 April. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/23%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/24%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20February.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 February. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20January.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 January. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20March.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 March. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20May.%20Pre-defense/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 May. Pre defense
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20October.%20Meeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 October. Meeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/28%20November.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 November. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/31%20October.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 October. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    RICOVER
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER — RISC-V Compiler Optimization VERification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2" id="__nav_4_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Doc
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Doc
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/20_May_Status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 May Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_BUGLIST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ALIVE2 BUGLIST
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_TESTABILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER vs Alive2 Bug Corpus — Testability Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/BRANCHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Block CHC Encoding for Branches and Loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/CSMITH_INITIAL_OVERVIEW_22_MAY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PLAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/TEST_SUITE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TEST SUITE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2_9" id="__nav_4_1_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_1_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/BENCH1_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BENCH1 IMPLEMENTATION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/LOAD_STORE_STRATEGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAD STORE STRATEGY
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/OPCODE_CHECK_12_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/REVIEW_10_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review of Isla IR to CHC Transpiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nomencloture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Nomencloture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/THESIS_RULES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    THESIS RULES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/Thesis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/Thesis_Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thesis Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper Review
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper Review
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Alive2%20Bounded%20Translation%20Validation%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2 Bounded Translation Validation for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Compiler%20Optimization%20Testing%20Based%20on%20Optimization-Guided%20Equivalence%20Transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler Optimization Testing Based on Optimization Guided Equivalence Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Finding%20and%20Understanding%20Bugs%20in%20C%20Compilers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finding and Understanding Bugs in C Compilers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Formal%20Verification%20of%20SSA-Based%20Optimizations%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Verification of SSA Based Optimizations for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Horn Clause Solvers for Program Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Translation%20Validation%20for%20LLVM%E2%80%99s%20AArch64%20Backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translation Validation for LLVM’s AArch64 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Verifying%20Optimizations%20using%20SMTSolvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifying Optimizations using SMTSolvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QUICK_START_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-pass-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Pass Pipelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpreting Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#known-false-positive-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known false positive sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addressing-csmith-test-suite-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addressing Csmith test suite issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Addressing Csmith test suite issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-operations-as-the-correct-complexity-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory operations as the correct complexity metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-load-forwarding-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store-load forwarding optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#z3-spacer-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Z3 Spacer configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spacer-flag-experiment-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spacer flag experiment results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RISC-V Assembly Optimization Diff Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README_SMALL_GENERATOR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Random C Program Generator Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TestSuite
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TestSuite
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLVM TEST RISCV OPTS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLVM TEST RISCV OPTS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/LLVM_TEST_RISCV_OPTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Csmith
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/csmith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Random Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/ARM-TV/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Alive2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/CompCert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CompCert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Vellvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vellvm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sail
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sail
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Internal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Isla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Isla
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Constrained%20Horn%20Clauses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constrained Horn Clauses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Proving%20semantic%20equivalence%20of%20RISC-V%20programs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-pass-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Pass Pipelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpreting Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#known-false-positive-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known false positive sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addressing-csmith-test-suite-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addressing Csmith test suite issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Addressing Csmith test suite issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-operations-as-the-correct-complexity-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory operations as the correct complexity metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-load-forwarding-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store-load forwarding optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#z3-spacer-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Z3 Spacer configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spacer-flag-experiment-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spacer flag experiment results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="csmith_ricover_e2epy">csmith_ricover_e2e.py<a class="headerlink" href="#csmith_ricover_e2epy" title="Permanent link">&para;</a></h1>
+<p>End-to-end pipeline: generate random C programs with csmith, apply specific LLVM IR passes, and verify equivalence using RICOVER + Z3.</p>
+<h2 id="pipeline">Pipeline<a class="headerlink" href="#pipeline" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>csmith --no-global-variables
+    |
+    v
+clang -O0 -Xclang -disable-O0-optnone -emit-llvm -S
+    |
+    v
+base.ll ──────────────────────────┐
+    |                             |
+    v                             v
+llc -O1 → base.s            opt -passes=&#39;...&#39; → llc -O1 → pass.s
+    |                             |
+    └──── per-function diff ──────┘
+                |
+                v
+         RICOVER check-equiv → .smt2
+                |
+                v
+            z3 → sat/unsat
+</code></pre></div>
+<p>Both sides use the same <code>llc</code> optimization level, so the <strong>only</strong> difference in the assembly comes from the <code>opt</code> pass being tested.</p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Single program, single pass</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>--passes<span class="w"> </span><span class="s1">&#39;sroa,instcombine&lt;no-verify-fixpoint&gt;&#39;</span>
+
+<span class="c1"># 5 programs, all default pipelines</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span>
+
+<span class="c1"># Custom output dir and timeout</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">3</span><span class="w"> </span>-o<span class="w"> </span>/tmp/my_run<span class="w"> </span>--z3-timeout<span class="w"> </span><span class="m">120</span>
+
+<span class="c1"># List available default pipelines</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>--list-passes
+
+<span class="c1"># Reproducible run with csmith seed</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>--seed<span class="w"> </span><span class="m">12345</span>
+
+<span class="c1"># Relaxed csmith (allow pointers) with mem ops cutoff</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">20</span><span class="w"> </span>--relaxed<span class="w"> </span>--max-mem-ops<span class="w"> </span><span class="m">15</span>
+
+<span class="c1"># Custom Z3 Spacer flags</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span><span class="w"> </span>--z3-flags<span class="w"> </span>fp.spacer.global<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-n</code></td>
+<td>1</td>
+<td>Number of csmith programs to generate</td>
+</tr>
+<tr>
+<td><code>--passes</code></td>
+<td>(all defaults)</td>
+<td>Custom opt pass pipelines (space-separated)</td>
+</tr>
+<tr>
+<td><code>-o</code></td>
+<td><code>/tmp/ricover_csmith_e2e</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>--llc-opt</code></td>
+<td>1</td>
+<td>LLC optimization level for both sides (0/1/2)</td>
+</tr>
+<tr>
+<td><code>--z3-timeout</code></td>
+<td>60</td>
+<td>Z3 solver timeout in seconds</td>
+</tr>
+<tr>
+<td><code>--z3-flags</code></td>
+<td>(none)</td>
+<td>Extra Z3/Spacer flags (e.g. <code>fp.spacer.global=true</code>)</td>
+</tr>
+<tr>
+<td><code>--max-instrs</code></td>
+<td>200</td>
+<td>Skip functions with more than N base instructions</td>
+</tr>
+<tr>
+<td><code>--max-mem-ops</code></td>
+<td>(none)</td>
+<td>Skip functions with more than N memory ops in src</td>
+</tr>
+<tr>
+<td><code>--relaxed</code></td>
+<td>off</td>
+<td>Allow pointers in csmith (keeps <code>--no-safe-math</code>)</td>
+</tr>
+<tr>
+<td><code>--include-helpers</code></td>
+<td>off</td>
+<td>Include csmith utility functions (safe_<em>, crc</em>, etc.)</td>
+</tr>
+<tr>
+<td><code>--seed</code></td>
+<td>random</td>
+<td>Csmith random seed (for reproducibility)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="default-pass-pipelines">Default Pass Pipelines<a class="headerlink" href="#default-pass-pipelines" title="Permanent link">&para;</a></h2>
+<p>Each pipeline includes prerequisite passes (sroa, instcombine, simplifycfg, loop-simplify, lcssa) needed for the target pass to fire on O0 IR.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Pipeline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>instcombine</td>
+<td>sroa, instcombine</td>
+</tr>
+<tr>
+<td>simplifycfg</td>
+<td>sroa, instcombine, simplifycfg</td>
+</tr>
+<tr>
+<td>gvn</td>
+<td>prereqs + gvn</td>
+</tr>
+<tr>
+<td>dse</td>
+<td>prereqs + dse (dead store elimination)</td>
+</tr>
+<tr>
+<td>licm</td>
+<td>prereqs + licm (loop-invariant code motion)</td>
+</tr>
+<tr>
+<td>indvars</td>
+<td>prereqs + indvars (induction variable simplification)</td>
+</tr>
+<tr>
+<td>loop-rotate</td>
+<td>prereqs + loop-rotate</td>
+</tr>
+<tr>
+<td>loop-unroll</td>
+<td>prereqs + indvars, loop-rotate, loop-unroll</td>
+</tr>
+<tr>
+<td>loop-deletion</td>
+<td>prereqs + indvars, loop-deletion</td>
+</tr>
+</tbody>
+</table>
+<h2 id="filters">Filters<a class="headerlink" href="#filters" title="Permanent link">&para;</a></h2>
+<p>The script automatically skips:</p>
+<ul>
+<li><strong>Csmith helper functions</strong> (<code>safe_add_func_*</code>, <code>crc*</code>, <code>platform_*</code>, <code>__undefined</code>) — large, uninteresting for pass testing</li>
+<li><strong>Functions with relocations</strong> (<code>%hi</code>, <code>%lo</code>, <code>%pcrel</code>, <code>auipc</code>) — RICOVER can't handle address computations for globals</li>
+<li><strong>Oversized functions</strong> (&gt; <code>--max-instrs</code>) — Z3 times out on large CHC encodings</li>
+<li><strong>Identical functions</strong> — pass didn't change anything</li>
+</ul>
+<h2 id="output-structure">Output Structure<a class="headerlink" href="#output-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>/tmp/ricover_csmith_e2e/
+  prog_000/
+    program.c          # generated csmith source
+    base.ll            # LLVM IR (O0, no optnone)
+    base.s             # base assembly
+    instcombine/
+      optimized.ll     # IR after opt pass
+      optimized.s      # assembly after opt pass
+      func_X_Obase_vs_instcombine.s   # ricover format file
+      func_X.smt2      # CHC equivalence query
+    licm/
+      ...
+  prog_001/
+    ...
+  results.json         # structured results for all functions
+</code></pre></div>
+<h2 id="interpreting-results">Interpreting Results<a class="headerlink" href="#interpreting-results" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Z3 result</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>unsat</td>
+<td>Pass preserves semantics (verified equivalent)</td>
+</tr>
+<tr>
+<td>sat</td>
+<td>Potential divergence (may be false positive — see below)</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Z3 couldn't decide within the timeout</td>
+</tr>
+<tr>
+<td>error</td>
+<td>RICOVER produced invalid SMT (e.g., <code>unit</code> constants)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-false-positive-sources">Known false positive sources<a class="headerlink" href="#known-false-positive-sources" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>ABI preconditions</strong>: RICOVER doesn't constrain initial register values to the calling convention. Functions with narrow parameter types (uint8_t, int16_t) may report <code>sat</code> because O0 explicitly truncates while the optimized version assumes the ABI guarantee.</p>
+</li>
+<li>
+<p><strong>SMT output bugs</strong>: Some IR variants produce <code>unknown constant unit</code> in the SMT output, causing Z3 to treat affected relations as unconstrained and trivially find <code>sat</code>.</p>
+</li>
+</ol>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>~/Tools/csmith/src/csmith</code></li>
+<li><code>~/Tools/llvm-project/build/bin/{clang,opt,llc}</code></li>
+<li><code>~/Tools/csmith/runtime/</code> (csmith headers)</li>
+<li>RICOVER built (<code>cargo build</code> in Implementation/RICOVER)</li>
+<li>Z3 on PATH</li>
+<li><code>/usr/riscv64-linux-gnu</code> sysroot</li>
+</ul>
+<h2 id="addressing-csmith-test-suite-issues">Addressing Csmith test suite issues<a class="headerlink" href="#addressing-csmith-test-suite-issues" title="Permanent link">&para;</a></h2>
+<h3 id="memory-operations-as-the-correct-complexity-metric">Memory operations as the correct complexity metric<a class="headerlink" href="#memory-operations-as-the-correct-complexity-metric" title="Permanent link">&para;</a></h3>
+<p>The raw instruction count (<code>--max-instrs</code>) is a poor predictor of solver difficulty. The actual bottleneck is the number of <strong>memory operations</strong> (loads/stores: <code>lb/lbu/lh/lhu/lw/lwu/ld/sb/sh/sw/sd</code>) in the source function, because each one generates an array-theory constraint in the CHC encoding.</p>
+<p>Empirical data from a 20-program run (instcombine, <code>--z3-timeout 300</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Memory ops (src)</th>
+<th>Tested</th>
+<th>Solved</th>
+<th>Timeout</th>
+<th>Solve rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3–8</td>
+<td>4</td>
+<td>4</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>9–11</td>
+<td>7</td>
+<td>7</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>13+</td>
+<td>5</td>
+<td>0</td>
+<td>4</td>
+<td>0%</td>
+</tr>
+</tbody>
+</table>
+<p>The practical boundary is <strong>~12 memory operations</strong> in the source function. Pure register functions solve in seconds regardless of instruction count.</p>
+<p>The script now reports <code>mem_ops_src</code> and <code>mem_ops_tgt</code> in <code>results.json</code> and in the summary output. The summary includes a "By memory ops" breakdown.</p>
+<h3 id="store-load-forwarding-optimization">Store-load forwarding optimization<a class="headerlink" href="#store-load-forwarding-optimization" title="Permanent link">&para;</a></h3>
+<p>O0 code produces abundant redundant store-then-reload patterns on the stack:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">sw</span><span class="w"> </span><span class="no">a0</span><span class="p">,</span><span class="w"> </span><span class="mi">-20</span><span class="p">(</span><span class="no">s0</span><span class="p">)</span><span class="w">    </span><span class="c1">; store a0 to stack slot</span>
+<span class="nf">lw</span><span class="w"> </span><span class="no">a0</span><span class="p">,</span><span class="w"> </span><span class="mi">-20</span><span class="p">(</span><span class="no">s0</span><span class="p">)</span><span class="w">    </span><span class="c1">; immediately reload (redundant — value is already in a0)</span>
+</code></pre></div>
+<p>Each memory read generates an <code>Array(BitVec 64 → BitVec 8)</code> constraint in the CHC encoding. RICOVER now performs <strong>store-load forwarding</strong> during CHC emission: when a load reads from a stack slot that was just written by a store (same offset, same base register, same width), the load's <code>read_mem_*</code> constraint is replaced with a direct register expression. This eliminates the array-theory constraint entirely.</p>
+<p>The forwarding is conservative:
+- Only same-width pairs (e.g., <code>sw</code>/<code>lw</code>, <code>sd</code>/<code>ld</code>)
+- Only when the base register and source register are unmodified between store and load
+- Store facts are invalidated when any potentially aliasing write occurs</p>
+<p><strong>Results (100 programs, instcombine, <code>--z3-timeout 300</code>, with store-load forwarding):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Memory ops (src)</th>
+<th>Tested</th>
+<th>Solved</th>
+<th>Timeout</th>
+<th>Solve rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3–5</td>
+<td>8</td>
+<td>8</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>6–8</td>
+<td>23</td>
+<td>23</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>9–11</td>
+<td>22</td>
+<td>21</td>
+<td>1</td>
+<td>95%</td>
+</tr>
+<tr>
+<td>12–14</td>
+<td>12</td>
+<td>6</td>
+<td>6</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>15–17</td>
+<td>16</td>
+<td>4</td>
+<td>12</td>
+<td>25%</td>
+</tr>
+<tr>
+<td>18–20</td>
+<td>9</td>
+<td>3</td>
+<td>6</td>
+<td>33%</td>
+</tr>
+<tr>
+<td>21+</td>
+<td>16</td>
+<td>0</td>
+<td>16</td>
+<td>0%</td>
+</tr>
+</tbody>
+</table>
+<p>Total: 126 functions tested, 60 EQUIV, 5 SAT (false positives from ABI precondition), 42 timeout, 19 skipped (unsupported instructions). Median solve time: 63.9s, p90: 212.0s, max: 293.2s.</p>
+<p><strong>Comparison with baseline (no store-load forwarding):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Baseline</th>
+<th>With forwarding</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Practical boundary</td>
+<td>~12 mem ops</td>
+<td>~15–18 mem ops</td>
+<td>+25–50%</td>
+</tr>
+<tr>
+<td>Solve rate (9–11 ops)</td>
+<td>100%</td>
+<td>95%</td>
+<td>~same</td>
+</tr>
+<tr>
+<td>Solve rate (12–14 ops)</td>
+<td>~0%</td>
+<td>50%</td>
+<td>new capability</td>
+</tr>
+<tr>
+<td>Solve rate (15–17 ops)</td>
+<td>0%</td>
+<td>25%</td>
+<td>new capability</td>
+</tr>
+<tr>
+<td>Solve rate (18–20 ops)</td>
+<td>0%</td>
+<td>33%</td>
+<td>new capability</td>
+</tr>
+<tr>
+<td>Max solved mem ops</td>
+<td>12</td>
+<td>20</td>
+<td>+67%</td>
+</tr>
+</tbody>
+</table>
+<p>The optimization extends the solvability boundary from ~12 to ~15–18 memory operations, with some functions up to 20 mem ops now solvable (e.g., <code>func_48</code>: 20 mem ops, solved in 293s; <code>func_21</code>: 18 mem ops, solved in 275s).</p>
+<p><strong>Relaxed csmith results (20 programs, pointers enabled, <code>--relaxed</code>, instcombine, <code>--z3-timeout 300</code>, with store-load forwarding):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Memory ops (src)</th>
+<th>Tested</th>
+<th>Solved</th>
+<th>Timeout</th>
+<th>Solve rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6–8</td>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>9–11</td>
+<td>5</td>
+<td>4</td>
+<td>1</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>12–14</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>18–20</td>
+<td>3</td>
+<td>0</td>
+<td>3</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>21–23</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>27–35</td>
+<td>5</td>
+<td>0</td>
+<td>5</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>48–62</td>
+<td>4</td>
+<td>2</td>
+<td>2</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>96+</td>
+<td>3</td>
+<td>0</td>
+<td>1</td>
+<td>0%</td>
+</tr>
+</tbody>
+</table>
+<p>Total: 28 functions tested, 8 EQUIV, 1 SAT (false positive from ABI precondition), 13 timeout, 4 skipped (unsupported instructions), 2 error (<code>unit</code> constant). Median solve time: 122.6s, p90: 256.4s, max: 256.4s.</p>
+<p>Notable: relaxed csmith with pointers generates much higher raw memory operation counts (48–106 src mem ops common) than strict mode. Store-load forwarding reduces effective target mem ops dramatically (most functions show 4 mem ops in target), but the source-side complexity still drives solver difficulty. Two high-mem-ops functions solved: <code>func_55</code> (49 src → 6 tgt, 0.0s) and <code>func_38</code> (61 src → 6 tgt, sat/FP). The practical solvability boundary in relaxed mode remains ~12 source mem ops, similar to strict mode.</p>
+<h3 id="z3-spacer-configuration">Z3 Spacer configuration<a class="headerlink" href="#z3-spacer-configuration" title="Permanent link">&para;</a></h3>
+<p>Z3 is invoked with <code>set-logic HORN</code>, which routes to the Spacer engine automatically. Default Spacer parameters (Z3 4.15.4):</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spacer.global</code></td>
+<td>false</td>
+<td>Global guidance strategy</td>
+</tr>
+<tr>
+<td><code>spacer.mbqi</code></td>
+<td>true</td>
+<td>Model-based quantifier instantiation</td>
+</tr>
+<tr>
+<td><code>spacer.q3</code></td>
+<td>true</td>
+<td>Quantifier handling</td>
+</tr>
+<tr>
+<td><code>spacer.ground_pobs</code></td>
+<td>true</td>
+<td>Ground proof obligations</td>
+</tr>
+<tr>
+<td><code>spacer.ctp</code></td>
+<td>true</td>
+<td>Counterexample-to-proof</td>
+</tr>
+<tr>
+<td><code>spacer.use_array_eq_generalizer</code></td>
+<td>true</td>
+<td>Array equality generalizer</td>
+</tr>
+<tr>
+<td><code>xform.inline_eager</code></td>
+<td>true</td>
+<td>Eagerly inline relations</td>
+</tr>
+<tr>
+<td><code>xform.inline_linear</code></td>
+<td>true</td>
+<td>Inline linear rules</td>
+</tr>
+<tr>
+<td><code>xform.inline_linear_branch</code></td>
+<td>false</td>
+<td>Inline linear branch rules</td>
+</tr>
+<tr>
+<td><code>xform.coalesce_rules</code></td>
+<td>false</td>
+<td>Coalesce rules</td>
+</tr>
+<tr>
+<td><code>xform.array_blast</code></td>
+<td>false</td>
+<td>Array blasting</td>
+</tr>
+</tbody>
+</table>
+<p>Both <code>csmith_ricover_e2e.py</code> and <code>run_bench.py</code> now accept <code>--z3-flags</code> to pass extra Spacer parameters:</p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span><span class="w"> </span>--z3-flags<span class="w"> </span>fp.spacer.global<span class="o">=</span><span class="nb">true</span><span class="w"> </span>fp.xform.coalesce_rules<span class="o">=</span><span class="nb">true</span>
+python<span class="w"> </span>benchmark/run_bench.py<span class="w"> </span>bench.s<span class="w"> </span>--z3-flags<span class="w"> </span>fp.spacer.global<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<h3 id="spacer-flag-experiment-results">Spacer flag experiment results<a class="headerlink" href="#spacer-flag-experiment-results" title="Permanent link">&para;</a></h3>
+<p>Tested 7 configurations on Csmith-generated queries (6 queries: 2 fast, 2 borderline, 2 timeout). Use <code>spacer_flags_experiment.py</code> to reproduce:</p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>spacer_flags_experiment.py<span class="w"> </span>--from-benchmarks<span class="w"> </span>--timeout<span class="w"> </span><span class="m">300</span>
+python3<span class="w"> </span>spacer_flags_experiment.py<span class="w"> </span>/path/to/*.smt2<span class="w"> </span>--timeout<span class="w"> </span><span class="m">300</span><span class="w"> </span>--configs<span class="w"> </span>baseline<span class="w"> </span>global<span class="w"> </span>coalesce
+</code></pre></div>
+<p>Results on fast queries (5–10 mem ops, baseline ~25–48s):</p>
+<table>
+<thead>
+<tr>
+<th>Config</th>
+<th>Median time</th>
+<th>vs baseline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>coalesce</td>
+<td>43.3s</td>
+<td>−9%</td>
+</tr>
+<tr>
+<td>inline_branch</td>
+<td>44.7s</td>
+<td>−6%</td>
+</tr>
+<tr>
+<td>baseline</td>
+<td>47.8s</td>
+<td>—</td>
+</tr>
+<tr>
+<td>global</td>
+<td>47.7s</td>
+<td>~0%</td>
+</tr>
+<tr>
+<td>global+inline</td>
+<td>46.8s</td>
+<td>−2%</td>
+</tr>
+<tr>
+<td>no_array_gen</td>
+<td>49.1s</td>
+<td>+3%</td>
+</tr>
+<tr>
+<td><strong>array_blast</strong></td>
+<td><strong>78.1s</strong></td>
+<td><strong>+63%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Results on borderline queries (9–12 mem ops, baseline ~170s):</p>
+<table>
+<thead>
+<tr>
+<th>Config</th>
+<th>Median time</th>
+<th>vs baseline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>170.6s</td>
+<td>—</td>
+</tr>
+<tr>
+<td>global</td>
+<td>170.7s</td>
+<td>~0%</td>
+</tr>
+<tr>
+<td>inline_branch</td>
+<td>172.0s</td>
+<td>+1%</td>
+</tr>
+<tr>
+<td>global+inline</td>
+<td>174.6s</td>
+<td>+2%</td>
+</tr>
+<tr>
+<td>coalesce</td>
+<td>176.3s</td>
+<td>+3%</td>
+</tr>
+<tr>
+<td><strong>no_array_gen</strong></td>
+<td><strong>190.6s</strong></td>
+<td><strong>+12%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Results on relaxed csmith queries (pointers enabled, <code>--relaxed --max-instrs 500</code>, 8–17 mem ops, 300s timeout):</p>
+<table>
+<thead>
+<tr>
+<th>Config</th>
+<th>Solved / Total</th>
+<th>Median time</th>
+<th>Notable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>5/8</td>
+<td>117.9s</td>
+<td>—</td>
+</tr>
+<tr>
+<td>global</td>
+<td>5/8</td>
+<td>118.0s</td>
+<td>~0%</td>
+</tr>
+<tr>
+<td>no_array_gen</td>
+<td>5/8</td>
+<td>117.9s</td>
+<td>func_28: fastest (83.8s)</td>
+</tr>
+<tr>
+<td>inline_branch</td>
+<td>5/8</td>
+<td>118.2s</td>
+<td>func_28: +65% slower (146.8s)</td>
+</tr>
+<tr>
+<td>global+inline</td>
+<td>5/8</td>
+<td>118.5s</td>
+<td></td>
+</tr>
+<tr>
+<td>coalesce</td>
+<td>5/8</td>
+<td>121.0s</td>
+<td>func_99: +15% slower (246.9s vs 214.7s)</td>
+</tr>
+</tbody>
+</table>
+<p>No configuration flipped a timeout to a solve. On individual queries, some configs show up to 60% variance in either direction, but no config is consistently better across all queries.</p>
+<p><strong>Conclusions:</strong>
+- No configuration solved queries that baseline couldn't — tested across 3 datasets (manual benchmarks, strict csmith, relaxed csmith)
+- <code>coalesce_rules</code> gives ~9% speedup on simple queries but hurts on harder ones
+- <code>spacer.global</code> (global guidance) has negligible effect on this CHC structure
+- <code>array_blast</code> is actively harmful (+63% slower) — blasting arrays into scalars explodes the variable count
+- <code>use_array_eq_generalizer=false</code> hurts on hard queries (+12%) — the generalizer is doing useful work
+- Individual query variance (up to ±60%) exceeds inter-config variance — solver behavior is sensitive to CHC structure, not flag tuning
+- The bottleneck is fundamental array-theory complexity, not Spacer heuristic configuration
+- The default Z3 configuration is near-optimal for RICOVER's CHC encoding</p>
+<h2 id="design-notes">Design Notes<a class="headerlink" href="#design-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Uses <code>-Xclang -disable-O0-optnone</code> so that <code>opt</code> passes actually fire on O0 IR (otherwise clang marks all functions with the <code>optnone</code> attribute)</li>
+<li>Uses <code>--no-global-variables</code> in csmith to avoid <code>%hi/%lo</code> relocations that RICOVER can't handle</li>
+<li>Strips <code>static</code> from csmith output so functions are externally visible</li>
+<li>Imports <code>split_into_functions</code>, <code>has_relocation</code>, <code>generate_ricover_file</code> from <code>riscv_opt_diff.py</code></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

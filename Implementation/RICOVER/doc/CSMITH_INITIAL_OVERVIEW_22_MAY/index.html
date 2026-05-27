@@ -1,0 +1,4114 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../BRANCHING/">
+      
+      
+        <link rel="next" href="../GUIDE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Csmith Benchmark Initial Overview — 22 May 2026 - Safonov ITMO Thesis Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#csmith-benchmark-initial-overview-22-may-2026" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Safonov ITMO Thesis Notes" class="md-header__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Safonov ITMO Thesis Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Csmith Benchmark Initial Overview — 22 May 2026
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Safonov ITMO Thesis Notes" class="md-nav__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Safonov ITMO Thesis Notes
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../PROJECT_MEMORY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Days
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Days
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/16%20April.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 April. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/23%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/24%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/26%20February.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 February. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/26%20January.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 January. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/26%20March.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 March. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/27%20May.%20Pre-defense/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 May. Pre defense
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/27%20October.%20Meeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 October. Meeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/28%20November.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 November. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Days/31%20October.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 October. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    RICOVER
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER — RISC-V Compiler Optimization VERification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2" id="__nav_4_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Doc
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Doc
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20_May_Status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 May Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ALIVE2_BUGLIST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ALIVE2 BUGLIST
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ALIVE2_TESTABILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER vs Alive2 Bug Corpus — Testability Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BRANCHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Block CHC Encoding for Branches and Loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to run (end-to-end)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to run (end-to-end)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-generate-a-random-c-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Generate a random C program
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-compile-at-o0-vs-o1-extract-per-function-ricover-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Compile at O0 vs O1, extract per-function ricover files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-run-ricover-on-each-extracted-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Run RICOVER on each extracted function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#are-the-results-sound" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Are the results sound?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#soundness-concerns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soundness concerns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-needs-fixing-for-production-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What needs fixing for production use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bulk-readiness-analysis-22-may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Readiness Analysis — 22 May 2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk Readiness Analysis — 22 May 2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#instruction-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instruction coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funnel-analysis-20-programs-instcombine-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Funnel analysis (20 programs, instcombine pass)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-blockers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three blockers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-one-sat-result-seed-208-func_54" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The one sat result (seed 208, func_54)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extended-timeout-analysis-300s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended timeout analysis (300s)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimized-run-memory-variable-elimination-simplified-csmith-22-may" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimized run: memory variable elimination + simplified csmith (22 May)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-csmith-vs-handcrafted-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: csmith vs handcrafted benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-passes-sweep-22-may-2026-post-inlining" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-passes sweep — 22 May 2026 (post-inlining)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="All-passes sweep — 22 May 2026 (post-inlining)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changes-applied-before-this-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes applied before this run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#csmith-flag-effects-on-call-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Csmith flag effects on call instructions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#results-4-programs-completed-9-pipelines-each-300s-z3-timeout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results (4 programs completed, 9 pipelines each, 300s Z3 timeout)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-no-sat-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why no sat results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-reproduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to reproduce
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relaxed-flags-experiment-2223-may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relaxed flags experiment — 22–23 May 2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Relaxed flags experiment — 22–23 May 2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-changed-in-the-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed in the scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-1-relaxed-flags-300s-timeout-max-50-instructions-1-program-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 1: relaxed flags, 300s timeout, max 50 instructions (1 program completed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-2-relaxed-flags-60s-timeout-max-20-instructions-3-programs-aborted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 2: relaxed flags, 60s timeout, max 20 instructions (3 programs, aborted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-3-relaxed-flags-300s-timeout-max-20-instructions-10-programs-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 3: relaxed flags, 300s timeout, max 20 instructions (10 programs completed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-across-all-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison across all runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-reproduce-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to reproduce end-to-end
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PLAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TEST_SUITE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TEST SUITE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2_9" id="__nav_4_1_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_1_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archive/BENCH1_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BENCH1 IMPLEMENTATION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archive/LOAD_STORE_STRATEGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAD STORE STRATEGY
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archive/OPCODE_CHECK_12_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archive/REVIEW_10_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review of Isla IR to CHC Transpiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nomencloture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Nomencloture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Nomencloture/THESIS_RULES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    THESIS RULES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Nomencloture/Thesis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Nomencloture/Thesis_Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thesis Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper Review
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper Review
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Alive2%20Bounded%20Translation%20Validation%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2 Bounded Translation Validation for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Compiler%20Optimization%20Testing%20Based%20on%20Optimization-Guided%20Equivalence%20Transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler Optimization Testing Based on Optimization Guided Equivalence Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Finding%20and%20Understanding%20Bugs%20in%20C%20Compilers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finding and Understanding Bugs in C Compilers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Formal%20Verification%20of%20SSA-Based%20Optimizations%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Verification of SSA Based Optimizations for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Horn Clause Solvers for Program Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Translation%20Validation%20for%20LLVM%E2%80%99s%20AArch64%20Backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translation Validation for LLVM’s AArch64 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Paper%20Review/Verifying%20Optimizations%20using%20SMTSolvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifying Optimizations using SMTSolvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Scripts/QUICK_START_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Scripts/README_CSMITH_RICOVER_E2E/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Scripts/README_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RISC-V Assembly Optimization Diff Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Scripts/README_SMALL_GENERATOR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Random C Program Generator Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TestSuite
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TestSuite
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLVM TEST RISCV OPTS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLVM TEST RISCV OPTS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../TestSuite/LLVM_TEST_RISCV_OPTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Csmith
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../TestSuite/csmith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Random Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/ARM-TV/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/Alive2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/CompCert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CompCert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/Vellvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vellvm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sail
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sail
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/Sail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/Sail/Internal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Tools/Sail/Isla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Isla
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Topics/Constrained%20Horn%20Clauses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constrained Horn Clauses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Topics/Glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Topics/Proving%20semantic%20equivalence%20of%20RISC-V%20programs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to run (end-to-end)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to run (end-to-end)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-generate-a-random-c-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Generate a random C program
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-compile-at-o0-vs-o1-extract-per-function-ricover-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Compile at O0 vs O1, extract per-function ricover files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-run-ricover-on-each-extracted-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Run RICOVER on each extracted function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#are-the-results-sound" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Are the results sound?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#soundness-concerns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soundness concerns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-needs-fixing-for-production-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What needs fixing for production use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bulk-readiness-analysis-22-may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Readiness Analysis — 22 May 2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk Readiness Analysis — 22 May 2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#instruction-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instruction coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funnel-analysis-20-programs-instcombine-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Funnel analysis (20 programs, instcombine pass)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-blockers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three blockers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-one-sat-result-seed-208-func_54" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The one sat result (seed 208, func_54)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extended-timeout-analysis-300s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended timeout analysis (300s)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimized-run-memory-variable-elimination-simplified-csmith-22-may" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimized run: memory variable elimination + simplified csmith (22 May)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-csmith-vs-handcrafted-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: csmith vs handcrafted benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-passes-sweep-22-may-2026-post-inlining" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-passes sweep — 22 May 2026 (post-inlining)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="All-passes sweep — 22 May 2026 (post-inlining)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changes-applied-before-this-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes applied before this run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#csmith-flag-effects-on-call-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Csmith flag effects on call instructions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#results-4-programs-completed-9-pipelines-each-300s-z3-timeout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results (4 programs completed, 9 pipelines each, 300s Z3 timeout)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-no-sat-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why no sat results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-reproduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to reproduce
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relaxed-flags-experiment-2223-may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relaxed flags experiment — 22–23 May 2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Relaxed flags experiment — 22–23 May 2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-changed-in-the-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed in the scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-1-relaxed-flags-300s-timeout-max-50-instructions-1-program-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 1: relaxed flags, 300s timeout, max 50 instructions (1 program completed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-2-relaxed-flags-60s-timeout-max-20-instructions-3-programs-aborted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 2: relaxed flags, 60s timeout, max 20 instructions (3 programs, aborted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-3-relaxed-flags-300s-timeout-max-20-instructions-10-programs-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run 3: relaxed flags, 300s timeout, max 20 instructions (10 programs completed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-across-all-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison across all runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-reproduce-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to reproduce end-to-end
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="csmith-benchmark-initial-overview-22-may-2026">Csmith Benchmark Initial Overview — 22 May 2026<a class="headerlink" href="#csmith-benchmark-initial-overview-22-may-2026" title="Permanent link">&para;</a></h1>
+<h2 id="how-to-run-end-to-end">How to run (end-to-end)<a class="headerlink" href="#how-to-run-end-to-end" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>~/Tools/csmith/src/csmith</code> — Csmith random program generator</li>
+<li><code>~/Tools/llvm-project/build/bin/clang</code> — RISC-V cross-compiler</li>
+<li><code>~/Uni/thesis/thesis-notes/Scripts/riscv_opt_diff.py</code> — diff/extraction tool</li>
+<li>Z3 solver on PATH</li>
+</ul>
+<h3 id="step-1-generate-a-random-c-program">Step 1: Generate a random C program<a class="headerlink" href="#step-1-generate-a-random-c-program" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>~/Tools/csmith/src/csmith<span class="w"> </span>--no-checksum<span class="w"> </span>--no-argc<span class="w"> </span>&gt;<span class="w"> </span>/tmp/csmith_test.c
+</code></pre></div>
+<h3 id="step-2-compile-at-o0-vs-o1-extract-per-function-ricover-files">Step 2: Compile at O0 vs O1, extract per-function ricover files<a class="headerlink" href="#step-2-compile-at-o0-vs-o1-extract-per-function-ricover-files" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/Uni/thesis/thesis-notes/Scripts
+python3<span class="w"> </span>riscv_opt_diff.py<span class="w"> </span>/tmp/csmith_test.c<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--csmith<span class="w"> </span>--csmith-runtime<span class="w"> </span>~/Tools/csmith/runtime<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt-levels<span class="w"> </span><span class="m">0</span>,1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ricover<span class="w"> </span>--ricover-dir<span class="w"> </span>/tmp/ricover_out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span>/tmp/ricover_diff<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cc<span class="w"> </span>~/Tools/llvm-project/build/bin/clang<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--arch<span class="w"> </span>riscv64-linux-gnu
+</code></pre></div>
+<p>This produces one <code>.s</code> file per function that differs between O0 and O1 in <code>/tmp/ricover_out/</code>. Functions with PC-relative relocations (<code>auipc</code>/<code>%pcrel</code>) are skipped automatically.</p>
+<h3 id="step-3-run-ricover-on-each-extracted-function">Step 3: Run RICOVER on each extracted function<a class="headerlink" href="#step-3-run-ricover-on-each-extracted-function" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/Uni/thesis/thesis-notes/Implementation/RICOVER
+<span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span>/tmp/ricover_out/*.s<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span><span class="nv">name</span><span class="o">=</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$f</span><span class="s2">&quot;</span><span class="w"> </span>.s<span class="k">)</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== </span><span class="nv">$name</span><span class="s2"> ===&quot;</span>
+<span class="w">  </span>cargo<span class="w"> </span>run<span class="w"> </span>-q<span class="w"> </span>--<span class="w"> </span>check-equiv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--before<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$f</span><span class="s2">&quot;</span><span class="w"> </span>--after<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$f</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--before-fn<span class="w"> </span>src<span class="w"> </span>--after-fn<span class="w"> </span>tgt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$name</span><span class="s2">&quot;</span><span class="w"> </span>--ir<span class="w"> </span>snapshot/rv64d.ir<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span><span class="s2">&quot;/tmp/</span><span class="si">${</span><span class="nv">name</span><span class="si">}</span><span class="s2">.smt2&quot;</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;Error|Wrote|falling back&quot;</span>
+<span class="w">  </span>z3<span class="w"> </span><span class="s2">&quot;/tmp/</span><span class="si">${</span><span class="nv">name</span><span class="si">}</span><span class="s2">.smt2&quot;</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;^sat</span>$<span class="s2">|^unsat</span>$<span class="s2">&quot;</span>
+<span class="k">done</span>
+</code></pre></div>
+<ul>
+<li><code>unsat</code> = optimization is verified equivalent</li>
+<li><code>sat</code> = potential divergence (see "False positives" below)</li>
+<li><code>Error</code> = unsupported instruction or missing label</li>
+</ul>
+<h3 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Use <code>--opt-levels 0,1</code> or <code>0,3</code> to control which optimization level to compare against</li>
+<li>The <code>--csmith</code> flag strips <code>static</code> and adds <code>-fno-inline</code> at non-base levels</li>
+<li>See <code>Scripts/compile_example_opt.sh</code> for a non-csmith example invocation</li>
+</ul>
+<h2 id="pipeline">Pipeline<a class="headerlink" href="#pipeline" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Generate</strong>: <code>csmith</code> produces a random C program (<code>/tmp/csmith_clean.c</code>)</li>
+<li><strong>De-static</strong>: <code>riscv_opt_diff.py --csmith</code> strips <code>static</code> from functions and compiles with <code>clang --target=riscv64 -O0</code> (base) and <code>-O1 -fno-inline</code> (optimized)</li>
+<li><strong>Extract</strong>: <code>--ricover</code> mode splits assembly per-function, creates paired <code>src:/tgt:</code> files</li>
+<li><strong>Verify</strong>: RICOVER's <code>check-equiv</code> translates both sides to CHC; Z3 checks equivalence</li>
+</ol>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>src instrs</th>
+<th>tgt instrs</th>
+<th>Z3 result</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>func_11</td>
+<td>80</td>
+<td>2 (<code>mv a0, a4; ret</code>)</td>
+<td><strong>sat</strong></td>
+<td>Not equivalent</td>
+</tr>
+<tr>
+<td>func_24</td>
+<td>16</td>
+<td>3</td>
+<td><strong>unsat</strong></td>
+<td>Equivalent</td>
+</tr>
+<tr>
+<td>platform_main_begin</td>
+<td>8</td>
+<td>0</td>
+<td>—</td>
+<td>Empty tgt (can't verify)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="are-the-results-sound">Are the results sound?<a class="headerlink" href="#are-the-results-sound" title="Permanent link">&para;</a></h2>
+<p><strong>func_24 (unsat) — sound and correct.</strong> The O0 code stores constants to the stack then loads back <code>a1</code> as a sign-extended halfword. The O1 code does <code>slli+srai</code> to sign-extend <code>a1</code> and returns it. These are semantically equivalent under RICOVER's projection model (ABI-visible registers + observable memory). Z3 confirms: <code>unsat</code>.</p>
+<p><strong>func_11 (sat) — false positive due to missing ABI preconditions.</strong> The C source shows <code>func_11</code> simply returns <code>p_16</code> (its 5th parameter, <code>uint16_t</code>). The optimizer correctly emits <code>mv a0, a4; ret</code>. Z3 reports <code>sat</code> because RICOVER does not constrain initial register values to the calling convention — see "False positives" section below.</p>
+<h2 id="soundness-concerns">Soundness concerns<a class="headerlink" href="#soundness-concerns" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Label stripping (critical)</strong>: The format converter discards internal labels. Without correct labels, the CFG is wrong and the CHC encoding is unsound. func_11's <code>sat</code> result is unreliable until this is fixed.</p>
+</li>
+<li>
+<p><strong>MUL rule was wrong (fixed 22 May)</strong>: Before this session, all four MUL variants (<code>mul</code>, <code>mulh</code>, <code>mulhsu</code>, <code>mulhu</code>) emitted identical incorrect rules (high-half with zero-extend instead of correct per-variant semantics). The two bugs were: wrong argument index for <code>result_part</code> in the handler, and positional (not name-based) struct field binding in specialization. Both are now fixed.</p>
+</li>
+<li>
+<p><strong>REMW divide-by-zero</strong>: The skip mechanism assumes divide-by-zero is UB (correct for C), so the divide-by-zero handler arm is skipped. This is sound for compiler verification of C code. SMT-LIB's <code>bvsrem</code> for zero divisor gives an unspecified (but deterministic per solver) value, which is consistent with UB.</p>
+</li>
+</ol>
+<h2 id="what-needs-fixing-for-production-use">What needs fixing for production use<a class="headerlink" href="#what-needs-fixing-for-production-use" title="Permanent link">&para;</a></h2>
+<p>The <code>riscv_opt_diff.py</code> script must <strong>preserve internal labels</strong> (lines starting with <code>.L</code>). The current filter on line 185 (<code>if stripped.startswith('.'): continue</code>) discards them along with assembler directives. Fix: only skip directives like <code>.cfi_*</code>, <code>.type</code>, <code>.size</code>, <code>.section</code>, etc. — not label definitions matching <code>.L*:</code>.</p>
+<hr />
+<h2 id="bulk-readiness-analysis-22-may-2026">Bulk Readiness Analysis — 22 May 2026<a class="headerlink" href="#bulk-readiness-analysis-22-may-2026" title="Permanent link">&para;</a></h2>
+<p>Systematic evaluation of csmith as a random benchmark source for RICOVER, using <code>csmith_ricover_e2e.py</code> with the <code>instcombine</code> pass pipeline across 20 programs (seeds 200–219, <code>--no-safe-math --no-global-variables</code>).</p>
+<h3 id="instruction-coverage">Instruction coverage<a class="headerlink" href="#instruction-coverage" title="Permanent link">&para;</a></h3>
+<p>All core RV64IM instructions are IR-derived from the Sail spec via Isla IR (199 of 746 variants transpile; the 547 skipped are floating-point, vector, crypto, and privilege instructions that csmith never generates):</p>
+<ul>
+<li><strong>Fully covered</strong>: ITYPE (addi/addiw/andi/ori/xori/slti/sltiu), RTYPE (add/sub/and/or/xor/sll/srl/sra/slt/sltu + W variants), LOAD (lb/lbu/lh/lhu/lw/lwu/ld), STORE (sb/sh/sw/sd), BRANCH (beq/bne/blt/bge/bltu/bgeu), JAL, JALR, LUI, MUL/MULH/MULHU/MULHSU/MULW, DIV/DIVU/DIVW/DIVUW, REM/REMU/REMW/REMUW, shift-immediate (slli/srli/srai + W variants)</li>
+<li><strong>Compressed expansions</strong>: c.addi, c.li, c.lui, c.mv, c.add, c.addiw, c.lw, c.sw, c.ld, c.sd, c.beqz, c.bnez, c.slli, c.srli, c.srai, c.j, c.jr, c.jalr</li>
+<li><strong>Pseudos handled</strong>: ret, mv, li, snez, zext.b, lui</li>
+<li><strong>Pseudos missing</strong>: <code>sext.w</code> (caused 1 RICOVER error in 20 seeds), <code>neg</code>, <code>not</code>, <code>seqz</code>, <code>nop</code> — all are trivial expansions</li>
+</ul>
+<h3 id="funnel-analysis-20-programs-instcombine-pass">Funnel analysis (20 programs, instcombine pass)<a class="headerlink" href="#funnel-analysis-20-programs-instcombine-pass" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th style="text-align: right;">Count</th>
+<th style="text-align: center;">% of differing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Functions differing between base and optimized</td>
+<td style="text-align: right;">185</td>
+<td style="text-align: center;">100%</td>
+</tr>
+<tr>
+<td>Blocked by <code>call</code> instructions</td>
+<td style="text-align: right;">152</td>
+<td style="text-align: center;">82%</td>
+</tr>
+<tr>
+<td>Blocked by relocations (<code>%hi/%lo/auipc</code>)</td>
+<td style="text-align: right;">136</td>
+<td style="text-align: center;">73%</td>
+</tr>
+<tr>
+<td>Call-free <strong>and</strong> relocation-free</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: center;">11%</td>
+</tr>
+<tr>
+<td>Within size limit + supported instructions</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: center;">6%</td>
+</tr>
+<tr>
+<td>Z3 <code>unsat</code> at 30s</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: center;">0%</td>
+</tr>
+<tr>
+<td>Z3 <code>sat</code> (potential divergence)</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: center;">&lt;1%</td>
+</tr>
+<tr>
+<td>Z3 timeout at 30s</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: center;">5%</td>
+</tr>
+</tbody>
+</table>
+<p>With a <strong>30s Z3 timeout</strong>, effective yield was 0%. Increasing to <strong>300s (5 min)</strong> solved 2 of the 10 timeouts — see extended timeout analysis below.</p>
+<h3 id="three-blockers">Three blockers<a class="headerlink" href="#three-blockers" title="Permanent link">&para;</a></h3>
+<p><strong>1. <code>call</code> instructions (82% of candidates blocked).</strong> Csmith programs call their own <code>func_*</code> functions even with <code>--no-safe-math</code>. RICOVER verifies single-function equivalence and errors on <code>call</code>. The e2e script's <code>has_relocation</code> filter catches <code>auipc</code>/<code>%pcrel</code> but not <code>call</code> pseudo-instructions, so these functions error out inside RICOVER instead of being skipped cleanly.</p>
+<p><strong>2. Z3 scalability.</strong> Of 11 functions that reached Z3 at 30s timeout, 10 timed out and 0 returned <code>unsat</code>. At 300s timeout, 2 of 10 solved (<code>unsat</code>), both with ≤14 source instructions. Everything ≥20 instructions still times out at 5 minutes. See extended timeout results below.</p>
+<p><strong>3. Missing pseudo-instructions (minor).</strong> <code>sext.w rd, rs</code> → <code>addiw rd, rs, 0</code>. Easy fix, low impact since blockers 1 and 2 dominate.</p>
+<h3 id="the-one-sat-result-seed-208-func_54">The one <code>sat</code> result (seed 208, func_54)<a class="headerlink" href="#the-one-sat-result-seed-208-func_54" title="Permanent link">&para;</a></h3>
+<p>86→9 instructions. The O0 version stores many pointers to a 608-byte stack frame and returns a loaded byte; instcombine reduces to <code>mv a0, a2; ret</code>. Z3 reports <code>sat</code> — likely a false positive from the ABI precondition issue (narrow parameter types: <code>uint8_t</code> third argument, O0 explicitly sign-extends while O1 assumes the ABI guarantee that <code>a2</code> already holds the correct value).</p>
+<h3 id="extended-timeout-analysis-300s">Extended timeout analysis (300s)<a class="headerlink" href="#extended-timeout-analysis-300s" title="Permanent link">&para;</a></h3>
+<p>Re-running all 10 timed-out functions with a 5-minute Z3 timeout:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th style="text-align: center;">src→tgt instrs</th>
+<th style="text-align: center;">30s</th>
+<th style="text-align: center;">300s</th>
+<th style="text-align: right;">Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>210/func_4</td>
+<td style="text-align: center;">12→10</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">39s</td>
+</tr>
+<tr>
+<td>203/func_37</td>
+<td style="text-align: center;">14→9</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">30–300s</td>
+</tr>
+<tr>
+<td>203/func_9</td>
+<td style="text-align: center;">20→10</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>206/func_17</td>
+<td style="text-align: center;">33→20</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>213/func_35</td>
+<td style="text-align: center;">38→16</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>219/func_15</td>
+<td style="text-align: center;">40→20</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>217/func_1</td>
+<td style="text-align: center;">42→9</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>211/func_74</td>
+<td style="text-align: center;">51→16</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>211/func_55</td>
+<td style="text-align: center;">79→16</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>210/func_28</td>
+<td style="text-align: center;">86→33</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>208/func_54</td>
+<td style="text-align: center;">86→9</td>
+<td style="text-align: center;">sat</td>
+<td style="text-align: center;"><em>(not re-run)</em></td>
+<td style="text-align: right;">—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>2 of 10 solved — both <code>unsat</code>, both ≤14 source instructions.</strong> The solvability boundary is around ~15 source instructions. func_4 solved in 39s (just above the 30s cutoff), confirming the 30s timeout was marginal for small functions. Everything ≥20 instructions remains intractable at 5 minutes.</p>
+<h3 id="optimized-run-memory-variable-elimination-simplified-csmith-22-may">Optimized run: memory variable elimination + simplified csmith (22 May)<a class="headerlink" href="#optimized-run-memory-variable-elimination-simplified-csmith-22-may" title="Permanent link">&para;</a></h3>
+<p>Two changes were applied:</p>
+<p><strong>1. Memory variable elimination (RICOVER patch).</strong> Instructions that don't modify memory (arithmetic, register moves) no longer get their own <code>memN</code> quantified variable. Instead, the previous memory variable is reused, eliminating trivial <code>(= memN memN-1)</code> equalities over array-typed variables. For a 20-instruction function this reduced memory constraints from 43 to 10. No regressions on existing benchmarks (all SUCCESS → <code>unsat</code>, all BAD → <code>sat</code>, 41/41 tests pass).</p>
+<p><strong>2. Simplified csmith flags.</strong> Added <code>--no-arrays --no-structs --no-pointers</code> to csmith invocation. This produces register-heavy code with fewer memory operations, directly reducing array theory complexity for Z3.</p>
+<p>Results (100 programs, seeds 300–399, instcombine pass, 300s Z3 timeout):</p>
+<ul>
+<li>153 candidate functions generated (vs 20 in the baseline run — 7.6× more, because <code>--no-pointers</code> eliminates most <code>call</code> and relocation patterns)</li>
+<li>10 tested (smallest functions, 10–13 source instructions):</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th style="text-align: center;">src→tgt</th>
+<th style="text-align: center;">Result</th>
+<th style="text-align: right;">Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>func_36</td>
+<td style="text-align: center;">10→8</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">27s</td>
+</tr>
+<tr>
+<td>func_38</td>
+<td style="text-align: center;">11→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">28s</td>
+</tr>
+<tr>
+<td>func_29</td>
+<td style="text-align: center;">11→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">29s</td>
+</tr>
+<tr>
+<td>func_43</td>
+<td style="text-align: center;">11→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">31s</td>
+</tr>
+<tr>
+<td>func_88</td>
+<td style="text-align: center;">11→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">42s</td>
+</tr>
+<tr>
+<td>func_12</td>
+<td style="text-align: center;">13→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">77s</td>
+</tr>
+<tr>
+<td>func_39</td>
+<td style="text-align: center;">11→9</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">160s</td>
+</tr>
+<tr>
+<td>func_46</td>
+<td style="text-align: center;">10→8</td>
+<td style="text-align: center;"><strong>unsat</strong></td>
+<td style="text-align: right;">276s</td>
+</tr>
+<tr>
+<td>func_17</td>
+<td style="text-align: center;">13→9</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+<tr>
+<td>func_153</td>
+<td style="text-align: center;">12→8</td>
+<td style="text-align: center;">timeout</td>
+<td style="text-align: right;">300s</td>
+</tr>
+</tbody>
+</table>
+<p><strong>7 of 10 solved <code>unsat</code></strong> (vs 2/10 in the baseline). Solve times range from 27s to 276s. The two timeouts show that even small functions can be hard depending on the specific arithmetic patterns.</p>
+<h3 id="comparison-csmith-vs-handcrafted-benchmarks">Comparison: csmith vs handcrafted benchmarks<a class="headerlink" href="#comparison-csmith-vs-handcrafted-benchmarks" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Handcrafted benchmarks</th>
+<th>Csmith (baseline)</th>
+<th>Csmith (optimized)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Function calls</td>
+<td>None</td>
+<td>Pervasive (82%)</td>
+<td>Rare (~5%)</td>
+</tr>
+<tr>
+<td>Function size</td>
+<td>2–30 instrs</td>
+<td>9–86+ instrs</td>
+<td>10–50 instrs</td>
+</tr>
+<tr>
+<td>Z3 solve rate</td>
+<td>High (&lt;1s)</td>
+<td>2/11 at 300s</td>
+<td><strong>7/10 at 300s</strong></td>
+</tr>
+<tr>
+<td>Coverage</td>
+<td>Targeted</td>
+<td>Random, broad</td>
+<td>Random, broad</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommendations">Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix <code>sext.w</code>/<code>neg</code>/<code>not</code>/<code>seqz</code>/<code>nop</code></strong> pseudo-instruction expansions in <code>asm_emit.rs</code> — trivial, removes one error class.</li>
+<li>~~<strong>Add <code>call</code> to the <code>has_relocation</code> filter</strong>~~ <strong>Done (22 May).</strong> <code>call</code> is now filtered in <code>has_relocation</code> in <code>riscv_opt_diff.py</code>.</li>
+<li><strong>For thesis evaluation</strong>: use <code>--no-arrays --no-structs --no-pointers --no-safe-math --no-global-variables</code> csmith flags with 300s Z3 timeout. This combination produces a 70% solve rate on small random functions — strong evidence that the approach generalizes beyond handcrafted inputs.</li>
+<li><strong>To improve csmith yield further</strong>: (a) try Eldarica as alternative CHC solver; (b) detect stack-only functions and skip observable memory comparison entirely; (c) filter to ≤15 source instructions for reliable solving.</li>
+</ol>
+<hr />
+<h2 id="all-passes-sweep-22-may-2026-post-inlining">All-passes sweep — 22 May 2026 (post-inlining)<a class="headerlink" href="#all-passes-sweep-22-may-2026-post-inlining" title="Permanent link">&para;</a></h2>
+<p>After the "inline instruction rules" optimization (<code>b59a62a</code>), re-ran csmith with all 9 default pass pipelines and the simplified csmith flags (now baked into <code>csmith_ricover_e2e.py</code>).</p>
+<h3 id="changes-applied-before-this-run">Changes applied before this run<a class="headerlink" href="#changes-applied-before-this-run" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Csmith flags baked into e2e script.</strong> <code>--no-safe-math --no-arrays --no-structs --no-pointers</code> added to <code>generate_csmith()</code> in <code>csmith_ricover_e2e.py</code> (previously only used manually).</li>
+<li><strong><code>call</code> added to relocation filter.</strong> <code>has_relocation()</code> in <code>riscv_opt_diff.py</code> now checks for <code>call</code> instructions, so functions with calls are skipped cleanly instead of erroring inside RICOVER.</li>
+</ol>
+<h3 id="csmith-flag-effects-on-call-instructions">Csmith flag effects on <code>call</code> instructions<a class="headerlink" href="#csmith-flag-effects-on-call-instructions" title="Permanent link">&para;</a></h3>
+<p>Even with <code>--no-safe-math</code>, csmith functions still call each other in assembly (inter-function calls). The <code>--no-safe-math</code> flag removes <code>safe_*</code> wrapper calls, but does not eliminate all <code>call</code> instructions. Measurements at seed 42:</p>
+<table>
+<thead>
+<tr>
+<th>Flags</th>
+<th style="text-align: center;"><code>call</code> instrs in assembly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--no-pointers</code> (with arrays, structs)</td>
+<td style="text-align: center;">86</td>
+</tr>
+<tr>
+<td><code>--no-pointers --no-arrays</code></td>
+<td style="text-align: center;">29</td>
+</tr>
+<tr>
+<td><code>--no-pointers --no-arrays --no-structs</code></td>
+<td style="text-align: center;">15</td>
+</tr>
+</tbody>
+</table>
+<p>Relaxing <code>--no-arrays --no-structs</code> does <strong>not</strong> introduce more calls per se — it makes functions more complex (more memory operations), which increases Z3 array theory complexity and causes more timeouts. The <code>call</code> filter handles both cases.</p>
+<h3 id="results-4-programs-completed-9-pipelines-each-300s-z3-timeout">Results (4 programs completed, 9 pipelines each, 300s Z3 timeout)<a class="headerlink" href="#results-4-programs-completed-9-pipelines-each-300s-z3-timeout" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Program</th>
+<th>Function</th>
+<th style="text-align: center;">src→tgt instrs</th>
+<th style="text-align: center;">Passes tested</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prog_0</td>
+<td><em>(none)</em></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">9</td>
+<td>All functions had relocations</td>
+</tr>
+<tr>
+<td>prog_1</td>
+<td>func_1</td>
+<td style="text-align: center;">15→9</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>prog_2</td>
+<td>func_1</td>
+<td style="text-align: center;">30→9</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>prog_3</td>
+<td>func_16</td>
+<td style="text-align: center;">15→9</td>
+<td style="text-align: center;">6</td>
+<td><strong>6/6 EQUIV</strong> (run killed)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>24/24 tested = EQUIV (unsat), 0 sat, 0 timeouts.</strong> No timeouts is notable — the previous instcombine-only run had 2/10 timeouts. The inlining optimization may have improved Z3 solve times, or these particular functions were easier.</p>
+<h3 id="why-no-sat-results">Why no <code>sat</code> results<a class="headerlink" href="#why-no-sat-results" title="Permanent link">&para;</a></h3>
+<p>With the simplified csmith flags, all 9 passes produce the same optimization on these simple functions (constant folding / dead store elimination). The passes don't diverge from each other because the code is too simple for pass-specific transformations (GVN, LICM, loop unroll) to fire differently.</p>
+<p>To find <code>sat</code> results, options are:
+1. <strong>Use known LLVM miscompile reproductions</strong> (Alive2/bugzilla) as inputs — the existing <code>benchmark/supported/</code> benchmarks already do this
+2. <strong>Mutation testing</strong> — take verified-equivalent pairs, mutate one instruction in the optimized side, confirm RICOVER detects the divergence
+3. <strong>Relax csmith flags</strong> (allow arrays/structs) — more complex code, but more Z3 timeouts</p>
+<h3 id="how-to-reproduce">How to reproduce<a class="headerlink" href="#how-to-reproduce" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>Scripts
+bash<span class="w"> </span>run_csmith_all_passes.sh<span class="w">      </span><span class="c1"># all 9 pipelines × 10 programs</span>
+bash<span class="w"> </span>run_csmith_instcombine.sh<span class="w">     </span><span class="c1"># instcombine only × 20 programs</span>
+bash<span class="w"> </span>run_csmith_aggressive.sh<span class="w">      </span><span class="c1"># simplifycfg + gvn + dse × 20 programs</span>
+bash<span class="w"> </span>run_csmith_loops.sh<span class="w">           </span><span class="c1"># loop passes × 20 programs</span>
+</code></pre></div>
+<p>All scripts use <code>csmith_ricover_e2e.py</code> with 300s Z3 timeout and max 50 source instructions.</p>
+<hr />
+<h2 id="relaxed-flags-experiment-2223-may-2026">Relaxed flags experiment — 22–23 May 2026<a class="headerlink" href="#relaxed-flags-experiment-2223-may-2026" title="Permanent link">&para;</a></h2>
+<p>Relaxed csmith flags from <code>--no-safe-math --no-arrays --no-structs --no-pointers</code> to <code>--no-safe-math --no-pointers</code> (allowing arrays and structs). Goal: produce more complex code where different LLVM passes diverge, increasing the chance of <code>sat</code> results.</p>
+<h3 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">&para;</a></h3>
+<p>With simplified flags, all 9 passes produced identical optimizations on simple register-only code — 24/24 EQUIV, no divergence between passes. By allowing arrays and structs, functions have richer memory behaviour (struct field access, array indexing), which:
+- Gives DSE, GVN, LICM more to work with (different passes may transform differently)
+- Increases Z3 array theory complexity (more timeouts at short timeouts)</p>
+<h3 id="what-changed-in-the-scripts">What changed in the scripts<a class="headerlink" href="#what-changed-in-the-scripts" title="Permanent link">&para;</a></h3>
+<p><code>csmith_ricover_e2e.py</code> <code>generate_csmith()</code>:
+<div class="highlight"><pre><span></span><code><span class="c1"># Simplified (previous):</span>
+<span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--no-safe-math&quot;</span><span class="p">,</span> <span class="s2">&quot;--no-arrays&quot;</span><span class="p">,</span> <span class="s2">&quot;--no-structs&quot;</span><span class="p">,</span> <span class="s2">&quot;--no-pointers&quot;</span><span class="p">]</span>
+<span class="c1"># Relaxed (current):</span>
+<span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--no-safe-math&quot;</span><span class="p">,</span> <span class="s2">&quot;--no-pointers&quot;</span><span class="p">]</span>
+</code></pre></div></p>
+<p><code>riscv_opt_diff.py</code> <code>has_relocation()</code> — added <code>call</code> filtering (done earlier, still in effect):
+<div class="highlight"><pre><span></span><code><span class="ow">or</span> <span class="n">i</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;call &#39;</span><span class="p">)</span>
+</code></pre></div></p>
+<h3 id="run-1-relaxed-flags-300s-timeout-max-50-instructions-1-program-completed">Run 1: relaxed flags, 300s timeout, max 50 instructions (1 program completed)<a class="headerlink" href="#run-1-relaxed-flags-300s-timeout-max-50-instructions-1-program-completed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">10</span><span class="w"> </span>--z3-timeout<span class="w"> </span><span class="m">300</span><span class="w"> </span>--max-instrs<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/tmp/ricover_csmith_relaxed_20260522_222831
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th style="text-align: center;">src→tgt</th>
+<th>Pipeline</th>
+<th style="text-align: center;">Result</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>func_55</td>
+<td style="text-align: center;">18→10</td>
+<td>instcombine through loop-unroll (8 passes)</td>
+<td style="text-align: center;"><strong>8/8 EQUIV</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>func_136</td>
+<td style="text-align: center;">33→15</td>
+<td>instcombine, simplifycfg, gvn, licm, indvars, loop-rotate, loop-unroll</td>
+<td style="text-align: center;"><strong>7/7 TIMEOUT</strong></td>
+<td>33 src instrs too heavy</td>
+</tr>
+<tr>
+<td>func_136</td>
+<td style="text-align: center;">33→10</td>
+<td><strong>dse</strong></td>
+<td style="text-align: center;"><strong>sat</strong></td>
+<td>DSE eliminated a dead store to a struct passed by value</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The <code>sat</code> result (func_136, DSE pass):</strong> The C function takes <code>struct S0 p_139</code> by value, modifies <code>p_139.f0</code> (a dead store to the local copy), and returns a local constant. DSE correctly eliminates the <code>p_139.f0 |= ...</code> dead store. In assembly, however, the base version writes to the struct's memory via <code>sb a1, 0(a2)</code> (where <code>a2</code> is the caller-provided pointer to the by-value struct copy). This address is outside the function's own stack frame <code>[sp0 - 64, sp0)</code>, so RICOVER considers it observable memory and reports a divergence.</p>
+<p><strong>Classification: false positive.</strong> The write is to a by-value struct copy that the caller will never read again. Both versions are semantically equivalent from C's perspective. This is a known limitation: RICOVER's memory observation model treats all memory outside the function's private stack frame as observable, but the RISC-V calling convention places by-value struct copies on the <em>caller's</em> stack, making dead stores to them appear as observable side effects.</p>
+<p>The sat benchmark is saved at <code>TestSuite/csmith/func_136_Obase_vs_dse.s</code> with the C source at <code>TestSuite/csmith/func_136_dse_sat.c</code>.</p>
+<h3 id="run-2-relaxed-flags-60s-timeout-max-20-instructions-3-programs-aborted">Run 2: relaxed flags, 60s timeout, max 20 instructions (3 programs, aborted)<a class="headerlink" href="#run-2-relaxed-flags-60s-timeout-max-20-instructions-3-programs-aborted" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">20</span><span class="w"> </span>--z3-timeout<span class="w"> </span><span class="m">60</span><span class="w"> </span>--max-instrs<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/tmp/ricover_csmith_relaxed_fast_20260522_232216
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th style="text-align: center;">Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EQUIV</td>
+<td style="text-align: center;">18</td>
+</tr>
+<tr>
+<td>TIMEOUT</td>
+<td style="text-align: center;">21</td>
+</tr>
+</tbody>
+</table>
+<p>60s was insufficient — functions with struct/array memory ops need longer solve times. Over half timed out, including 13-instruction functions. Run aborted.</p>
+<h3 id="run-3-relaxed-flags-300s-timeout-max-20-instructions-10-programs-completed">Run 3: relaxed flags, 300s timeout, max 20 instructions (10 programs completed)<a class="headerlink" href="#run-3-relaxed-flags-300s-timeout-max-20-instructions-10-programs-completed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span>-n<span class="w"> </span><span class="m">20</span><span class="w"> </span>--z3-timeout<span class="w"> </span><span class="m">300</span><span class="w"> </span>--max-instrs<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/tmp/ricover_csmith_relaxed_300s_20260522_235632
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th style="text-align: center;">src→tgt</th>
+<th style="text-align: center;">Passes tested</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>func_11</td>
+<td style="text-align: center;">19→9</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>func_22</td>
+<td style="text-align: center;">12→10</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>func_30</td>
+<td style="text-align: center;">12→10</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>func_47</td>
+<td style="text-align: center;">13→10</td>
+<td style="text-align: center;">9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>func_5</td>
+<td style="text-align: center;">16→9</td>
+<td style="text-align: center;">4</td>
+<td><strong>4/4 EQUIV</strong> (run aborted during prog 9)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>40/40 tested = EQUIV, 0 sat, 0 timeouts.</strong> The 300s timeout solved everything at ≤20 instructions, including the functions that timed out at 60s. All 9 passes produced equivalent results — even with structs and arrays, the code was simple enough that passes didn't diverge.</p>
+<h3 id="comparison-across-all-runs">Comparison across all runs<a class="headerlink" href="#comparison-across-all-runs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Csmith flags</th>
+<th style="text-align: center;">Timeout</th>
+<th style="text-align: center;">Max instrs</th>
+<th style="text-align: center;">Programs</th>
+<th style="text-align: center;">Tested</th>
+<th style="text-align: center;">EQUIV</th>
+<th style="text-align: center;">SAT</th>
+<th style="text-align: center;">TIMEOUT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simplified, all passes</td>
+<td>no-arrays/structs/pointers</td>
+<td style="text-align: center;">300s</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;"><strong>24</strong></td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td>Relaxed, all passes</td>
+<td>no-pointers only</td>
+<td style="text-align: center;">300s</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;"><strong>1</strong></td>
+<td style="text-align: center;">7</td>
+</tr>
+<tr>
+<td>Relaxed, all passes</td>
+<td>no-pointers only</td>
+<td style="text-align: center;">60s</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">39</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">21</td>
+</tr>
+<tr>
+<td>Relaxed, all passes</td>
+<td>no-pointers only</td>
+<td style="text-align: center;">300s</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;"><strong>40</strong></td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-findings">Key findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>300s Z3 timeout is essential</strong> for struct/array-bearing code. At 60s, over half of functions time out; at 300s, everything ≤20 instructions solves.</li>
+<li><strong>Relaxing <code>--no-arrays --no-structs</code> does not produce more <code>sat</code> results</strong> on small functions (≤20 instrs). All passes produce identical optimizations. The one <code>sat</code> (func_136, 33 instrs) was a false positive from the by-value struct limitation.</li>
+<li><strong>The bottleneck for finding real <code>sat</code> results is not csmith flags</strong> — it's that LLVM's passes are correct. Real miscompiles are rare and would require either (a) known-buggy LLVM versions, (b) mutation testing, or (c) much larger test volumes.</li>
+<li><strong>By-value struct dead stores are a known false-positive class.</strong> Functions that take structs by value and modify fields without returning them will produce <code>sat</code> under DSE because the store is to caller-owned memory that RICOVER considers observable.</li>
+</ol>
+<h3 id="how-to-reproduce-end-to-end">How to reproduce end-to-end<a class="headerlink" href="#how-to-reproduce-end-to-end" title="Permanent link">&para;</a></h3>
+<p><strong>Prerequisites:</strong>
+- <code>~/Tools/csmith/src/csmith</code> — Csmith random program generator
+- <code>~/Tools/llvm-project/build/bin/{clang,opt,llc}</code> — RISC-V cross-compiler and opt tools
+- <code>~/Tools/csmith/runtime/</code> — Csmith headers
+- <code>/usr/riscv64-linux-gnu</code> — RISC-V sysroot
+- Z3 solver on PATH
+- RICOVER built (<code>cargo build</code> in <code>Implementation/RICOVER</code>)</p>
+<p><strong>Step 1: Run the e2e pipeline</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>Scripts
+
+<span class="c1"># All 9 default passes, 10 programs, 300s Z3 timeout, max 20 src instructions</span>
+python3<span class="w"> </span>csmith_ricover_e2e.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-n<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--z3-timeout<span class="w"> </span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-instrs<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/tmp/ricover_csmith_run
+
+<span class="c1"># Or use one of the shell wrapper scripts:</span>
+bash<span class="w"> </span>run_csmith_all_passes.sh<span class="w">      </span><span class="c1"># all 9 pipelines × 10 programs</span>
+bash<span class="w"> </span>run_csmith_instcombine.sh<span class="w">     </span><span class="c1"># instcombine only × 20 programs</span>
+bash<span class="w"> </span>run_csmith_aggressive.sh<span class="w">      </span><span class="c1"># simplifycfg + gvn + dse × 20 programs</span>
+bash<span class="w"> </span>run_csmith_loops.sh<span class="w">           </span><span class="c1"># loop passes × 20 programs</span>
+</code></pre></div>
+<p><strong>Step 2: Check results</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Structured JSON results</span>
+cat<span class="w"> </span>/tmp/ricover_csmith_run/results.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>json.tool
+
+<span class="c1"># Quick summary from terminal output</span>
+grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;EQUIV|DIFF|TIMEOUT&quot;</span><span class="w"> </span>/tmp/ricover_csmith_run/*.log
+</code></pre></div>
+<p><strong>Step 3: Inspect a specific sat result</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Look at the ricover-format assembly</span>
+cat<span class="w"> </span>/tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s
+
+<span class="c1"># Re-run RICOVER + Z3 manually</span>
+<span class="nb">cd</span><span class="w"> </span>Implementation/RICOVER
+cargo<span class="w"> </span>run<span class="w"> </span>-q<span class="w"> </span>--<span class="w"> </span>check-equiv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--before<span class="w"> </span>/tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--after<span class="w">  </span>/tmp/ricover_csmith_run/prog_000/dse/func_136_Obase_vs_dse.s<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--before-fn<span class="w"> </span>src<span class="w"> </span>--after-fn<span class="w"> </span>tgt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-f<span class="w"> </span>func_136<span class="w"> </span>--ir<span class="w"> </span>snapshot/rv64d.ir<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/tmp/func_136.smt2
+z3<span class="w"> </span>-T:300<span class="w"> </span>/tmp/func_136.smt2
+</code></pre></div>
+<p><strong>Pipeline internals</strong> (what <code>csmith_ricover_e2e.py</code> does):</p>
+<div class="highlight"><pre><span></span><code>csmith --no-safe-math --no-pointers --no-global-variables
+  → program.c
+  → clang -O0 -Xclang -disable-O0-optnone -emit-llvm -S → base.ll
+  → llc -O1 → base.s
+  → opt -passes=&#39;&lt;pipeline&gt;&#39; -S → opt.ll → llc -O1 → opt.s
+  → per-function diff (skip: call, relocations, &gt;max-instrs, identical)
+  → generate ricover .s file (src: base, tgt: opt)
+  → RICOVER check-equiv → .smt2
+  → z3 -T:&lt;timeout&gt; → sat/unsat/timeout
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,30 @@
+# FAILED (src): LLVM ERROR: Unimplemented RISCVTargetLowering::LowerOperation Case
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace and instructions to reproduce the bug.
+Stack dump:
+0.	Program arguments: /home/artjom/Tools/llvm-project/build/bin/llc -mtriple riscv32 -mattr +zve32x /tmp/tmps9fy1or6.ll -o - -O0
+1.	Running pass 'Function Pass Manager' on module '/tmp/tmps9fy1or6.ll'.
+2.	Running pass 'RISC-V DAG->DAG Pattern Instruction Selection' on function '@target_vl_one'
+Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):
+0  llc       0x000055c3c90eae29 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 57
+1  llc       0x000055c3c90e7c87
+2  libc.so.6 0x00007f9fb50204d0
+3  libc.so.6 0x00007f9fb507a90c
+4  libc.so.6 0x00007f9fb50203a0 gsignal + 32
+5  libc.so.6 0x00007f9fb500757a abort + 38
+6  llc       0x000055c3c76ba46f
+7  llc       0x000055c3c9015269
+8  llc       0x000055c3c79e4208
+9  llc       0x000055c3c8d3475f llvm::TargetLowering::LowerOperationWrapper(llvm::SDNode*, llvm::SmallVectorImpl<llvm::SDValue>&, llvm::SelectionDAG&) const + 31
+10 llc       0x000055c3c8eed34d
+11 llc       0x000055c3c8f97e0b
+12 llc       0x000055c3c8eedd1e
+13 llc       0x000055c3c8eee2af llvm::SelectionDAG::LegalizeTypes() + 1135
+14 llc       0x000055c3c8e22188 llvm::SelectionDAGISel::CodeGenAndEmitDAG() + 248
+15 llc       0x000055c3c8e2476f llvm::SelectionDAGISel::SelectAllBasicBlocks(llvm::Function const&) + 3599
+16 llc       0x000055c3c8e26904 llvm::SelectionDAGISel::runOnMachineFunction(llvm::MachineFunction&) + 228
+17 llc       0x000055c3c8e13ce9 llvm::SelectionDAGISelLegacy::runOnMachineFunction(llvm::MachineFunction&) + 441
+18 llc       0x000055c3c7f7d8c9 llvm::MachineFunctionPass::runOnFunction(llvm::Function&) + 457
+19 llc       0x000055c3c855ffe1 llvm::FPPassManager::runOnFunction(llvm::Function&) + 1665
+20 llc       0x000055c3c85602c3 llvm:
+# Source: InstCombine/riscv-vmv-v-x.riscv32__zve32x.ll
+# Function: scalar_non_constant

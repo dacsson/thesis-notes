@@ -1,0 +1,2974 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../LOAD_STORE_STRATEGY/">
+      
+      
+        <link rel="next" href="../REVIEW_10_04/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Opcode translation audit — 2026-04-12 - Safonov ITMO Thesis Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#opcode-translation-audit-2026-04-12" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../../.." title="Safonov ITMO Thesis Notes" class="md-header__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Safonov ITMO Thesis Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Opcode translation audit — 2026-04-12
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../.." title="Safonov ITMO Thesis Notes" class="md-nav__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Safonov ITMO Thesis Notes
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../PROJECT_MEMORY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Days
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Days
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/16%20April.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 April. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/23%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/24%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/26%20February.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 February. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/26%20January.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 January. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/26%20March.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 March. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/27%20May.%20Pre-defense/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 May. Pre defense
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/27%20October.%20Meeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 October. Meeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/28%20November.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 November. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Days/31%20October.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 October. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    RICOVER
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER — RISC-V Compiler Optimization VERification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2" id="__nav_4_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Doc
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Doc
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../20_May_Status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 May Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALIVE2_BUGLIST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ALIVE2 BUGLIST
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALIVE2_TESTABILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER vs Alive2 Bug Corpus — Testability Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../BRANCHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Block CHC Encoding for Branches and Loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CSMITH_INITIAL_OVERVIEW_22_MAY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PLAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TEST_SUITE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TEST SUITE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2_9" id="__nav_4_1_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_1_2_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BENCH1_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BENCH1 IMPLEMENTATION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LOAD_STORE_STRATEGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAD STORE STRATEGY
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addi-translates-but-the-rule-is-wrong" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §ADDI — translates, but the rule is wrong
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§ADDI — translates, but the rule is wrong">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-addiw-works-and-addi-doesnt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ADDIW works and ADDI doesn't
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-needs-to-change-for-addi-specifically" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What needs to change for ADDI specifically
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#load-ld-lw-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §LOAD → ld, lw — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store-sd-sw-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §STORE → sd, sw — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jalr-ret-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §JALR → ret — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority ordering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-full-skipped-variant-list-from-this-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix — full skipped-variant list from this run
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../REVIEW_10_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review of Isla IR to CHC Transpiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nomencloture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Nomencloture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Nomencloture/THESIS_RULES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    THESIS RULES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Nomencloture/Thesis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Nomencloture/Thesis_Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thesis Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper Review
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper Review
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Alive2%20Bounded%20Translation%20Validation%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2 Bounded Translation Validation for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Compiler%20Optimization%20Testing%20Based%20on%20Optimization-Guided%20Equivalence%20Transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler Optimization Testing Based on Optimization Guided Equivalence Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Finding%20and%20Understanding%20Bugs%20in%20C%20Compilers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finding and Understanding Bugs in C Compilers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Formal%20Verification%20of%20SSA-Based%20Optimizations%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Verification of SSA Based Optimizations for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Horn Clause Solvers for Program Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Translation%20Validation%20for%20LLVM%E2%80%99s%20AArch64%20Backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translation Validation for LLVM’s AArch64 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Paper%20Review/Verifying%20Optimizations%20using%20SMTSolvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifying Optimizations using SMTSolvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Scripts/QUICK_START_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Scripts/README_CSMITH_RICOVER_E2E/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Scripts/README_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RISC-V Assembly Optimization Diff Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Scripts/README_SMALL_GENERATOR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Random C Program Generator Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TestSuite
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TestSuite
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLVM TEST RISCV OPTS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLVM TEST RISCV OPTS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../TestSuite/LLVM_TEST_RISCV_OPTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Csmith
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../TestSuite/csmith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Random Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/ARM-TV/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/Alive2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/CompCert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CompCert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/Vellvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vellvm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sail
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sail
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/Sail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/Sail/Internal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Tools/Sail/Isla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Isla
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Topics/Constrained%20Horn%20Clauses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constrained Horn Clauses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Topics/Glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../Topics/Proving%20semantic%20equivalence%20of%20RISC-V%20programs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addi-translates-but-the-rule-is-wrong" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §ADDI — translates, but the rule is wrong
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§ADDI — translates, but the rule is wrong">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-addiw-works-and-addi-doesnt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ADDIW works and ADDI doesn't
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-needs-to-change-for-addi-specifically" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What needs to change for ADDI specifically
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#load-ld-lw-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §LOAD → ld, lw — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store-sd-sw-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §STORE → sd, sw — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jalr-ret-skipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §JALR → ret — SKIPPED
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority ordering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-full-skipped-variant-list-from-this-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix — full skipped-variant list from this run
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="opcode-translation-audit-2026-04-12">Opcode translation audit — 2026-04-12<a class="headerlink" href="#opcode-translation-audit-2026-04-12" title="Permanent link">&para;</a></h1>
+<p>Target: the opcodes that the <code>foo</code> worked example uses and that <code>check-equiv</code> still warns about when run against <code>snapshot/rv64d.ir</code>:</p>
+<div class="highlight"><pre><span></span><code>warning: falling back to hand-written CHC rules for opcodes not covered by the IR: ld, lw, ret, sd, sw
+</code></pre></div>
+<p>(<code>addi</code> no longer appears in the warning list, but see §ADDI below — it translates to a <strong>broken</strong> rule, which is worse.)</p>
+<h2 id="method">Method<a class="headerlink" href="#method" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>cargo<span class="w"> </span>run<span class="w"> </span>--<span class="w"> </span>translate-ir<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-i<span class="w"> </span>snapshot/rv64d.ir<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span>/tmp/ricover_rv64d.smt2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>execute<span class="w"> </span><span class="m">2</span>&gt;<span class="w"> </span>/tmp/ricover_stderr.log
+</code></pre></div>
+<p>Then grep <code>/tmp/ricover_rv64d.smt2</code> for <code>declare-rel &lt;opcode&gt;</code> and <code>SKIPPED variant</code>, and cross-reference against the ITYPE/LOAD/STORE/JALR bodies in <code>zexecute</code> (line 251154+ of <code>rv64d.ir</code>).</p>
+<p>Target opcode → IR variant mapping:</p>
+<table>
+<thead>
+<tr>
+<th>asm opcode</th>
+<th>IR variant</th>
+<th>outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>addi</code></td>
+<td>ITYPE</td>
+<td>translates (but rule is semantically empty — see §ADDI)</td>
+</tr>
+<tr>
+<td><code>addiw</code></td>
+<td>ADDIW</td>
+<td>translates correctly</td>
+</tr>
+<tr>
+<td><code>ld</code></td>
+<td>LOAD</td>
+<td>SKIPPED — <code>lteq_int(p4, xlen_bytes)</code></td>
+</tr>
+<tr>
+<td><code>lw</code></td>
+<td>LOAD</td>
+<td>SKIPPED — same</td>
+</tr>
+<tr>
+<td><code>sd</code></td>
+<td>STORE</td>
+<td>SKIPPED — <code>lteq_int(p3, xlen_bytes)</code></td>
+</tr>
+<tr>
+<td><code>sw</code></td>
+<td>STORE</td>
+<td>SKIPPED — same</td>
+</tr>
+<tr>
+<td><code>ret</code></td>
+<td>JALR</td>
+<td>SKIPPED — <code>update_elp_state(p1)</code> (+ <code>ret</code> is a pseudo-insn, no dedicated variant anyway)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="addi-translates-but-the-rule-is-wrong">§ADDI — translates, but the rule is wrong<a class="headerlink" href="#addi-translates-but-the-rule-is-wrong" title="Permanent link">&para;</a></h2>
+<p>The emitted rule (<code>/tmp/ricover_rv64d.smt2:240</code>):</p>
+<div class="highlight"><pre><span></span><code>;; --- ADDI instruction (from Isla IR [309..328]) ---
+(declare-rel addi
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall ((regs0 …) (mem0 …) (pc0 …) (regs1 …) (mem1 …) (pc1 …))
+    (=&gt; (and (= regs1 regs0)
+             (= mem1 mem0)
+             (= pc1 (bvadd pc0 (_ bv4 64))))
+        (addi regs0 mem0 pc0 regs1 mem1 pc1))))
+</code></pre></div>
+<p>Problems:</p>
+<ol>
+<li><strong>6-arity signature, not 9-arity.</strong> No <code>imm</code>, <code>rs1</code>, <code>rd</code> parameters. The operand triple has been silently dropped.</li>
+<li><strong>Body is a no-op.</strong> <code>regs1 = regs0</code>, <code>mem1 = mem0</code>, <code>pc1 = pc0 + 4</code>. There is no <code>set_reg</code>, no <code>bvadd</code>, nothing that reflects <code>rd := rs1 + sign_extend(imm)</code>.</li>
+<li><strong>Arity mismatch in the equivalence query.</strong> <code>emit_program_rule</code> still emits 9-argument calls (<code>(addi regs0 mem0 pc0 regs1 mem1 pc1 (_ bv4064 12) reg_sp reg_sp)</code> — <code>/tmp/ricover_foo_query.smt2:2696</code>), so the query combines a 6-arity <code>declare-rel</code> with 9-arity callsites. Z3 will reject it outright.</li>
+</ol>
+<p>Compare this with <strong>ADDIW</strong> (<code>/tmp/ricover_rv64d.smt2:295</code>), which translates correctly:</p>
+<div class="highlight"><pre><span></span><code>(declare-rel addiw
+  (… BV12 BV5 BV5))
+
+(rule
+  (forall (… (p0 (_ BitVec 12)) (p1 (_ BitVec 5)) (p2 (_ BitVec 5)))
+    (=&gt; (and (= regs1 (set_reg regs0 p2
+                      ((_ sign_extend 32)
+                       ((_ extract 31 0)
+                        (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0))))))
+             (= mem1 mem0)
+             (= pc1 (bvadd pc0 (_ bv4 64))))
+        (addiw regs0 mem0 pc0 regs1 mem1 pc1 p0 p1 p2))))
+</code></pre></div>
+<p>— 9-arity, real <code>set_reg</code>/<code>bvadd</code>/<code>sign_extend</code>/<code>extract</code>, exactly what we want.</p>
+<h3 id="why-addiw-works-and-addi-doesnt">Why ADDIW works and ADDI doesn't<a class="headerlink" href="#why-addiw-works-and-addi-doesnt" title="Permanent link">&para;</a></h3>
+<p>They sit inside the same <code>zexecute</code> function but arrive there by different routes. In <code>rv64d.ir</code> (line 251434):</p>
+<div class="highlight"><pre><span></span><code>jump zmergez3var is zITYPE goto 383
+  zz4110 : %bv12    ; imm
+  zz4111 : %bv5     ; rs1
+  zz4112 : %bv5     ; rd
+  zz4113 : %enum ziop
+  zz4113 = … as ITYPE.…ziop3              ; &lt;— enum operand
+  … state init (pc += 4, sign_extend imm) …
+  jump @neq(zADDI, zz4113) goto 309       ; &lt;— inner dispatch
+    zz4120 = zrX_bits(zz4111)             ; rs1
+    zz4123 = zadd_bits(zz4120, zz4114)    ; rs1 + imm
+    zz4119 = zz4123
+    goto 378
+  jump @neq(zSLTI, zz4113) goto 328
+    …SLTI body…
+  jump @neq(zANDI, zz4113) goto 347
+    …
+  … [the actual writeback `wX_bits(rd, result)` lives past label 378]
+</code></pre></div>
+<p>ADDIW, by contrast, is its <strong>own outer variant</strong>: the stderr line <code>found ADDIW: jump Kind(…) to 825</code> shows that variant discovery recognized ADDIW as a standalone dispatch target, so its body is a single straight-line block from start-of-variant to end-of-variant. <code>translate_path</code> walks it and all the operand reads and the writeback are in range.</p>
+<p>For ADDI, two independent issues combine to produce the empty rule:</p>
+<ol>
+<li><strong>The <code>iop</code> enum parameter has type <code>Ty::Enum(Name { id: 467 })</code>.</strong> <code>ty_to_smt</code> has no mapping for enum types, so when the variant's parameter list is built, <code>iop</code> is omitted. But variant discovery also somehow drops <code>imm</code>/<code>rs1</code>/<code>rd</code> from the parameter list — likely because it's using a synthetic ADDI variant whose operand list was derived from walking only the inner <code>@neq(zADDI, …)</code> arm header, which lost the bindings.</li>
+<li><strong>The actual ADDI computation (<code>rX_bits</code>/<code>add_bits</code>/<code>wX_bits</code>) lives inside the <code>@neq(zADDI, …) goto 309</code> arm.</strong> <code>translate_path</code> is linear; it walks instruction indices <code>[body_start..body_end]</code> and does not follow <code>goto</code> edges. When it reaches the <code>jump @neq</code> it either falls through (skipping the inner arm entirely) or treats the guard as a dead precondition. Either way, the ADDI-specific stmts never reach the emitter. All that survives is the shared prologue: the <code>sign_extend</code> of the immediate (a dead let, since no <code>p0</code> param exists to bind it to) and the implicit <code>pc += 4</code>.</li>
+</ol>
+<p>Net effect: the variant discovery emits <strong>something</strong> called "ADDI", but it has no operands and no computation — essentially a NOP rule. Because it type-checks as HORN on its own, the transpiler reports success and no warning is printed; the breakage only becomes visible when the program rule calls it with the real 9-arity signature.</p>
+<p>This is strictly worse than a fallback: a fallback produces a working rule, whereas this produces a silently-wrong rule that also makes the query malformed. <strong>Fixing this should take priority over any of the skipped variants below.</strong></p>
+<h3 id="what-needs-to-change-for-addi-specifically">What needs to change for ADDI specifically<a class="headerlink" href="#what-needs-to-change-for-addi-specifically" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Variant discovery must either (a) reject synthetic variants produced from nested <code>@neq</code>-dispatch arms, so ADDI falls back cleanly, or (b) actually follow the <code>@neq</code> arm as its own linear subpath and emit the full 9-arity rule with operand parameters.</li>
+<li>Option (b) is the real fix and also unlocks SLTI/SLTIU/ANDI/ORI/XORI from ITYPE, plus the whole RTYPE/BTYPE/UTYPE/SHIFTIWOP/SHIFTIOP families, all of which use the same inner-enum-dispatch pattern in the full IR.</li>
+</ul>
+<h2 id="load-ld-lw-skipped">§LOAD → <code>ld</code>, <code>lw</code> — SKIPPED<a class="headerlink" href="#load-ld-lw-skipped" title="Permanent link">&para;</a></h2>
+<p>IR body starts at <code>rv64d.ir:251817</code>. The first thing it does, before any memory access:</p>
+<div class="highlight"><pre><span></span><code>zz4277 : %i64                                ; width in bytes
+zz4283 = zz5i64zDzKz5i(zz4277)               ; i64 → %i  (unclassified)
+zz4284 = zz5i64zDzKz5i(zxlen_bytes)          ; i64 → %i
+zz4282 = zlteq_int(zz4283, zz4284)           ; &lt;— fails here
+zz4285 = $zsail_assert(zz4282, &quot;…:289.28-289.29&quot;)
+</code></pre></div>
+<p><code>lteq_int</code> is not in <code>classify_call</code>, so <code>call_to_smt</code> raises <code>unsupported Sail function call: lteq_int(p4, xlen_bytes)</code> and the whole LOAD variant is abandoned by the per-variant error recovery.</p>
+<p>Even if we classify <code>lteq_int</code> and <code>sail_assert</code> (as a no-op), LOAD will hit two further unclassified constructs before it completes:</p>
+<div class="highlight"><pre><span></span><code>zz4286 = zvmem_read(rs1, addr, width, zLoadzIuzK(zData),
+                    false, false, false)        ; 7-arg mem read
+jump have_exception goto 695                    ; global exception flag
+jump zz4286 is zOkzIbzCUExecutionResultzK       ; result-union pattern match
+zz4290 = zextend_value(is_unsigned, data)       ; runtime sign/zero switch
+zwX_bits(rd, zz4290)
+</code></pre></div>
+<p>So the full list of blockers for LOAD is:</p>
+<ol>
+<li><code>lteq_int</code> — integer <code>≤</code>, not classified.</li>
+<li><code>zz5i64zDzKz5i</code> — <code>%i64 → %i</code> coercion, not classified.</li>
+<li><code>sail_assert</code> — runtime assertion primitive, not classified. Cleanest fix: treat as a precondition, or drop.</li>
+<li><code>vmem_read</code> — 7-argument virtual-memory read. Takes a <code>MemoryAccessType</code> union (<code>zLoadzIuzK(zData)</code>) and returns a <code>result</code> union. Not classified, and our memory model speaks <code>mem_read_N</code>/<code>read_mem_word</code> directly, so we need a bridge.</li>
+<li><code>jump have_exception</code> — branches on a global exception flag. Exception state isn't modeled.</li>
+<li><code>jump zz4286 is zOkzIbzCUExecutionResultzK</code> — pattern match on a <code>result</code> union. <code>translate_path</code> only handles union dispatch at the <em>outer</em> variant level.</li>
+<li><code>extend_value(is_unsigned, bytes)</code> — runtime choice between <code>sign_extend</code> and <code>zero_extend</code> driven by a bool operand. Not classified.</li>
+</ol>
+<p>Minimum work to land <code>ld</code> and <code>lw</code>:</p>
+<ul>
+<li>Classify <code>lteq_int</code> and i64↔i conversions. Treat <code>sail_assert</code> as a no-op.</li>
+<li>Add a <code>vmem_read</code> → <code>mem_read_N</code> bridge that (a) discards the access-type union tag, (b) assumes no exception (i.e. takes only the <code>Ok</code> arm).</li>
+<li>Handle the <code>Ok</code>/<code>Err</code> union pattern match either by pre-simplifying when one arm goes to an exception handler, or by emitting two rule variants.</li>
+<li>Handle <code>extend_value</code> by expanding to <code>ite</code> on the bool, or by emitting a dispatch on the param at rule-emit time.</li>
+</ul>
+<p>Widths (for both <code>lw</code> and <code>ld</code>) come from the <code>p4 : i64</code> operand, so a single LOAD rule parameterized on <code>p4</code> covers both as long as our memory bridge can handle a variable <code>N</code> — or we emit N=4 and N=8 specializations.</p>
+<h2 id="store-sd-sw-skipped">§STORE → <code>sd</code>, <code>sw</code> — SKIPPED<a class="headerlink" href="#store-sd-sw-skipped" title="Permanent link">&para;</a></h2>
+<p>IR body at <code>rv64d.ir:251866</code>. Exact same blocker pattern as LOAD:</p>
+<div class="highlight"><pre><span></span><code>zlteq_int(p3, xlen_bytes)          ; width precondition
+$zsail_assert(…)
+zvmem_write(…, MemoryAccessType, …)  ; writes, returns result union
+jump have_exception …
+jump … is zOkzIbzCUExecutionResultzK
+</code></pre></div>
+<p>Same fixes as LOAD plus a <code>vmem_write</code> → <code>mem_write_N</code> bridge. Unlocking LOAD automatically unblocks ~90% of STORE.</p>
+<h2 id="jalr-ret-skipped">§JALR → <code>ret</code> — SKIPPED<a class="headerlink" href="#jalr-ret-skipped" title="Permanent link">&para;</a></h2>
+<p>IR body at <code>rv64d.ir:252696</code>. The very first statement is:</p>
+<div class="highlight"><pre><span></span><code>update_elp_state(p1)    ; CFI / shadow-stack / landing-pad tracking
+</code></pre></div>
+<p><code>update_elp_state</code> is a side-effecting call on a Zicfilp-related CSR. Not classified. Beyond that, JALR also has the <code>have_exception</code>/result-union machinery that LOAD/STORE use, and calls <code>get_next_pc</code>/<code>handle_illegal</code>.</p>
+<p><code>ret</code> has an additional wrinkle: it's a pseudo-instruction (<code>jalr zero, 0(ra)</code>), not an IR variant of its own. So even when JALR translates, <code>ir_rule_for_opcode</code> will need a <code>ret</code> → <code>jalr</code> alias that binds <code>rd=zero</code>, <code>rs1=ra</code>, <code>imm=0</code>.</p>
+<p>Minimum work to land <code>ret</code>:</p>
+<ul>
+<li>Stub <code>update_elp_state</code> as a no-op (Zicfilp is outside our observable equivalence notion).</li>
+<li>Classify <code>get_next_pc</code> / <code>get_arch_pc</code> (also responsible for blocking LUI and JAL — see the stderr log).</li>
+<li>Fix the same result-union/exception handling that LOAD/STORE need.</li>
+<li>Add <code>ret</code> → <code>jalr(zero, ra, 0)</code> alias in <code>ir_rule_for_opcode</code>.</li>
+</ul>
+<p>LUI and JAL, which <code>foo</code> doesn't use, share the <code>get_arch_pc</code>/<code>get_next_pc</code> blocker with JALR and would come along for free.</p>
+<h2 id="priority-ordering">Priority ordering<a class="headerlink" href="#priority-ordering" title="Permanent link">&para;</a></h2>
+<p>In ascending order of blast radius (what unlocks the most instructions per unit of work):</p>
+<ol>
+<li><strong>Fix ADDI first.</strong> It's actively producing a broken rule that makes check-equiv queries malformed. Either teach variant discovery to follow inner <code>@neq</code> arms as sub-variants (real fix, unlocks all of ITYPE/RTYPE/BTYPE/UTYPE/SHIFTIWOP/SHIFTIOP), or reject the synthetic ADDI variant so it falls back cleanly.</li>
+<li><strong>LOAD/STORE bridge.</strong> The <code>lteq_int</code> + <code>sail_assert</code> + <code>vmem_read</code>/<code>vmem_write</code> + result-union + <code>extend_value</code> cluster. Unlocks <code>ld</code>, <code>lw</code>, <code>sd</code>, <code>sw</code> together — all four foo memory ops — plus C.LW/C.LD/C.SW/C.SD (see the stderr log, those are skipped on <code>creg2reg_idx</code> which is a second-order blocker behind LOAD/STORE).</li>
+<li><strong>JALR + pseudo-insn alias.</strong> Unlocks <code>ret</code>, plus LUI/JAL which share the <code>get_arch_pc</code>/<code>get_next_pc</code> classification.</li>
+</ol>
+<p>Steps 2 and 3 share the <code>have_exception</code> / result-union infrastructure, so doing them together is cheaper than doing them separately.</p>
+<h2 id="appendix-full-skipped-variant-list-from-this-run">Appendix — full skipped-variant list from this run<a class="headerlink" href="#appendix-full-skipped-variant-list-from-this-run" title="Permanent link">&para;</a></h2>
+<p>See <code>/tmp/ricover_stderr.log</code> (339 lines, ~350 variants skipped out of 390). The frequency analysis of skip reasons is left for a follow-up, but the dominant ones in order of occurrence are:</p>
+<ul>
+<li><code>unsupported IR type in SMT translation: Enum(…)</code> — inner-enum-dispatch families</li>
+<li><code>get_sew((_ unit))</code> — vector instructions (SEW = standard element width)</li>
+<li><code>lteq_int(…)</code> / <code>sub_atom(…)</code> / <code>mult_atom(…)</code> — integer-domain guards and arithmetic</li>
+<li><code>creg2reg_idx(p…)</code> — compressed instructions (C.*)</li>
+<li><code>count_ones</code> / <code>count_leading_zeros</code> / <code>count_trailing_zeros</code> / <code>rev8</code> / <code>carryless_mul</code> — Zbb/Zbc primitives</li>
+<li>Floating-point helpers (<code>_get_Fcsr_FRM</code>, <code>rF_or_X_*</code>, <code>select_instr_or_fcsr_rm</code>) — F/D/Zfh</li>
+<li>CSR / privilege-mode helpers (<code>eq_anything&lt;EPrivilege%&gt;</code>, <code>cur_privilege</code>) — system instructions</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../../..", "features": [], "search": "../../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

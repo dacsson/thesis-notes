@@ -1,0 +1,20 @@
+# ==================================================
+# Ricover Format File
+# ==================================================
+# Source file: ../TestSuite/randprog/program_01.c
+# Function: DumbHash_block2
+# Comparison: O0 vs O1
+# Instructions in src (O0): 2
+# Instructions in tgt (O1): 0
+# ==================================================
+
+# Function: src (O0 version)
+.globl src
+src:
+    sd a0, 0(a1)
+    ld a0, 0(a1)
+
+
+# Function: tgt (O1 version)
+.globl tgt
+tgt:

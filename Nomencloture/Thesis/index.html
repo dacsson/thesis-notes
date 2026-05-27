@@ -1,0 +1,4397 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../THESIS_RULES/">
+      
+      
+        <link rel="next" href="../Thesis_Rules/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Формальная проверка корректности оптимизаций RISC-V программ - Safonov ITMO Thesis Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#risc-v" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-header__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Safonov ITMO Thesis Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Формальная проверка корректности оптимизаций RISC-V программ
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-nav__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Safonov ITMO Thesis Notes
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROJECT_MEMORY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Days
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Days
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/16%20April.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 April. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/23%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/24%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20February.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 February. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20January.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 January. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20March.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 March. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20May.%20Pre-defense/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 May. Pre defense
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20October.%20Meeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 October. Meeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/28%20November.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 November. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/31%20October.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 October. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    RICOVER
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER — RISC-V Compiler Optimization VERification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2" id="__nav_4_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Doc
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Doc
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/20_May_Status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 May Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_BUGLIST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ALIVE2 BUGLIST
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_TESTABILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER vs Alive2 Bug Corpus — Testability Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/BRANCHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Block CHC Encoding for Branches and Loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/CSMITH_INITIAL_OVERVIEW_22_MAY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PLAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/TEST_SUITE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TEST SUITE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2_9" id="__nav_4_1_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_1_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/BENCH1_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BENCH1 IMPLEMENTATION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/LOAD_STORE_STRATEGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAD STORE STRATEGY
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/OPCODE_CHECK_12_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/REVIEW_10_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review of Isla IR to CHC Transpiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nomencloture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Nomencloture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../THESIS_RULES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    THESIS RULES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Введение
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 1. Анализ предметной области
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 1. Анализ предметной области">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Ошибки мисоптимизации в компиляторах
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Обзор существующих инструментов верификации
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.2 Обзор существующих инструментов верификации">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#121-compcert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.1 CompCert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#122-islaris" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.2. Islaris
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-alive2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.3 Alive2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#124-arm-tv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.4 ARM-TV
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Сравнительный анализ и обоснование подхода
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 2. Теоретические основы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 2. Теоретические основы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Операционная семантика низкоуровневых программ
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-risc-v-sail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Архитектурная спецификация RISC-V на языке Sail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Ограниченные дизъюнкты Хорна
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-chc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Кодирование семантической эквивалентности в CHC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.4 Кодирование семантической эквивалентности в CHC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Три нотации эквивалентности
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Схема запроса
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Мотивирующий пример
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-ricover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 3. Реализация инструмента RICOVER
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 3. Реализация инструмента RICOVER">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Общая архитектура и конвейер
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-sail-ir-chc-translate-ir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Трансляция Sail IR в CHC (модуль translate-ir)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-risc-v-check-equiv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Разбор RISC-V ассемблера и формирование запроса (check-equiv)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-chc-stdlibsmt2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Стандартная библиотека CHC (stdlib.smt2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Модель наблюдаемого состояния и приватный стековый фрейм
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 Кодирование ветвлений и граф потока управления
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 4. Экспериментальная оценка
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 4. Экспериментальная оценка">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Тестовая среда и инструментарий
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-alive2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Тестовая база: ошибки мисоптимизации из Alive2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-chc-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Производительность CHC-решателей
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-csmith" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Масштабная верификация с помощью Csmith
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Ограничения и направления развития
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Заключение
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Список литературы
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Thesis_Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thesis Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper Review
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper Review
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Alive2%20Bounded%20Translation%20Validation%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2 Bounded Translation Validation for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Compiler%20Optimization%20Testing%20Based%20on%20Optimization-Guided%20Equivalence%20Transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler Optimization Testing Based on Optimization Guided Equivalence Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Finding%20and%20Understanding%20Bugs%20in%20C%20Compilers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finding and Understanding Bugs in C Compilers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Formal%20Verification%20of%20SSA-Based%20Optimizations%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Verification of SSA Based Optimizations for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Horn Clause Solvers for Program Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Translation%20Validation%20for%20LLVM%E2%80%99s%20AArch64%20Backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translation Validation for LLVM’s AArch64 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Verifying%20Optimizations%20using%20SMTSolvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifying Optimizations using SMTSolvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/QUICK_START_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_CSMITH_RICOVER_E2E/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RISC-V Assembly Optimization Diff Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_SMALL_GENERATOR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Random C Program Generator Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TestSuite
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TestSuite
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLVM TEST RISCV OPTS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLVM TEST RISCV OPTS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/LLVM_TEST_RISCV_OPTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Csmith
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/csmith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Random Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/ARM-TV/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Alive2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/CompCert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CompCert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Vellvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vellvm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sail
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sail
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Internal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Isla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Isla
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Constrained%20Horn%20Clauses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constrained Horn Clauses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Topics/Proving%20semantic%20equivalence%20of%20RISC-V%20programs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Введение
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 1. Анализ предметной области
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 1. Анализ предметной области">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Ошибки мисоптимизации в компиляторах
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Обзор существующих инструментов верификации
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.2 Обзор существующих инструментов верификации">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#121-compcert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.1 CompCert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#122-islaris" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.2. Islaris
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-alive2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.3 Alive2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#124-arm-tv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.4 ARM-TV
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Сравнительный анализ и обоснование подхода
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 2. Теоретические основы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 2. Теоретические основы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Операционная семантика низкоуровневых программ
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-risc-v-sail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Архитектурная спецификация RISC-V на языке Sail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Ограниченные дизъюнкты Хорна
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-chc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Кодирование семантической эквивалентности в CHC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.4 Кодирование семантической эквивалентности в CHC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Три нотации эквивалентности
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Схема запроса
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Мотивирующий пример
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-ricover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 3. Реализация инструмента RICOVER
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 3. Реализация инструмента RICOVER">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Общая архитектура и конвейер
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-sail-ir-chc-translate-ir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Трансляция Sail IR в CHC (модуль translate-ir)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-risc-v-check-equiv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Разбор RISC-V ассемблера и формирование запроса (check-equiv)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-chc-stdlibsmt2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Стандартная библиотека CHC (stdlib.smt2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Модель наблюдаемого состояния и приватный стековый фрейм
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 Кодирование ветвлений и граф потока управления
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Глава 4. Экспериментальная оценка
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Глава 4. Экспериментальная оценка">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Тестовая среда и инструментарий
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-alive2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Тестовая база: ошибки мисоптимизации из Alive2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-chc-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Производительность CHC-решателей
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-csmith" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Масштабная верификация с помощью Csmith
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Ограничения и направления развития
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Заключение
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Список литературы
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="risc-v">Формальная проверка корректности оптимизаций RISC-V программ<a class="headerlink" href="#risc-v" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Магистерская диссертация<br />
+Автор: Сафонов Артём<br />
+Научный руководитель: Степанов Даниил Сергеевич<br />
+Научный консультант: Соболь Валентин</p>
+</blockquote>
+<hr />
+<h2 id="_1">Введение<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Современные оптимизирующие компиляторы применяют сотни трансформаций. Корректность каждой трансформации является крайне важна: оптимизированная программа должна производить те же наблюдаемые результаты, что и исходная. Нарушение этого поведения называется мисоптимизацией и представляет особую угрозу: такая ошибка проявляется лишь при конкретных входных данных и конкретном уровне оптимизации, тогда как сам исходный код остаётся полностью корректным. Исследования показывают, что от 57 до 61 процента всех зафиксированных ошибок в компиляторах составляют именно мисоптимизации [3]. Например, инструмент формальной верификации Alive2 [1] обнаружил 47 ранее неизвестных ошибок и потребовал исправлений в официальном описание семантики LLVM IR.</p>
+<p>Значительная часть таргет-специфичных трансформаций осуществляется на этапе кодогенерации - при переходе от промежуточного представления к конкретным инструкциям целевой архитектуры. Именно здесь инструменты верификации промежуточного уровня теряют применимость. Верифицированный компилятор CompCert [9] гарантирует корректность трансформаций внутри собственного конвейера, однако не применим к коду других компиляторов. Alive2 [1] работает исключительно на уровне LLVM IR. ARM-TV [8] проверяет переход от IR (Intermediate Representation) к AArch64, но охватывает лишь одну архитектуру и только межуровневый переход. Islaris [7] верифицирует соответствие машинного кода архитектурной спецификации ISA (Instruction Set Architecture), но не трансформации программ. Таким образом, для архитектуры RISC-V на сегодняшний день отсутствует инструмент автоматической формальной верификации оптимизаций непосредственно на уровне ассемблерного кода с опорой на официальную архитектурную спецификацию.</p>
+<p>Целью данной работы является разработка методологии и прототипа инструмента (названый RICOVER) автоматической формальной верификации семантической эквивалентности RISC-V ассемблерного кода до и после применения оптимизаций компилятора. Для достижения цели решаются следующие задачи: (1) обосновать применение ограниченных дизъюнктов Хорна (Constrained Horn Clauses, CHC) как промежуточного формализма; (2) исследовать извлечение семантики инструкций RISC-V из официальной спецификации Sail через Isla IR; (3) разработать метод трансляции каждой инструкции в CHC-правило; (4) формализовать понятие наблюдаемой семантической эквивалентности, корректно обращающейся с приватным стековым фреймом; (5) реализовать прототип инструмента; (6) верифицировать инструмент на тестовой базе.</p>
+<p>Научная новизна работы состоит в следующем: предложен метод автоматической генерации CHC-правил для инструкций RISC-V из официальной спецификации Sail [11] через Isla IR, устраняющий ручное описание семантики. Определена нотация проекционной семантической эквивалентности (<span class="arithmatex">\(\simeq_{\text{proj}}\)</span>), разграничивающая наблюдаемое состояние (ABI-видимые регистры, внешняя память) и приватный стековый фрейм. Реализован конвейер от архитектурной спецификации и пары ассемблерных файлов до SMT-LIB2 запроса в формате ограниченных дизъюнктов Хорна (далее CHC), совместимого с решателями Z3/Spacer [14] и Eldarica [13].</p>
+<p>Практическая значимость состоит в том, что инструмент автоматически обнаруживает мисоптимизации в RISC-V ассемблерном коде без привязки к конкретному компилятору. При обнаружении несоответствия CHC-решатель предоставляет контрпример - конкретное начальное состояние, на котором программы расходятся, что существенно упрощает отладку. Достоверность обеспечивается использованием официальной спецификации RISC-V International [11] и верификацией на примерах с заранее известным результатом. </p>
+<p>Работа состоит из введения, четырёх глав, заключения и списка литературы. В первой главе проводится анализ предметной области и сравнение существующих инструментов верификации. Вторая глава излагает теоретические основы: операционную семантику малого шага, спецификацию Sail и формализм CHC. Третья глава описывает архитектуру и реализацию инструмента верификации. Четвёртая глава представляет результаты экспериментальной оценки на бенчмарках и Csmith.</p>
+<hr />
+<h2 id="1">Глава 1. Анализ предметной области<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 Ошибки мисоптимизации в компиляторах<a class="headerlink" href="#11" title="Permanent link">&para;</a></h3>
+<p>Современный компилятор - это сложная многоуровневая система, выполняющая сотни трансформаций исходного кода на пути к машинным инструкциям. Каждая такая трансформация обязана сохранять семантику программы: оптимизированный вариант должен производить те же наблюдаемые результаты, что и исходный, при любых допустимых входных данных. Нарушение этого инварианта называется <em>мисоптимизацией</em> и представляет принципиально иную угрозу по сравнению с обычными ошибками компилятора: в то время как синтаксические ошибки обнаруживаются немедленно, мисоптимизация проявляется только на конкретных входных данных при конкретном уровне оптимизации, тогда как сам исходный код остаётся полностью корректным.</p>
+<p>Статистика подтверждает серьёзность проблемы: эмпирические исследования показывают, что 57–61% всех зафиксированных ошибок в компиляторах составляют именно мисоптимизации [3]. Масштаб практических последствий демонстрирует опыт инструмента Alive2 [1]: при первом применении к LLVM он обнаружил 47 ранее неизвестных ошибок оптимизаций, а его результаты потребовали внесения исправлений непосредственно в описание семантики LLVM IR.</p>
+<p>Принципиальная трудность верификации оптимизаций состоит в следующем: нужно доказать, что для <em>всех возможных</em> входных данных поведение двух программ совпадает. Ни тестирование, ни рандомизированная проверка не могут дать таких гарантий - они ограничены конечным множеством входов. Формальная верификация, опирающаяся на математическое доказательство, является тем подходом, который способен дать исчерпывающую гарантию.</p>
+<p>Для архитектуры RISC-V задача приобретает дополнительное измерение. Архитектура RISC-V является открытой и модульной: существует множество реализаций и компиляторов (LLVM, GCC, компиляторы для встраиваемых систем), а таргет-специфичные оптимизации кодогенератора - сжатые инструкции расширения C, многобайтовые операции с памятью, цепочки сдвигов - осуществляются уже после того, как инструменты верификации промежуточного уровня завершили свою работу.</p>
+<h3 id="12">1.2 Обзор существующих инструментов верификации<a class="headerlink" href="#12" title="Permanent link">&para;</a></h3>
+<h4 id="121-compcert">1.2.1 CompCert<a class="headerlink" href="#121-compcert" title="Permanent link">&para;</a></h4>
+<p>CompCert [9] - это верифицированный компилятор языка C, разработанный в INRIA с использованием системы доказательства теорем Coq. Ключевое свойство CompCert: все трансформации от исходного кода C до ассемблерного вывода сопровождаются машинно-проверенными доказательствами корректности. </p>
+<p>Вместе с тем CompCert обладает принципиальным ограничением: верификация неотделима от самого компилятора. Подход не позволяет верифицировать код, произведённый другими компиляторами, и не применим к уже существующему ассемблерному коду, независимо от его происхождения.</p>
+<h4 id="122-islaris">1.2.2. Islaris<a class="headerlink" href="#122-islaris" title="Permanent link">&para;</a></h4>
+<p>Islaris [7] - инструмент для валидации машинного кода относительно архитектурной спецификации ISA. Подход основан на символьном исполнении: инструмент извлекает трассы исполнения из машинного кода и доказывает их соответствие формальной спецификации. Islaris использует библиотеку Isla для работы с Sail IR - ту же библиотеку, которая задействована в настоящей работе.</p>
+<p>Однако предмет Islaris - корректность реализации инструкций относительно спецификации, а не семантическая эквивалентность трансформаций программ. Кроме того, символьное исполнение порождает риск экспоненциального роста числа исследуемых путей (path explosion), что ограничивает масштабируемость подхода.</p>
+<h4 id="123-alive2">1.2.3 Alive2<a class="headerlink" href="#123-alive2" title="Permanent link">&para;</a></h4>
+<p>Alive2 [1] - инструмент автоматической формальной верификации оптимизаций LLVM IR. Alive2 доказывает, что каждая конкретная оптимизация в компиляторе LLVM корректна: перед трансформацией и после неё он эмитирует SMT-формулы, кодирующие семантику обоих вариантов, и задаёт вопрос о возможности расхождения. Инструмент также даёт возможность получить исходные данные при которых оптимизация не будет сохранять эквивалентность программ.</p>
+<p>Alive2 существенно повлиял на качество LLVM: именно благодаря ему было обнаружено 47 новых ошибок оптимизаций при первом применении. Принципиальное ограничение - Alive2 работает исключительно с LLVM IR. Это означает, что весь бэкенд компилятора - кодогенерация, выбор инструкций, планирование инструкций, оптимизации на уровне ассемблера - остаётся вне области анализа.</p>
+<h4 id="124-arm-tv">1.2.4 ARM-TV<a class="headerlink" href="#124-arm-tv" title="Permanent link">&para;</a></h4>
+<p>ARM-TV [8] верифицирует переход от LLVM IR к коду архитектуры AArch64, тем самым закрывая часть пробела, оставленного Alive2. Инструмент переводит код AArch64 обратно в LLVM IR и применяет для сравнения алгоритмы валидации перевода.</p>
+<p>Ограничения ARM-TV: привязанность к одной целевой архитектуре (AArch64) и анализ межуровневого перехода (IR в asm), но не внутриуровневых трансформаций внутри ассемблерного представления. Семантика AArch64 при этом не извлекается из официальной спецификации, а кодируется вручную.</p>
+<h3 id="13">1.3 Сравнительный анализ и обоснование подхода<a class="headerlink" href="#13" title="Permanent link">&para;</a></h3>
+<p>Анализ существующих инструментов показывает: для архитектуры RISC-V отсутствует инструмент, способный автоматически верифицировать корректность трансформаций непосредственно на уровне ассемблерного кода, при этом опираясь на официальную архитектурную спецификацию как единственный источник семантики инструкций.</p>
+<p>Сравнительный анализ представлен в таблице 1.1.</p>
+<p><strong>Таблица 1.1 - Сравнение инструментов верификации оптимизаций</strong></p>
+<table>
+<thead>
+<tr>
+<th>Инструмент</th>
+<th>Уровень анализа</th>
+<th>Архитектура</th>
+<th>Семантика из спецификации</th>
+<th>Трансформации внутри уровня</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CompCert [9]</td>
+<td>C в asm</td>
+<td>multi</td>
+<td>Нет (Coq-доказательства)</td>
+<td>Да (внутри компилятора)</td>
+</tr>
+<tr>
+<td>Alive2 [1]</td>
+<td>LLVM IR</td>
+<td>Нет</td>
+<td>Нет</td>
+<td>Да</td>
+</tr>
+<tr>
+<td>ARM-TV [8]</td>
+<td>IR в AArch64</td>
+<td>AArch64</td>
+<td>Нет</td>
+<td>Нет</td>
+</tr>
+<tr>
+<td>Islaris [7]</td>
+<td>Asm vs. ISA</td>
+<td>AArch64/RISC-V</td>
+<td>Да (Sail)</td>
+<td>Нет</td>
+</tr>
+<tr>
+<td><strong>RICOVER</strong></td>
+<td><strong>Asm в Asm</strong></td>
+<td><strong>RISC-V</strong></td>
+<td><strong>Да (Sail/Isla IR)</strong></td>
+<td><strong>Да</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Выбор ограниченных дизъюнктов Хорна (CHC) как целевого формализма обоснован тремя соображениями. Во-первых, CHC являются стандартным промежуточным форматом для верификации императивных программ [2]: они выражают как операционную семантику (правила переходов), так и свойства корректности (ограничения-запросы) в единой системе. Во-вторых, современные CHC-решатели (Z3/Spacer [14], Eldarica [13]) поддерживают теории массивов и битовых векторов, необходимые для точного кодирования регистрового файла и памяти. В-третьих, CHC-формат <code>HORN</code> является стандартом SMT-LIB2, что обеспечивает совместимость с различными решателями без изменения кода инструмента.</p>
+<hr />
+<h2 id="2">Глава 2. Теоретические основы<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 Операционная семантика низкоуровневых программ<a class="headerlink" href="#21" title="Permanent link">&para;</a></h3>
+<p>Для определения понятия семантической эквивалентности двух программ необходимо прежде всего формализовать понятие <em>семантики программы</em> - что именно программа «делает». В данной работе используется <em>операционная семантика малого шага</em> (small-step operational semantics), также известная как структурная операционная семантика [4].</p>
+<p>В операционной семантике малого шага поведение программы описывается как последовательность элементарных переходов между <em>конфигурациями</em>. Конфигурация - это пара <span class="arithmatex">\(\langle s, \sigma \rangle\)</span>, где <span class="arithmatex">\(s\)</span> - остаток программы к исполнению (текущая инструкция), <span class="arithmatex">\(\sigma\)</span> - текущее состояние машины.</p>
+<p><strong>Определение 2.1 (Шаг исполнения).</strong> Отношение <em>одного шага</em> <span class="arithmatex">\(\Rightarrow\)</span> задаётся правилами перехода:</p>
+<div class="arithmatex">\[
+\langle s_0, \sigma_0 \rangle \Rightarrow \langle s_1, \sigma_1 \rangle \tag{2.1}
+\]</div>
+<p>где <span class="arithmatex">\(s_0\)</span> - текущая инструкция, исполняемая в состоянии <span class="arithmatex">\(\sigma_0\)</span>; <span class="arithmatex">\(s_1\)</span> - следующая инструкция, <span class="arithmatex">\(\sigma_1\)</span> - новое состояние после применения семантики <span class="arithmatex">\(s_0\)</span>.</p>
+<p><strong>Определение 2.2 (Полное исполнение - exec).</strong> Полное исполнение программы - достижение завершающего состояния <span class="arithmatex">\(\text{halt}\)</span> из начального состояния <span class="arithmatex">\(\sigma_0\)</span>:</p>
+<div class="arithmatex">\[
+\text{exec}(P, \sigma_0, \sigma_1) \;\leftarrow\; \langle P_0, \sigma_0 \rangle \Rightarrow^* \langle \text{halt}, \sigma_1 \rangle \tag{2.2}
+\]</div>
+<p>где <span class="arithmatex">\(\Rightarrow^*\)</span> - рефлексивное транзитивное замыкание отношения <span class="arithmatex">\(\Rightarrow\)</span>; псевдооператор <span class="arithmatex">\(\text{halt}\)</span> обозначает нормальное завершение программы (при его достижении счётчик команд не обновляется, что является стандартным приёмом в малошаговой семантике).</p>
+<p>В CHC-нотации цепочка шагов и полное исполнение кодируются тремя правилами:</p>
+<div class="arithmatex">\[
+\text{run}(S, \sigma, S, \sigma) \leftarrow \top
+\]</div>
+<div class="arithmatex">\[
+\text{run}(S_0, \sigma_0, S_2, \sigma_2) \leftarrow \text{step}(S_0, \sigma_0, S_1, \sigma_1),\ \text{run}(S_1, \sigma_1, S_2, \sigma_2)
+\]</div>
+<div class="arithmatex">\[
+\text{exec}(S, \sigma_0, \sigma_1) \leftarrow \text{run}(S, \sigma_0, \text{halt}, \sigma_1)
+\]</div>
+<p>Применительно к RISC-V ассемблеру состояние машины <span class="arithmatex">\(\sigma\)</span> - это тройка:</p>
+<div class="arithmatex">\[
+\sigma = \langle pc,\ \text{regs},\ \text{mem} \rangle \tag{2.3}
+\]</div>
+<p>где <span class="arithmatex">\(pc \in \mathbb{B}^{64}\)</span> - 64-битный счётчик команд; <span class="arithmatex">\(\text{regs} : \mathbb{B}^5 \to \mathbb{B}^{64}\)</span> - функция, отображающая пятибитный индекс регистра в 64-битное значение; <span class="arithmatex">\(\text{mem} : \mathbb{B}^{64} \to \mathbb{B}^{8}\)</span> - побайтовое отображение адресного пространства памяти. Именно эта модель состояния используется в CHC-стандартной библиотеке RICOVER (<code>stdlib.smt2</code>).</p>
+<p>Вместо того чтобы задавать функцию <span class="arithmatex">\(\text{step}\)</span> вручную для каждой инструкции, в настоящей работе она извлекается из официальной архитектурной спецификации RISC-V - как описано в следующем разделе.</p>
+<h3 id="22-risc-v-sail">2.2 Архитектурная спецификация RISC-V на языке Sail<a class="headerlink" href="#22-risc-v-sail" title="Permanent link">&para;</a></h3>
+<p><em>Sail</em> - это специализированный язык для описания семантики архитектур набора инструкций (ISA) [7]. Формальная спецификация RISC-V на языке Sail, разработанная и принятая организацией RISC-V International [11], является официальным машиночитаемым описанием архитектуры.</p>
+<p>Спецификация определяет функцию <code>execute</code> для каждой инструкции. Например, для класса целочисленных инструкций с непосредственным операндом (ITYPE) спецификация содержит:</p>
+<div class="highlight"><pre><span></span><code>function clause execute ITYPE(imm, rs1, rd, op) = {
+  let immext : xlenbits = sign_extend(imm);
+  X(rd) = match op {
+    ADDI  =&gt; X(rs1) + immext,
+    SLTI  =&gt; zero_extend(bool_to_bit(X(rs1) &lt;_s immext)),
+    ANDI  =&gt; X(rs1) &amp; immext,
+    ORI   =&gt; X(rs1) | immext,
+    XORI  =&gt; X(rs1) ^ immext
+  };
+  RETIRE_SUCCESS
+}
+</code></pre></div>
+<p>Это описание однозначно задаёт семантику инструкций ADDI, SLTI, ANDI, ORI, XORI: какой регистр модифицируется, каким образом, что происходит с памятью и счётчиком команд.</p>
+<p>Для работы с Sail-моделями в RICOVER используется библиотека <strong>Isla</strong> (isla-lib) [7]. Isla - это символическая машина, способная исполнять Sail-код и транслировать его в формальное представление. Isla-sail компилирует Sail-модель RISC-V в <em>Isla IR</em> - промежуточное представление на основе статической формы с единственным присваиванием (SSA). Именно этот файл <code>.ir</code> служит входными данными для модуля <code>isla_ir.rs</code> в RICOVER.</p>
+<p>Ключевой шаг конвейера - <em>специализация</em> вариантов. Функция <code>execute</code> - это один обработчик на несколько вариантов через сравнение с образцом. Isla IR сохраняет эту структуру, а <code>isla_ir.rs</code> перебирает все ветки и специализирует каждую по конкретному значению <code>op</code>, получая отдельное CHC-правило на каждый вариант инструкции. Таким образом, одна Sail-функция <code>execute ITYPE</code> порождает шесть независимых CHC-правил: <code>addi</code>, <code>slti</code>, <code>sltiu</code>, <code>andi</code>, <code>ori</code>, <code>xori</code>.</p>
+<p>Полный вывод в виде Isla IR для RISC-V 64 (файл <code>snapshot/rv64d.ir</code>) содержит 746 вариантов инструкций. Из них 210 успешно транслируются в CHC-правила, поддерживая расширеный профиль <code>rv64i</code>. </p>
+<h3 id="23">2.3 Ограниченные дизъюнкты Хорна<a class="headerlink" href="#23" title="Permanent link">&para;</a></h3>
+<p><em>Ограниченные дизъюнкты Хорна</em> (Constrained Horn Clauses, CHC) - это фрагмент логики первого порядка, в котором дизъюнкты Хорна расширяются использованием формул произвольной теории ограничений [2]. CHC обеспечивают пригодную промежуточную форму для выражения семантики различных языков программирования и вычислительных моделей [12].</p>
+<p><strong>Определение 2.3 (Ограниченный дизъюнкт Хорна).</strong> CHC - это формула вида:</p>
+<div class="arithmatex">\[
+\phi \land p_1(\vec{V}) \land \ldots \land p_k(\vec{V}) \implies H \tag{2.4}
+\]</div>
+<p>где <span class="arithmatex">\(\phi\)</span> - <em>ограничение</em> в теории <span class="arithmatex">\(A\)</span> (битовые векторы, массивы, целые числа); <span class="arithmatex">\(p_1, \ldots, p_k\)</span> - <em>неинтерпретированные предикатные символы</em>; <span class="arithmatex">\(\vec{V}\)</span> - набор переменных; <span class="arithmatex">\(H\)</span> - либо применение предиката <span class="arithmatex">\(p_i(\vec{V})\)</span>, либо <span class="arithmatex">\(\text{false}\)</span>.</p>
+<p>Если <span class="arithmatex">\(H = \text{false}\)</span>, дизъюнкт называется <em>запросом</em> (integrity constraint). Если тело пусто (<span class="arithmatex">\(k = 0\)</span>, <span class="arithmatex">\(\phi\)</span> - тавтология), дизъюнкт называется <em>фактом</em>.</p>
+<p>Теория ограничений <span class="arithmatex">\(A\)</span> в RICOVER - это теория битовых векторов (QF_BV) в сочетании с теорией массивов (QF_ABV), что позволяет точно моделировать 64-битные регистры и побайтовую адресуемую память.</p>
+<p>Дизъюнкты Хорна естественно кодируют множество достижимых состояний последовательных программ: <em>выполнимые</em> дизъюнкты Хорна соответствуют свойствам программы, которые выполняются, тогда как <em>невыполнимые</em> - нарушенным свойствам. Это делает CHC канонической промежуточной формой для верификации программ.</p>
+<p>Схема верификации свойств безопасности через CHC выглядит следующим образом. Для системы с начальным состоянием <span class="arithmatex">\(\text{init}(v)\)</span> и шагом <span class="arithmatex">\(\text{step}(v, v')\)</span> ищется <em>индуктивный инвариант</em> <span class="arithmatex">\(\text{inv}(v)\)</span>:</p>
+<div class="arithmatex">\[
+\text{inv}(v) \leftarrow \text{init}(v)
+\qquad
+\text{inv}(v') \leftarrow \text{inv}(v) \land \text{step}(v, v')
+\qquad
+\text{safe}(v) \leftarrow \text{inv}(v)
+\]</div>
+<p>CHC-решатель проверяет выполнимость системы: если <code>safe</code> выводимо - свойство доказано; если не выводимо - найден контрпример.</p>
+<p>Для решения CHC в настоящей работе применяется решатель Z3 Spacer [14].</p>
+<h3 id="24-chc">2.4 Кодирование семантической эквивалентности в CHC<a class="headerlink" href="#24-chc" title="Permanent link">&para;</a></h3>
+<p>TODO: something here to start off this section</p>
+<h4 id="_2">Три нотации эквивалентности<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>Для двух RISC-V функций <span class="arithmatex">\(P\)</span> и <span class="arithmatex">\(Q\)</span> можно определить три нотации семантической эквивалентности в порядке убывания строгости.</p>
+<p><strong>Нотация 1: Полная эквивалентность состояний</strong> (<span class="arithmatex">\(\simeq_{\text{full}}\)</span>).</p>
+<p>Два программы полностью эквивалентны, если для любого начального состояния <span class="arithmatex">\(\sigma_0\)</span> их конечные состояния совпадают полностью:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{full}} Q \iff \forall \sigma_0,\sigma_1,\sigma_2.\,
+\bigl(\text{exec}(P,\sigma_0,\sigma_1) \land \text{exec}(Q,\sigma_0,\sigma_2)\bigr)
+\rightarrow \sigma_1 = \sigma_2 \tag{2.5}
+\]</div>
+<p>где <span class="arithmatex">\(\sigma_0\)</span> - начальное состояние; <span class="arithmatex">\(\sigma_1, \sigma_2\)</span> - конечные состояния функций <span class="arithmatex">\(P\)</span> и <span class="arithmatex">\(Q\)</span> соответственно.</p>
+<p>CHC-запрос для данной нотации:
+$$
+\text{bad}_{\text{full}} \leftarrow \text{exec}_P(\sigma_0,\sigma_1),\ \text{exec}_Q(\sigma_0,\sigma_2),\ \sigma_1 \neq \sigma_2
+$$</p>
+<p>Эта нотация слишком строга для верификации оптимизаций: оптимизации почти всегда изменяют стек (размещение временных переменных, порядок сохранения регистров). Поэтому <span class="arithmatex">\(\text{bad}_{\text{full}}\)</span> оказывается выполнимым даже для семантически корректных оптимизаций.</p>
+<p><strong>Нотация 2: ABI-эквивалентность</strong> (<span class="arithmatex">\(\simeq_{\text{abi}}\)</span>).</p>
+<p>Более практичная нотация: два программы ABI-эквивалентны, если они согласуются по всем видимым вызывающему коду (caller-visible) компонентам:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{abi}} Q \iff \forall \sigma_0,\sigma_1,\sigma_2.\,
+\bigl(\text{exec}(P,\sigma_0,\sigma_1) \land \text{exec}(Q,\sigma_0,\sigma_2)\bigr)
+\rightarrow \text{Obs}_{\text{abi}}(\sigma_1) = \text{Obs}_{\text{abi}}(\sigma_2) \tag{2.6}
+\]</div>
+<p>где функция <span class="arithmatex">\(\text{Obs}_{\text{abi}}\)</span> возвращает проекцию на ABI-видимые регистры: возвращаемое значение (регистр <code>a0</code>), сохраняемые регистры (<code>ra</code>, <code>sp</code>, <code>s0</code>–<code>s11</code>) и программный счётчик. Этот набор определяется соглашением о вызовах RISC-V (RISC-V ABI) [11].</p>
+<p><strong>Нотация 3: Проекционная эквивалентность</strong> (<span class="arithmatex">\(\simeq_{\text{proj}}\)</span>).</p>
+<p>Наиболее сбалансированная нотация расширяет ABI-эквивалентность требованием о согласованности <em>наблюдаемой памяти</em>:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{proj}} Q \iff \forall \sigma_0,\sigma_1,\sigma_2.\,
+\bigl(\text{exec}(P,\sigma_0,\sigma_1) \land \text{exec}(Q,\sigma_0,\sigma_2)\bigr)
+\rightarrow \Bigl(
+\text{Obs}_{\text{abi}}(\sigma_1) = \text{Obs}_{\text{abi}}(\sigma_2)
+\land
+\forall a \in \text{ObsMem}(\sigma_0).\ \text{mem}_1[a] = \text{mem}_2[a]
+\Bigr) \tag{2.7}
+\]</div>
+<p>где <span class="arithmatex">\(\text{ObsMem}(\sigma_0)\)</span> - множество <em>наблюдаемых</em> адресов памяти, то есть все адреса за исключением приватного стекового фрейма функции. Фрейм вычисляется как интервал <span class="arithmatex">\([\text{sp}_0 - N,\ \text{sp}_0)\)</span>, где <span class="arithmatex">\(N\)</span> извлекается из первой инструкции функции вида <code>addi sp, sp, -N</code>; <span class="arithmatex">\(\text{mem}_1\)</span> и <span class="arithmatex">\(\text{mem}_2\)</span> - конечные состояния памяти функций <span class="arithmatex">\(P\)</span> и <span class="arithmatex">\(Q\)</span> соответственно.</p>
+<h4 id="_3">Схема запроса<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<p>Конкретный CHC-запрос для <span class="arithmatex">\(\simeq_{\text{proj}}\)</span> формулируется через отношение <code>bad</code>, выводимое ровно тогда, когда существует начальное состояние, при котором программы расходятся:</p>
+<div class="arithmatex">\[
+\text{bad} \leftarrow P(\sigma_0, \sigma_1),\ Q(\sigma_0, \sigma_2),\ \text{Obs}_{\text{abi}}(\sigma_1) \neq \text{Obs}_{\text{abi}}(\sigma_2) \tag{2.8}
+\]</div>
+<div class="arithmatex">\[
+\text{bad} \leftarrow P(\sigma_0, \sigma_1),\ Q(\sigma_0, \sigma_2),\ a \in \text{ObsMem}(\sigma_0),\ \text{mem}_1[a] \neq \text{mem}_2[a] \tag{2.9}
+\]</div>
+<p>Далее CHC-решатель проверяет выводимость <code>bad</code>:
+- <strong>unsat</strong> - <code>bad</code> недостижимо, обе программы семантически эквивалентны относительно <span class="arithmatex">\(\simeq_{\text{proj}}\)</span>;
+- <strong>sat</strong> - существует начальное состояние, при котором программы расходятся; решатель предоставляет конкретный контрпример.</p>
+<p>Именно нотация <span class="arithmatex">\(\simeq_{\text{proj}}\)</span> реализована в инструменте RICOVER и применяется во всех экспериментах данной работы.</p>
+<h4 id="_4">Мотивирующий пример<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<p>Рассмотрим функцию, реализующую вычисление <span class="arithmatex">\(y = x + 2\)</span> при <span class="arithmatex">\(x = 1\)</span>:</p>
+<div class="highlight"><pre><span></span><code>foo1 (неоптимизированная):          foo2 (оптимизированная):
+  addi sp, sp, -32                    addi a0, zero, 3
+  sd   ra, 24(sp)                     ret
+  sd   s0, 16(sp)
+  addi s0, sp, 32
+  addi a0, zero, 1
+  sw   a0, -20(s0)
+  lw   a0, -20(s0)
+  addiw a0, a0, 2
+  sw   a0, -24(s0)
+  lw   a0, -24(s0)
+  ld   ra, 24(sp)
+  ld   s0, 16(sp)
+  addi sp, sp, 32
+  ret
+</code></pre></div>
+<p>Запрос <span class="arithmatex">\(\text{bad}_{\text{full}}\)</span> для этих двух функций <strong>выполним</strong> (<code>sat</code>): финальная память отличается, поскольку <code>foo1</code> записала временные значения на стек. Запрос по формулам (2.8)–(2.9) <strong>невыполним</strong> (<code>unsat</code>): записи выполнены только в приватный фрейм <span class="arithmatex">\([\text{sp}_0 - 32, \text{sp}_0)\)</span>, который исключён из <span class="arithmatex">\(\text{ObsMem}\)</span>, а регистр <code>a0</code> в обоих случаях равен 3. Это и есть правильный ответ: константная свёртка семантически корректна.</p>
+<hr />
+<h2 id="3-ricover">Глава 3. Реализация инструмента RICOVER<a class="headerlink" href="#3-ricover" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 Общая архитектура и конвейер<a class="headerlink" href="#31" title="Permanent link">&para;</a></h3>
+<p>RICOVER (RISC-V Compiler Optimization VERification) - инструмент формальной верификации, реализованный на языке Rust. Он принимает два RISC-V ассемблерных файла и снимок Isla IR RISC-V модели, и транслирует это в формат SMT-LIB2, формируя CHC-запрос. Архитектура конвейера представлена на рисунке 3.1.</p>
+<p><strong>Рисунок 3.1 - Архитектура конвейера RICOVER</strong></p>
+<div class="highlight"><pre><span></span><code>                     ┌──────────────┐
+  riscv.ir ────────в │  isla_ir.rs  │──в CHC-правила инструкций
+  (из Sail/Isla)     └──────────────┘           │
+                                                ▼
+                                        ┌──────────────┐
+                                        │  chc_emit.rs │──в query.smt2 в Z3
+                                        └──────────────┘       │
+  program_before.s ──в ┌──────────────┐         ▲          unsat/sat
+  program_after.s  ──┘ │ asm_parse.rs │─────────┘
+                        └──────────────┘
+</code></pre></div>
+<p>Проект организован следующим образом:</p>
+<ul>
+<li><code>src/main.rs</code> - точка входа CLI (Clap), маршрутизирует команды <code>translate-ir</code> и <code>check-equiv</code>;</li>
+<li><code>src/isla_ir.rs</code> - загружает <code>.ir</code> файл через isla-lib, извлекает тела execute-клозов, специализирует варианты и транслирует в CHC;</li>
+<li><code>src/asm_parse.rs</code> - разбирает RISC-V ассемблерные файлы в структурированные последовательности инструкций;</li>
+<li><code>src/chc_emit.rs</code> - формирует финальный CHC-запрос: соединяет CHC-правила инструкций в цепочку состояний и добавляет запрос на эквивалентность;</li>
+<li><code>chc_stdlib/stdlib.smt2</code> - CHC стандартная библиотека.</li>
+</ul>
+<p>Точка входа RICOVER определяет два подкоманды через библиотеку аргументов командной строки Clap. Листинг 3.1 демонстрирует их объявление.</p>
+<p><strong>Листинг 3.1 - Перечисление команд CLI в main.rs (Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="sd">/// RICOVER - RISC-V Compiler Optimization Verification via CHC</span>
+<span class="cp">#[derive(Parser)]</span>
+<span class="cp">#[command(name = </span><span class="s">&quot;ricover&quot;</span><span class="cp">)]</span>
+<span class="k">enum</span><span class="w"> </span><span class="nc">Cli</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="sd">/// Translate Isla IR instruction definitions to CHC</span>
+<span class="w">    </span><span class="n">TranslateIR</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cp">#[arg(short, long)]</span><span class="w"> </span><span class="n">ir_file</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(short, long)]</span><span class="w"> </span><span class="n">output</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(short, long)]</span><span class="w"> </span><span class="n">functions</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="p">},</span>
+
+<span class="w">    </span><span class="sd">/// Emit CHC equivalence query from two RISC-V assembly functions</span>
+<span class="w">    </span><span class="n">CheckEquiv</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cp">#[arg(long)]</span><span class="w"> </span><span class="n">before</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(long)]</span><span class="w"> </span><span class="n">after</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(short, long)]</span><span class="w"> </span><span class="n">function</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(long)]</span><span class="w"> </span><span class="n">before_fn</span><span class="p">:</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(long)]</span><span class="w"> </span><span class="n">after_fn</span><span class="p">:</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(short, long)]</span><span class="w"> </span><span class="n">output</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">        </span><span class="cp">#[arg(long)]</span><span class="w"> </span><span class="n">ir</span><span class="p">:</span><span class="w"> </span><span class="nc">PathBuf</span><span class="p">,</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>RICOVER поддерживает две команды:</p>
+<ol>
+<li><code>translate-ir</code> - транслирует execute-функции из <code>.ir</code> файла в CHC-правила инструкций;</li>
+<li><code>check-equiv</code> - строит полный запрос на эквивалентность двух функций.</li>
+</ol>
+<h3 id="32-sail-ir-chc-translate-ir">3.2 Трансляция Sail IR в CHC (модуль translate-ir)<a class="headerlink" href="#32-sail-ir-chc-translate-ir" title="Permanent link">&para;</a></h3>
+<p>Основная задача модуля <code>isla_ir.rs</code> - преобразовать тела execute-функций Isla IR в CHC-правила, формально кодирующие семантику каждой инструкции RISC-V.</p>
+<p>Загрузка IR выполняется через публичные структуры данных модуля. Структура <code>IslaIRModel</code> хранит разобранные определения IR и таблицу символов; <code>IrFunction</code> представляет одну функцию с её телом (листинг 3.2).</p>
+<p><strong>Листинг 3.2 - Структуры данных модуля isla_ir.rs (Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">IslaIRModel</span><span class="o">&lt;&#39;</span><span class="na">ir</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">defs</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Def</span><span class="o">&lt;</span><span class="n">Name</span><span class="p">,</span><span class="w"> </span><span class="n">B129</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">symtab</span><span class="p">:</span><span class="w"> </span><span class="nc">Symtab</span><span class="o">&lt;&#39;</span><span class="na">ir</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">IrFunction</span><span class="o">&lt;&#39;</span><span class="na">a</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">params</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Name</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">body</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="na">a</span><span class="w"> </span><span class="p">[</span><span class="n">Instr</span><span class="o">&lt;</span><span class="n">Name</span><span class="p">,</span><span class="w"> </span><span class="n">B129</span><span class="o">&gt;</span><span class="p">],</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Загрузка и разбор <code>.ir</code> файла выполняются функцией <code>parse_ir</code>, которая делегирует синтаксический анализ парсеру isla-lib (листинг 3.3).</p>
+<p><strong>Листинг 3.3 - Загрузка и разбор Isla IR через isla-lib (Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_ir</span><span class="p">(</span><span class="n">contents</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">IslaIRModel</span><span class="o">&lt;&#39;</span><span class="nb">_</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">symtab</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Symtab</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">defs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">IrParser</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<span class="w">        </span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">symtab</span><span class="p">,</span><span class="w"> </span><span class="n">new_ir_lexer</span><span class="p">(</span><span class="n">contents</span><span class="p">))</span>
+<span class="w">        </span><span class="p">.</span><span class="n">map_err</span><span class="p">(</span><span class="o">|</span><span class="n">e</span><span class="o">|</span><span class="w"> </span><span class="n">anyhow</span><span class="o">!</span><span class="p">(</span><span class="s">&quot;IR parse error: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
+<span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">IslaIRModel</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">defs</span><span class="p">,</span><span class="w"> </span><span class="n">symtab</span><span class="w"> </span><span class="p">})</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Алгоритм трансляции</strong> состоит из четырёх шагов.</p>
+<ol>
+<li>
+<p><strong>Загрузка IR.</strong> Функция <code>read_ir_file</code> читает бинарный <code>.ir</code> файл с диска; <code>parse_ir</code> десериализует содержимое в AST Isla IR (листинг 3.3). Модуль ищет функции с именем <code>execute</code> (или указанные через флаг <code>-f</code>).</p>
+</li>
+<li>
+<p><strong>Обнаружение вариантов</strong> (<code>discover_variants</code>). Тело функции <code>execute</code> содержит <code>match</code>-выражения по типу инструкции. Модуль рекурсивно обходит IR, сопоставляя ветки <code>match</code> с конкретными вариантами инструкций (ADDI, LOAD, BRANCH и т. д.).</p>
+</li>
+<li>
+<p><strong>Специализация варианта</strong> (<code>emit_variant_chc</code>). Для каждого варианта: параметры инструкции (поля операнда, регистровые номера) становятся свободными переменными CHC-правила; каждое присваивание регистра (<code>X(rd) = ...</code>) кодируется через <code>set_reg(regs0, rd, val)</code>; обращения к памяти - через <code>mem_read_N</code>/<code>write_mem_*</code>; обновление PC: если инструкция не переход, то <code>pc1 = bvadd(pc0, 4)</code>.</p>
+</li>
+<li>
+<p><strong>Оптимизация: устранение переменных памяти.</strong> Инструкции, не изменяющие память (арифметические, логические, пересылки регистров), не получают собственной переменной <code>memN</code>. Вместо этого используется предыдущая переменная <code>memK</code>, устраняя тривиальные ограничения вида <code>(= memN memN-1)</code> над массивами.</p>
+</li>
+</ol>
+<p>Результатом шага 3 является CHC-правило для каждой инструкции. Листинг 3.4 демонстрирует правило для <code>addi rd, rs1, imm</code>, полученное из Sail-клоза <code>execute ITYPE</code> через Isla IR.</p>
+<p><strong>Листинг 3.4 - Транслированное CHC-правило инструкции addi (SMT-LIB2)</strong></p>
+<div class="highlight"><pre><span></span><code>(declare-rel addi
+  ((Array (_ BitVec 5) (_ BitVec 64))
+   (Array (_ BitVec 64) (_ BitVec 8))
+   (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64))
+   (Array (_ BitVec 64) (_ BitVec 8))
+   (_ BitVec 64)
+   (_ BitVec 12) (_ BitVec 5) (_ BitVec 5)))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0  (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0   (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1  (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1   (_ BitVec 64))
+           (p0 (_ BitVec 12)) (p1 (_ BitVec 5)) (p2 (_ BitVec 5)))
+    (=&gt; (and
+          (= regs1 (set_reg regs0 p2
+                    (bvadd (get_reg regs0 p1)
+                           ((_ sign_extend 52) p0))))
+          (= mem1 mem0)
+          (= pc1 (bvadd pc0 (_ bv4 64))))
+        (addi regs0 mem0 pc0 regs1 mem1 pc1 p0 p1 p2))))
+</code></pre></div>
+<p>Читать это правило следует так: «Начиная из состояния <code>(regs0, mem0, pc0)</code>, исполнение <code>addi</code> с операндами <code>imm=p0, rs1=p1, rd=p2</code> приводит к состоянию <code>(regs1, mem1, pc1)</code>, где регистр <code>rd</code> получает значение <code>rs1 + sign_extend(imm)</code>, память не изменяется, а PC увеличивается на 4». Тело правила было механически получено из Sail-клоза через Isla IR - оно не написано вручную.</p>
+<p>Команда <code>translate-ir</code> генерирует для каждой инструкции отдельное CHC-отношение (<code>declare-rel</code> + <code>rule</code>), как показано в листинге 3.4. При формировании запроса эквивалентности (<code>check-equiv</code>) тело каждого блока могло бы вызывать эти отношения:</p>
+<div class="highlight"><pre><span></span><code>; вариант с вызовом отношения (НЕ используется в check-equiv):
+(addi regs0 mem0 pc0 regs1 mem1 pc1 (_ bv4064 12) reg_sp reg_sp)
+(store_8 regs1 mem1 pc1 regs2 mem2 pc2 (_ bv24 12) reg_ra reg_sp)
+</code></pre></div>
+<p>Вместо этого <code>check-equiv</code> применяет прямое встраивание: тело каждого правила блока содержит три равенства-ограничения непосредственно, без ссылки на инструкцию в виду отношения. Такой подход сокращает глубину CHC-системы с двух уровней (инструкционные отношения, программные отношения) до одного (только блочные и композиционные отношения), что упрощает задачу поиска индуктивного инварианта алгоритмом Spacer.</p>
+<p>Технически инлайнинг реализован через структуру <code>InlinedSemantics</code> (листинг 3.5а) — три строковых шаблона, хранящих SMT-выражения для нового регистрового файла, памяти и PC.</p>
+<p><strong>Листинг 3.5а — Структура InlinedSemantics и метод instantiate_compressed (ir_emit.rs, Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="p">(</span><span class="k">crate</span><span class="p">)</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">InlinedSemantics</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="sd">/// Шаблон для regs_out. Содержит &quot;regs0&quot; и &quot;p0&quot;..&quot;pN&quot; (параметры инструкции).</span>
+<span class="w">    </span><span class="sd">/// Пример для addi: &quot;(set_reg regs0 p2 (bvadd (get_reg regs0 p1) ((_ sign_extend 52) p0)))&quot;</span>
+<span class="w">    </span><span class="sd">/// Пример для sd:   &quot;regs0&quot;  (инструкция-сохранение не изменяет регистры)</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">regs_expr</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="sd">/// Шаблон для mem_out. &quot;mem0&quot; если память не меняется, иначе — выражение write_mem_*.</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">mem_expr</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="sd">/// Шаблон для pc_out. Обычно &quot;(bvadd pc0 (_ bv4 64))&quot;.</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">pc_expr</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">n_params</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">impl</span><span class="w"> </span><span class="n">InlinedSemantics</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="sd">/// Подставляет конкретные операнды и индексы состояний в шаблоны.</span>
+<span class="w">    </span><span class="sd">/// mi/mo — индексы входной/выходной переменной памяти (могут совпадать,</span>
+<span class="w">    </span><span class="sd">/// если инструкция не пишет память — тогда ограничение (= mem_mo ...) пропускается).</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">instantiate_compressed</span><span class="p">(</span>
+<span class="w">        </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">operands</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="nb">String</span><span class="p">],</span><span class="w"> </span><span class="n">si</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w"> </span><span class="n">so</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w"> </span><span class="n">mi</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w"> </span><span class="n">mo</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// заменяем regs0→regsN, mem0→memM, pc0→pcN, p0..pK → конкретные операнды</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">regs_e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">regs_expr</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;regs0&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;regs{si}&quot;</span><span class="p">));</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">mem_e</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">mem_expr</span><span class="w"> </span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;mem0&quot;</span><span class="p">,</span><span class="w">  </span><span class="o">&amp;</span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;mem{mi}&quot;</span><span class="p">));</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">pc_e</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">pc_expr</span><span class="w">  </span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;pc0&quot;</span><span class="p">,</span><span class="w">   </span><span class="o">&amp;</span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;pc{si}&quot;</span><span class="p">));</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">..</span><span class="bp">self</span><span class="p">.</span><span class="n">n_params</span><span class="p">).</span><span class="n">rev</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">expr</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">regs_e</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">mem_e</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">pc_e</span><span class="p">]</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="o">*</span><span class="n">expr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">expr</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="o">&amp;</span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;p{i}&quot;</span><span class="p">),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">operands</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">            </span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;(= regs{so} {regs_e})&quot;</span><span class="p">),</span>
+<span class="w">            </span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;(= pc{so} {pc_e})&quot;</span><span class="p">),</span>
+<span class="w">        </span><span class="p">];</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">mi</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">mo</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">out</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;(= mem{mo} {mem_e})&quot;</span><span class="p">));</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="n">out</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>При построении правила блока <code>emit_block_body_rule_inlined</code> вызывает <code>instantiate_compressed</code> для каждой инструкции: результирующие три строки добавляются непосредственно в тело <code>(and ...)</code>. Когда <code>mi == mo</code> (инструкция не изменяет память), ограничение <code>(= memN memN)</code> опускается — это и есть оптимизация устранения переменных памяти, совмещённая с инлайнингом в одном проходе.</p>
+<p>Из 746 вариантов в полном Isla IR <code>rv64d.ir</code> успешно транслируются 199. Покрытые инструкции включают полный профиль RV64IM: ITYPE (addi/addiw/andi/ori/xori/slti/sltiu), RTYPE (add/sub/and/or/xor + W-варианты, сдвиги), LOAD (lb/lbu/lh/lhu/lw/lwu/ld), STORE (sb/sh/sw/sd), BRANCH (beq/bne/blt/bge/bltu/bgeu), JAL, JALR, LUI, MUL/MULH/DIV/REM и их варианты. Остальные 547 относятся к расширениям с плавающей точкой (F, D, H), векторным (V), криптографическим (K) и привилегированным (M/S) инструкциям - для целочисленных программ, генерируемых Csmith, все используемые инструкции покрыты.</p>
+<p>Формирование SMT-LIB2-вывода сосредоточено в модуле <code>src/chc_emit/</code>, организованном в виде восьми специализированных подмодулей (листинг 3.8).</p>
+<p><strong>Листинг 3.8 — Объявление подмодулей <code>chc_emit</code> (src/chc_emit/mod.rs, Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">mod</span><span class="w"> </span><span class="nn">format</span><span class="p">;</span><span class="w">            </span><span class="c1">// текстовое представление SMT-выражений</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">smt</span><span class="p">;</span><span class="w">               </span><span class="c1">// трансляция Isla IR Exp → SMT-строка</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">known_calls</span><span class="p">;</span><span class="w">       </span><span class="c1">// классификация известных Sail вызовов (rX, wX, EXTS, EXTZ…)</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">variant_discovery</span><span class="p">;</span><span class="w"> </span><span class="c1">// обнаружение вариантов execute в IR-дереве</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">ir_translate</span><span class="p">;</span><span class="w">      </span><span class="c1">// PathTranslation: обход пути варианта → SMT-ограничения</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">ir_emit</span><span class="p">;</span><span class="w">           </span><span class="c1">// InlinedSemantics: шаблоны ограничений для инлайнинга</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">asm_emit</span><span class="p">;</span><span class="w">          </span><span class="c1">// emit_program_rule_inlined: правила блоков и CFG-композиции</span>
+<span class="k">mod</span><span class="w"> </span><span class="nn">equiv</span><span class="p">;</span><span class="w">             </span><span class="c1">// emit_equivalence_query: сборка полного .smt2 запроса</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">use</span><span class="w"> </span><span class="n">ir_emit</span><span class="p">::</span><span class="n">emit_instruction_chc</span><span class="p">;</span>
+<span class="k">pub</span><span class="w"> </span><span class="k">use</span><span class="w"> </span><span class="n">equiv</span><span class="p">::</span><span class="n">emit_equivalence_query</span><span class="p">;</span>
+</code></pre></div>
+<p>Ключевой поток данных через модули: <code>variant_discovery</code> находит все пути выполнения в IR для каждого варианта инструкции → <code>ir_translate</code> обходит каждый путь и строит структуру <code>PathTranslation</code>, накапливающую параметры инструкции (<code>params</code>), выражение нового регистрового файла (<code>reg_write</code>), финальное выражение памяти (<code>mem_expr</code>) и выражение PC (<code>pc_expr</code>) → <code>ir_emit</code> преобразует <code>PathTranslation</code> в <code>InlinedSemantics</code> — готовые SMT-шаблоны с именованными слотами для операндов → <code>asm_emit</code> применяет шаблоны к конкретным ассемблерным операндам при построении правил блоков. Функция <code>emit_equivalence_query</code> в <code>equiv.rs</code> является точкой сборки: она последовательно записывает стандартную библиотеку, вызывает <code>emit_program_rule_inlined</code> для каждой из двух функций, добавляет предикат <code>obs_addr</code> и шесть правил <code>bad</code> с финальным <code>(query bad)</code>.</p>
+<h3 id="33-risc-v-check-equiv">3.3 Разбор RISC-V ассемблера и формирование запроса (check-equiv)<a class="headerlink" href="#33-risc-v-check-equiv" title="Permanent link">&para;</a></h3>
+<p>Команда <code>check-equiv</code> принимает два ассемблерных файла, имя функции, путь к <code>.ir</code> и выходной файл.</p>
+<p>Разборщик читает GAS-совместимые <code>.s</code> файлы и строит для каждой функции список структурированных инструкций. Поддерживаются базовые инструкции RV64GC, псевдоинструкции (<code>ret</code> в <code>jalr x0, 0(ra)</code>, <code>mv</code> в <code>addi rd, rs, 0</code>, <code>li</code>, <code>snez</code>, <code>zext.b</code>, <code>lui</code>) и сжатые инструкции (<code>c.addi</code>, <code>c.li</code>, <code>c.mv</code>, <code>c.ld</code>, <code>c.sd</code>, <code>c.beqz</code>, <code>c.bnez</code>), раскрываемые в базовые при разборе.</p>
+<p>Разбор основан на пяти структурах данных, отображающих элементы ассемблерного текста на типизированные объекты Rust (листинг 3.9).</p>
+<p><strong>Листинг 3.9 — Структуры данных модуля asm_parse.rs (Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">AsmInstruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">opcode</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">operands</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Operand</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="nc">Operand</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Reg</span><span class="p">(</span><span class="nb">String</span><span class="p">),</span><span class="w">                          </span><span class="c1">// регистр: &quot;sp&quot;, &quot;a0&quot;, &quot;ra&quot;</span>
+<span class="w">    </span><span class="n">Imm</span><span class="p">(</span><span class="kt">i64</span><span class="p">),</span><span class="w">                             </span><span class="c1">// непосредственный операнд: -32, 24</span>
+<span class="w">    </span><span class="n">MemRef</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">offset</span><span class="p">:</span><span class="w"> </span><span class="kt">i64</span><span class="p">,</span><span class="w"> </span><span class="n">base</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="c1">// ссылка на память: -20(s0), 24(sp)</span>
+<span class="w">    </span><span class="n">Label</span><span class="p">(</span><span class="nb">String</span><span class="p">),</span><span class="w">                        </span><span class="c1">// цель ветвления: &quot;.LBB0_2&quot;</span>
+<span class="p">}</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">AsmFunction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">instructions</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">AsmInstruction</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">labels</span><span class="p">:</span><span class="w"> </span><span class="nc">HashMap</span><span class="o">&lt;</span><span class="nb">String</span><span class="p">,</span><span class="w"> </span><span class="kt">usize</span><span class="o">&gt;</span><span class="p">,</span><span class="w">   </span><span class="c1">// имя метки → индекс инструкции</span>
+<span class="p">}</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">BasicBlock</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">instr_range</span><span class="p">:</span><span class="w"> </span><span class="nc">Range</span><span class="o">&lt;</span><span class="kt">usize</span><span class="o">&gt;</span><span class="p">,</span><span class="w">        </span><span class="c1">// диапазон инструкций блока (без терминатора)</span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">terminator</span><span class="p">:</span><span class="w"> </span><span class="nc">Terminator</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">pub</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="nc">Terminator</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Branch</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">branch_instr_idx</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w">  </span><span class="c1">// индекс инструкции ветвления</span>
+<span class="w">        </span><span class="n">taken_block</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w">       </span><span class="c1">// блок назначения при выполнении условия</span>
+<span class="w">        </span><span class="n">fallthrough_block</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span><span class="p">,</span><span class="w"> </span><span class="c1">// блок назначения при невыполнении</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="n">Fallthrough</span><span class="p">(</span><span class="kt">usize</span><span class="p">),</span>
+<span class="w">    </span><span class="n">Exit</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Функция <code>parse_asm</code> сканирует текст построчно: при нахождении метки <code>function_name:</code> начинает сбор инструкций; при встрече следующей внешней метки (без точки) завершает разбор; внутрифункциональные метки вида <code>.LBB0_2:</code> записываются в <code>labels</code> с текущим индексом инструкции и впоследствии используются функцией <code>build_cfg</code> для выявления границ блоков.</p>
+<p>Функция <code>instruction_to_chc</code> переводит каждую инструкцию в имя соответствующего CHC-правила и список SMT-операндов. Порядок операндов определяется порядком полей в кортеже Sail для каждого класса инструкций (листинг 3.10).</p>
+<p><strong>Листинг 3.10 — Отображение ассемблерных инструкций в SMT-операнды (asm_emit.rs, Rust)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">match</span><span class="w"> </span><span class="n">op</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I-type: addi rd, rs1, imm → (imm_bv12, rs1_idx, rd_idx)</span>
+<span class="w">    </span><span class="s">&quot;addi&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;addiw&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;andi&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;ori&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;xori&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;slti&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sltiu&quot;</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rd</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">instr</span><span class="p">.</span><span class="n">operands</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rs1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">instr</span><span class="p">.</span><span class="n">operands</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">imm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">imm_to_bv12</span><span class="p">(</span><span class="n">imm_val</span><span class="p">);</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">((</span><span class="n">op</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="n">imm</span><span class="p">,</span><span class="w"> </span><span class="n">rs1</span><span class="p">,</span><span class="w"> </span><span class="n">rd</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// Store: sd rs2, off(base) → (off_bv12, rs2_idx, base_idx)</span>
+<span class="w">    </span><span class="c1">// Порядок (imm, rs2, rs1=base) соответствует Sail-кортежу STYPE</span>
+<span class="w">    </span><span class="s">&quot;sb&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sh&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sw&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sd&quot;</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rs2</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="n">rs2_name</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="n">base_name</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">((</span><span class="n">op</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="n">imm_to_bv12</span><span class="p">(</span><span class="n">offset</span><span class="p">),</span><span class="w"> </span><span class="n">rs2</span><span class="p">,</span><span class="w"> </span><span class="n">base</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// Load: ld rd, off(base) → (off_bv12, base_idx, rd_idx)</span>
+<span class="w">    </span><span class="s">&quot;lb&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;lbu&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;lh&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;lhu&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;lw&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;lwu&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;ld&quot;</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rd</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="n">rd_name</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="n">base_name</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">((</span><span class="n">op</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="n">imm_to_bv12</span><span class="p">(</span><span class="n">offset</span><span class="p">),</span><span class="w"> </span><span class="n">base</span><span class="p">,</span><span class="w"> </span><span class="n">rd</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// R-type: add rd, rs1, rs2 → (rs2_idx, rs1_idx, rd_idx)</span>
+<span class="w">    </span><span class="c1">// Порядок (rs2, rs1, rd) соответствует Sail-кортежу RTYPE</span>
+<span class="w">    </span><span class="s">&quot;add&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sub&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;and&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;or&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;xor&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;slt&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sltu&quot;</span><span class="w"> </span><span class="o">|</span>
+<span class="w">    </span><span class="s">&quot;sll&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;srl&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;sra&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;addw&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;subw&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s">&quot;mul&quot;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="o">..</span><span class="p">.</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rd</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">instr</span><span class="p">.</span><span class="n">operands</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rs1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">instr</span><span class="p">.</span><span class="n">operands</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">rs2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg_to_smt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">instr</span><span class="p">.</span><span class="n">operands</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">((</span><span class="n">op</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="n">rs2</span><span class="p">,</span><span class="w"> </span><span class="n">rs1</span><span class="p">,</span><span class="w"> </span><span class="n">rd</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// Псевдоинструкция: ret = jalr x0, 0(ra)</span>
+<span class="w">    </span><span class="s">&quot;ret&quot;</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Ok</span><span class="p">((</span><span class="s">&quot;jalr&quot;</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span>
+<span class="w">                 </span><span class="fm">vec!</span><span class="p">[</span><span class="s">&quot;(_ bv0 12)&quot;</span><span class="p">.</span><span class="n">into</span><span class="p">(),</span><span class="w"> </span><span class="s">&quot;reg_ra&quot;</span><span class="p">.</span><span class="n">into</span><span class="p">(),</span><span class="w"> </span><span class="s">&quot;reg_zero&quot;</span><span class="p">.</span><span class="n">into</span><span class="p">()])),</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Несовпадение порядка операндов с кортежем Sail не приводит к ошибке компилятора — решатель применит семантически корректную формулу к неправильным аргументам и вернёт ложный <code>unsat</code>. Именно поэтому все новые инструкции верифицируются на примерах с заранее известным результатом.</p>
+<p><strong>Цепочка состояний.</strong> Формирование CHC-запроса - это связывание всех инструкций функции через промежуточные переменные состояния:</p>
+<div class="arithmatex">\[
+(\text{regs}_0, \text{mem}_0, \text{pc}_0) \xrightarrow{\text{instr}_1} (\text{regs}_1, \text{mem}_1, \text{pc}_1) \xrightarrow{\text{instr}_2} \cdots \xrightarrow{\text{instr}_n} (\text{regs}_n, \text{mem}_n, \text{pc}_n) \tag{3.1}
+\]</div>
+<p>где <span class="arithmatex">\(n\)</span> - количество инструкций функции; каждая тройка <span class="arithmatex">\((\text{regs}_i, \text{mem}_i, \text{pc}_i)\)</span> - промежуточное состояние машины после <span class="arithmatex">\(i\)</span>-й инструкции.</p>
+<p>Итоговое CHC-правило для блока функции формируется с инлайнингом семантики инструкций — без промежуточных CHC-отношений. Листинг 3.5 показывает фактически сгенерированное RICOVER правило для блока <code>func_361_bb0</code> из бенчмарка Csmith (функция <code>src</code>, 10 инструкций, 1 базовый блок). Инструкция <code>instcombine</code> из LLVM удаляет два мёртвых сохранения <code>sw</code>/<code>sh</code>, оставляя 8-инструкционную версию <code>func_362</code>.</p>
+<p><strong>Листинг 3.5 — Сгенерированное CHC-правило func_361_bb0 (SMT-LIB2, вывод RICOVER)</strong></p>
+<div class="highlight"><pre><span></span><code>(declare-rel func_361_bb0
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall
+    ;; 11 переменных регистров regs0..regs10, но только 5 переменных памяти mem0..mem4:
+    ;; инструкции, не изменяющие память, не получают новой переменной memN
+    ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+     (regs1 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc1 (_ BitVec 64))
+     (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (mem1 (Array (_ BitVec 64) (_ BitVec 8))) (pc2 (_ BitVec 64))
+     (regs3 (Array (_ BitVec 5) (_ BitVec 64))) (mem2 (Array (_ BitVec 64) (_ BitVec 8))) (pc3 (_ BitVec 64))
+     (regs4 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc4 (_ BitVec 64))
+     (regs5 (Array (_ BitVec 5) (_ BitVec 64))) (mem3 (Array (_ BitVec 64) (_ BitVec 8))) (pc5 (_ BitVec 64))
+     (regs6 (Array (_ BitVec 5) (_ BitVec 64))) (mem4 (Array (_ BitVec 64) (_ BitVec 8))) (pc6 (_ BitVec 64))
+     (regs7 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc7 (_ BitVec 64))
+     (regs8 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc8 (_ BitVec 64))
+     (regs9 (Array (_ BitVec 5) (_ BitVec 64)))                                            (pc9 (_ BitVec 64))
+     (regs10 (Array (_ BitVec 5) (_ BitVec 64)))                                           (pc10 (_ BitVec 64)))
+  (=&gt; (and
+        ; addi sp, sp, -32  [память не изменяется → новой переменной mem нет]
+        (= regs1 (set_reg regs0 reg_sp (bvadd (get_reg regs0 reg_sp)
+                                              ((_ sign_extend 52) (_ bv4064 12)))))
+        (= pc1 (bvadd pc0 (_ bv4 64)))
+        ; sd ra, 24(sp)  [запись в память → вводится mem1]
+        (= regs2 regs1)
+        (= mem1 (write_mem_dword mem0 (bvadd (get_reg regs1 reg_sp)
+                                             ((_ sign_extend 52) (_ bv24 12)))
+                                     ((_ extract 63 0) (get_reg regs1 reg_ra))))
+        (= pc2 (bvadd pc1 (_ bv4 64)))
+        ; sd s0, 16(sp)  [запись → mem2]
+        (= regs3 regs2)
+        (= mem2 (write_mem_dword mem1 (bvadd (get_reg regs2 reg_sp)
+                                             ((_ sign_extend 52) (_ bv16 12)))
+                                     ((_ extract 63 0) (get_reg regs2 reg_s0))))
+        (= pc3 (bvadd pc2 (_ bv4 64)))
+        ; addi s0, sp, 32  [память не изменяется]
+        (= regs4 (set_reg regs3 reg_s0 (bvadd (get_reg regs3 reg_sp)
+                                              ((_ sign_extend 52) (_ bv32 12)))))
+        (= pc4 (bvadd pc3 (_ bv4 64)))
+        ; sw a0, 12(sp)  [запись → mem3; мёртвое сохранение, удалённое instcombine]
+        (= regs5 regs4)
+        (= mem3 (write_mem_word mem2 (bvadd (get_reg regs4 reg_sp)
+                                            ((_ sign_extend 52) (_ bv12 12)))
+                                    ((_ zero_extend 32) ((_ extract 31 0) (get_reg regs4 reg_a0)))))
+        (= pc5 (bvadd pc4 (_ bv4 64)))
+        ; sh a1, 10(sp)  [запись → mem4; мёртвое сохранение]
+        (= regs6 regs5)
+        (= mem4 (write_mem_half mem3 (bvadd (get_reg regs5 reg_sp)
+                                            ((_ sign_extend 52) (_ bv10 12)))
+                                    ((_ zero_extend 48) ((_ extract 15 0) (get_reg regs5 (_ bv11 5))))))
+        (= pc6 (bvadd pc5 (_ bv4 64)))
+        ; ld ra, 24(sp)  [чтение из mem4; новая переменная памяти не нужна]
+        (= regs7 (set_reg regs6 reg_ra ((_ sign_extend 0)
+                  (mem_read_8 mem4 (bvadd (get_reg regs6 reg_sp) ((_ sign_extend 52) (_ bv24 12)))))))
+        (= pc7 (bvadd pc6 (_ bv4 64)))
+        ; ld s0, 16(sp)  [чтение из mem4]
+        (= regs8 (set_reg regs7 reg_s0 ((_ sign_extend 0)
+                  (mem_read_8 mem4 (bvadd (get_reg regs7 reg_sp) ((_ sign_extend 52) (_ bv16 12)))))))
+        (= pc8 (bvadd pc7 (_ bv4 64)))
+        ; addi sp, sp, 32  [память не изменяется]
+        (= regs9 (set_reg regs8 reg_sp (bvadd (get_reg regs8 reg_sp)
+                                              ((_ sign_extend 52) (_ bv32 12)))))
+        (= pc9 (bvadd pc8 (_ bv4 64)))
+        ; ret = jalr x0, 0(ra)
+        (= regs10 (set_reg regs9 reg_zero (bvadd pc9 (_ bv4 64))))
+        (= pc10 (concat ((_ extract 63 1)
+                         (bvadd (get_reg regs9 reg_ra) ((_ sign_extend 52) (_ bv0 12))))
+                        (_ bv0 1)))
+      )
+      (func_361_bb0 regs0 mem0 pc0 regs10 mem4 pc10))))
+</code></pre></div>
+<p>В блоке <code>forall</code> видна оптимизация устранения переменных памяти: из 10 инструкций лишь 4 (<code>sd</code>, <code>sd</code>, <code>sw</code>, <code>sh</code>) записывают память — вводятся переменные <code>mem1</code>–<code>mem4</code>. Инструкции <code>addi</code>, <code>ld</code> и <code>ret</code> не получают собственной переменной <code>memN</code>. Константа <code>(_ bv4064 12)</code> — 12-битное дополнение до двух для <code>-32</code> (поскольку <span class="arithmatex">\(4096 - 32 = 4064\)</span>).</p>
+<p>Оптимизированная версия <code>func_362</code> (8 инструкций, <code>sw</code>/<code>sh</code> удалены instcombine) содержит только <code>mem0</code>–<code>mem2</code>: оба мёртвых сохранения исчезли вместе со своими переменными памяти. CHC-решатель Z3 отвечает <code>unsat</code> за 27 секунд: мёртвые записи выполнялись в приватный фрейм <span class="arithmatex">\([\text{sp}_0 - 32, \text{sp}_0)\)</span>, который исключён из <span class="arithmatex">\(\text{ObsMem}\)</span>, и ABI-видимые регистры (<code>a0</code>, <code>ra</code>, <code>sp</code>, <code>s0</code>) совпадают в обоих вариантах.</p>
+<h3 id="34-chc-stdlibsmt2">3.4 Стандартная библиотека CHC (stdlib.smt2)<a class="headerlink" href="#34-chc-stdlibsmt2" title="Permanent link">&para;</a></h3>
+<p>Стандартная библиотека определяет примитивы, общие для всех сгенерированных запросов. Операции над регистрами реализованы как SMT-функции с учётом особенности нулевого регистра <code>x0</code> архитектуры RISC-V (листинг 3.6).</p>
+<p><strong>Листинг 3.6 - Операции get_reg и set_reg в stdlib.smt2 (SMT-LIB2)</strong></p>
+<div class="highlight"><pre><span></span><code>;; Read register: returns 0 for x0, otherwise reads from Regs array
+(define-fun get_reg ((regs (Array (_ BitVec 5) (_ BitVec 64)))
+                     (idx  (_ BitVec 5))) (_ BitVec 64)
+  (ite (= idx (_ bv0 5))
+       (_ bv0 64)
+       (select regs idx)))
+
+;; Write register: writes to x0 are discarded
+(define-fun set_reg ((regs (Array (_ BitVec 5) (_ BitVec 64)))
+                     (idx  (_ BitVec 5))
+                     (val  (_ BitVec 64))) (Array (_ BitVec 5) (_ BitVec 64))
+  (ite (= idx (_ bv0 5))
+       regs
+       (store regs idx val)))
+</code></pre></div>
+<p>Функция <code>get_reg</code> возвращает 0 при чтении регистра с индексом 0 (<code>x0</code> - жёстко прошитый ноль в RISC-V); <code>set_reg</code> игнорирует запись при <code>idx = 0</code>. Это гарантирует семантику нулевого регистра без дополнительных ограничений в теле каждого CHC-правила.</p>
+<p>Помимо регистровых операций, стандартная библиотека содержит:</p>
+<ul>
+<li><strong>Операции с памятью:</strong> <code>mem_read_N</code> (сырое чтение <span class="arithmatex">\(N\)</span> байт), <code>read_mem_word</code>/<code>read_mem_dword</code> (знаковое расширение до 64 бит), <code>write_mem_word</code>/<code>write_mem_dword</code> (запись в little-endian порядке), аналоги для 1- и 2-байтовых операций;</li>
+<li><strong>Константы ABI:</strong> <code>reg_zero = 0b00000</code>, <code>reg_ra = 0b00001</code>, <code>reg_sp = 0b00010</code>, <code>reg_s0 = 0b01000</code>, <code>reg_a0 = 0b01010</code>.</li>
+</ul>
+<h3 id="35">3.5 Модель наблюдаемого состояния и приватный стековый фрейм<a class="headerlink" href="#35" title="Permanent link">&para;</a></h3>
+<p>Формулировка проекционной эквивалентности <span class="arithmatex">\(\simeq_{\text{proj}}\)</span> (формула 2.7) требует точного определения множества <span class="arithmatex">\(\text{ObsMem}(\sigma_0)\)</span> - наблюдаемой памяти.</p>
+<p>При разборе функции <code>check-equiv</code> ищет первую инструкцию вида <code>addi sp, sp, -N</code> (или <code>c.addi sp, -N</code>). Число <span class="arithmatex">\(N\)</span> является размером стекового фрейма функции. Приватный фрейм определяется как интервал <span class="arithmatex">\([\text{sp}_0 - N, \text{sp}_0)\)</span>, где <span class="arithmatex">\(\text{sp}_0\)</span> - значение указателя стека в начальном состоянии.</p>
+<p>CHC-запрос <code>bad</code> эмитируется как два правила, реализующих формулы (2.8) и (2.9), показанные в листинге 3.7.</p>
+<p><strong>Листинг 3.7 - Bad-state запрос на эквивалентность (SMT-LIB2)</strong></p>
+<div class="highlight"><pre><span></span><code>; Компонент 1: расхождение ABI-видимых регистров
+(rule (=&gt; (and (P regs0 mem0 pc0 regsP memP pcP)
+               (Q regs0 mem0 pc0 regsQ memQ pcQ)
+               (or (distinct (get_reg regsP reg_a0)
+                             (get_reg regsQ reg_a0))
+                   (distinct (get_reg regsP reg_ra)
+                             (get_reg regsQ reg_ra))
+                   (distinct (get_reg regsP reg_sp)
+                             (get_reg regsQ reg_sp))))
+         (bad)))
+
+; Компонент 2: расхождение памяти вне приватного фрейма
+(rule (=&gt; (and (P regs0 mem0 pc0 regsP memP pcP)
+               (Q regs0 mem0 pc0 regsQ memQ pcQ)
+               (obs-addr addr regs0)
+               (distinct (select memP addr)
+                         (select memQ addr)))
+         (bad)))
+
+(query bad)
+</code></pre></div>
+<p>Предикат <code>obs-addr</code> выводим тогда и только тогда, когда адрес <code>addr</code> находится вне приватного фрейма <code>[sp0 - N, sp0)</code>, то есть является наблюдаемым. Если <code>bad</code> выводимо - найден контрпример; если нет - обе программы семантически эквивалентны относительно <span class="arithmatex">\(\simeq_{\text{proj}}\)</span>.</p>
+<h3 id="36">3.6 Кодирование ветвлений и граф потока управления<a class="headerlink" href="#36" title="Permanent link">&para;</a></h3>
+<p>Функции с условными переходами требуют многоблочного CHC-кодирования. RICOVER строит граф потока управления (CFG) и кодирует его через два слоя CHC-отношений.</p>
+<p><strong>Построение CFG.</strong> Функция <code>build_cfg</code> в <code>asm_parse.rs</code> делит функцию на базовые блоки: границы блоков проставляются на начало функции, на инструкцию-цель каждого перехода и на инструкцию сразу после каждой ветки. Для каждого блока определяется один из трёх терминаторов: <code>Branch</code> (условный переход с адресом обоих путей), <code>Fallthrough</code> (непосредственный переход к следующему блоку) и <code>Exit</code> (блок заканчивается инструкцией <code>ret</code>).</p>
+<p>Для каждого базового блока <code>bb&lt;N&gt;</code> функции <code>f</code> эмитируются:</p>
+<ol>
+<li><em>Тело блока</em> — <code>f_bb&lt;N&gt;(state_in, state_out)</code>: цепочка инлайн-ограничений для инструкций блока (без инструкции-терминатора);</li>
+<li><em>Композиция</em> — <code>f_from_bb&lt;N&gt;(state_in, state_out)</code>: описывает все пути выполнения от входа в блок <code>bb&lt;N&gt;</code> до завершения функции. Для входного блока (<code>bb0</code>) эта функция именуется просто <code>f</code> и является функциональным резюме всей функции.</li>
+</ol>
+<p>Такая структура позволяет естественно моделировать обратные рёбра (циклы) через рекурсивные CHC-правила: цикл-заголовок получает рекурсивное правило для <code>f_from_bb&lt;N&gt;</code>, а CHC-решатель находит индуктивный инвариант через фиксированную точку.</p>
+<p>Рассмотрим функцию <code>src</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nl">src:</span>
+<span class="w">    </span><span class="nf">lw</span><span class="w">   </span><span class="no">a3</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">(</span><span class="no">a2</span><span class="p">)</span><span class="w">       </span><span class="c1">; bb0: загрузка из памяти</span>
+<span class="w">    </span><span class="nf">lw</span><span class="w">   </span><span class="no">a4</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">(</span><span class="no">a1</span><span class="p">)</span><span class="w">       </span><span class="c1">; bb0: загрузка из памяти</span>
+<span class="w">    </span><span class="nf">blt</span><span class="w">  </span><span class="no">a3</span><span class="p">,</span><span class="w"> </span><span class="no">a4</span><span class="p">,</span><span class="w"> </span><span class="no">.LBB0_2</span><span class="w"> </span><span class="c1">; bb0: терминатор — условный переход</span>
+<span class="w">    </span><span class="nf">mv</span><span class="w">   </span><span class="no">a1</span><span class="p">,</span><span class="w"> </span><span class="no">a2</span><span class="w">          </span><span class="c1">; bb1: fallthrough — пересылка регистра</span>
+<span class="nl">.LBB0_2:</span>
+<span class="w">    </span><span class="nf">ld</span><span class="w">   </span><span class="no">a1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">(</span><span class="no">a1</span><span class="p">)</span><span class="w">       </span><span class="c1">; bb2: загрузка двойного слова</span>
+<span class="w">    </span><span class="nf">sd</span><span class="w">   </span><span class="no">a1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">(</span><span class="no">a0</span><span class="p">)</span><span class="w">       </span><span class="c1">; bb2: сохранение в память</span>
+<span class="w">    </span><span class="nf">ret</span><span class="w">                  </span><span class="c1">; bb2: выход</span>
+</code></pre></div>
+<p>CFG: <code>bb0 → (blt взята) → bb2 [exit]</code>; <code>bb0 → (blt не взята) → bb1 → bb2 [exit]</code>.</p>
+<p>Функция <code>build_cfg</code> разделяет функцию на три блока. <code>bb0</code> содержит две инструкции <code>lw</code> (тело) и ветку <code>blt</code> (терминатор); <code>bb1</code> — одну инструкцию <code>mv</code> (терминатор <code>Fallthrough(2)</code>); <code>bb2</code> — три инструкции <code>ld</code>, <code>sd</code>, <code>ret</code> (терминатор <code>Exit</code>). Листинг 3.11 показывает фактически сгенерированные правила CFG-композиции.</p>
+<p><strong>Листинг 3.11 — Правила CFG-композиции функции src из PR44306 (SMT-LIB2)</strong></p>
+<div class="highlight"><pre><span></span><code>;; Предварительное объявление всех отношений (Z3 требует объявления до первого использования)
+(declare-rel PR443061       ((Array ...) (Array ...) (_ BitVec 64)
+                             (Array ...) (Array ...) (_ BitVec 64)))
+(declare-rel PR443061_from_bb1  (...))
+(declare-rel PR443061_from_bb2  (...))
+
+;; Выходной блок bb2: from_bb2 = тело bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...) (regs1 ...) (mem1 ...) (pc1 ...))
+    (=&gt; (PR443061_bb2 regs0 mem0 pc0 regs1 mem1 pc1)
+        (PR443061_from_bb2 regs0 mem0 pc0 regs1 mem1 pc1))))
+
+;; Блок bb1 (fallthrough): тело bb1, затем from_bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=&gt; (and (PR443061_bb1 regs0 mem0 pc0 regs1 mem1 pc1)
+             (PR443061_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061_from_bb1 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+;; Входной блок bb0, ветвь взята (blt a3, a4): тело bb0 → from_bb2
+; taken: blt a3, a4, .LBB0_2 → bb2
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=&gt; (and (PR443061_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5)))
+             (PR443061_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+;; Входной блок bb0, ветвь не взята: тело bb0 → from_bb1
+; not-taken: fallthrough → bb1
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...))
+    (=&gt; (and (PR443061_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (not (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5))))
+             (PR443061_from_bb1 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR443061 regs0 mem0 pc0 regs2 mem2 pc2))))
+</code></pre></div>
+<p>Условие ветвления <code>(bvslt (get_reg regs1 ...) (get_reg regs1 ...))</code> читает регистры из состояния <strong>после</strong> выполнения тела блока (<code>regs1</code>), а не из входного состояния (<code>regs0</code>): сначала исполняются инструкции-данные блока, затем вычисляется условие перехода. Это соответствует семантике инструкции <code>blt</code>: условие проверяется на актуальных значениях регистров в момент ветвления.</p>
+<p>Все <code>declare-rel</code> эмитируются до всех <code>rule</code> — это требование Z3 Fixedpoint API: при обработке правила каждый предикат, используемый в теле, уже должен быть объявлен. <code>emit_composition_rules</code> поэтому делает два прохода: сначала объявляет все отношения, затем эмитирует правила.</p>
+<hr />
+<h2 id="4">Глава 4. Экспериментальная оценка<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 Тестовая среда и инструментарий<a class="headerlink" href="#41" title="Permanent link">&para;</a></h3>
+<p>Все эксперименты проводились на рабочей станции, конфигурация которой приведена в таблице 4.1.</p>
+<p><strong>Таблица 4.1 - Конфигурация тестового стенда</strong></p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Процессор</td>
+<td>12th Gen Intel Core i5-1235U</td>
+</tr>
+<tr>
+<td>Оперативная память</td>
+<td>8 ГБ</td>
+</tr>
+<tr>
+<td>Операционная система</td>
+<td>Arch Linux (ядро Linux 6.18.7-arch1-1, x86_64)</td>
+</tr>
+<tr>
+<td>CHC-решатель</td>
+<td>Z3 4.15.4 (64-бит)</td>
+</tr>
+<tr>
+<td>Реализация RICOVER</td>
+<td>Rust 1.89.0-nightly (edition 2024)</td>
+</tr>
+<tr>
+<td>Компилятор LLVM/Clang</td>
+<td>23.0.0git (цель: riscv64-linux-gnu)</td>
+</tr>
+<tr>
+<td>Генератор программ Csmith</td>
+<td>версия 2.4.0</td>
+</tr>
+</tbody>
+</table>
+<p>Стратегия CHC-решателя - Spacer, параметр <code>set-logic HORN</code>. Тайм-аут Z3 для экспериментов с Csmith - 300 секунд (5 минут) на одну задачу.</p>
+<h3 id="42-alive2">4.2 Тестовая база: ошибки мисоптимизации из Alive2<a class="headerlink" href="#42-alive2" title="Permanent link">&para;</a></h3>
+<p>Для первичной верификации корректности RICOVER использовалась тестовая база, составленная из подтверждённых ошибок мисоптимизации компилятора LLVM, обнаруженных инструментом Alive2 [1]. Каждая такая ошибка сопровождается тремя элементами:
+1. исходный вариант кода (до оптимизации);
+2. <em>ошибочная</em> оптимизация (с мисоптимизацией);
+3. <em>исправленная</em> оптимизация (корректный вариант).</p>
+<p>Методика верификации: RICOVER должен вернуть <code>sat</code> (расхождение обнаружено) для пары «до / ошибочная оптимизация» и <code>unsat</code> (эквивалентность подтверждена) для пары «до / исправленная оптимизация». Только оба результата вместе подтверждают корректность работы инструмента.</p>
+<p>Воспроизведение ошибок Alive2 на уровне RISC-V ассемблера требовало дополнительного шага: исходные ошибки описаны на уровне LLVM IR, и их необходимо воспроизвести путём компиляции конкретным LLVM-бэкендом для RISC-V.</p>
+<p>В директории <code>benchmark/supported/</code> представлены следующие верифицированные бенчмарки:</p>
+<ul>
+<li><code>bench1_BAD.s</code> - ошибочная оптимизация (ожидаемый результат: <code>sat</code>);</li>
+<li><code>constant_folding_simple_SUCCESS.s</code> - корректная константная свёртка (<code>unsat</code>);</li>
+<li><code>compressed_equiv_SUCCESS.s</code> - эквивалентность со сжатыми инструкциями (<code>unsat</code>);</li>
+<li><code>amo_swap_SUCCESS.s</code> - атомарная обменная операция (<code>unsat</code>);</li>
+<li><code>PR44306_BAD.s</code> - воспроизведение бага PR44306 из трекера LLVM (<code>sat</code>).</li>
+</ul>
+<p>Результаты приведены в таблице 4.2.</p>
+<p><strong>Таблица 4.2 - Результаты верификации ручных бенчмарков</strong></p>
+<table>
+<thead>
+<tr>
+<th>Бенчмарк</th>
+<th>Тип</th>
+<th>Инструкций (src/tgt)</th>
+<th>Результат Z3</th>
+<th>Время решения</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>constant_folding_simple</td>
+<td>UNSAT</td>
+<td>14 / 2</td>
+<td><strong>unsat</strong></td>
+<td>&lt; 1 с</td>
+</tr>
+<tr>
+<td>compressed_equiv</td>
+<td>UNSAT</td>
+<td>10 / 8</td>
+<td><strong>unsat</strong></td>
+<td>&lt; 1 с</td>
+</tr>
+<tr>
+<td>amo_swap</td>
+<td>UNSAT</td>
+<td>6 / 4</td>
+<td><strong>unsat</strong></td>
+<td>&lt; 1 с</td>
+</tr>
+<tr>
+<td>bench1</td>
+<td>SAT (ошибка)</td>
+<td>12 / 8</td>
+<td><strong>sat</strong></td>
+<td>&lt; 2 с</td>
+</tr>
+<tr>
+<td>PR44306</td>
+<td>SAT (ошибка)</td>
+<td>18 / 10</td>
+<td><strong>sat</strong></td>
+<td>&lt; 2 с</td>
+</tr>
+</tbody>
+</table>
+<p>Все поддерживаемые бенчмарки дают ожидаемый результат. Ручные бенчмарки разрешаются менее чем за 2 секунды: они имеют небольшое число инструкций и не затрагивают агрессивных операций с памятью, которые усложняют задачу для массивной теории.</p>
+<p><strong>Бенчмарк constant_folding_simple.</strong> Функция <code>foo1</code> вычисляет <span class="arithmatex">\(y = x + 2\)</span> при <span class="arithmatex">\(x = 1\)</span> через стек (14 инструкций); функция <code>foo2</code> возвращает <code>addi a0, zero, 3; ret</code> (2 инструкции). Z3 отвечает <code>unsat</code> мгновенно.</p>
+<p><strong>Бенчмарк bench1 (sat).</strong> Воспроизводит конкретный баг LLVM. Z3 отвечает <code>sat</code> и предоставляет конкретное начальное состояние (модель), в котором оптимизированный вариант вычисляет иной результат, что позволяет воспроизвести ошибку без перебора тестовых входных данных.</p>
+<h3 id="43-chc-">4.3 Производительность CHC-решателей<a class="headerlink" href="#43-chc-" title="Permanent link">&para;</a></h3>
+<p>На генерируемых Csmith функциях производительность Z3 существенно зависит от сложности CHC-задачи. Ключевые метрики, влияющие на время решения:</p>
+<ol>
+<li>
+<p><strong>Число инструкций:</strong> функции с числом базовых инструкций выше <span class="arithmatex">\(\approx 15\)</span> стабильно превышают тайм-аут 300 секунд. Причина - нелинейная сложность теории массивов (QF_ABV) при большом числе квантифицированных переменных.</p>
+</li>
+<li>
+<p><strong>Оптимизация устранения переменных памяти.</strong> До оптимизации функция из 20 инструкций порождала 43 ограничения над массивами; после оптимизации - 10. Снижение числа array-ограничений в 4,3 раза кратно ускоряет поиск инварианта.</p>
+</li>
+<li>
+<p><strong>Инлайнинг правил инструкций.</strong> Вместо обращения к инструкционным отношениям через <code>declare-rel</code> тела правил встраиваются непосредственно в программное правило, устраняя слой вложенности CHC-системы и упрощая работу алгоритма Spacer [14].</p>
+</li>
+</ol>
+<h3 id="44-csmith">4.4 Масштабная верификация с помощью Csmith<a class="headerlink" href="#44-csmith" title="Permanent link">&para;</a></h3>
+<p>Для систематической оценки применимости подхода к реальным компиляторным оптимизациям была разработана система автоматизированного тестирования на основе генератора случайных программ Csmith [3]. Конвейер <code>csmith_ricover_e2e.py</code> функционирует следующим образом:</p>
+<div class="highlight"><pre><span></span><code>csmith --no-safe-math --no-pointers --no-global-variables
+    -&gt; program.c
+    -&gt; clang -O0 -Xclang -disable-O0-optnone -emit-llvm -S в base.ll
+    -&gt; llc -O1 в base.s
+    -&gt; opt -passes=&#39;&lt;pipeline&gt;&#39; -S в opt.ll в llc -O1 в opt.s
+    -&gt; пофункциональный diff (пропуск: call, relocations, &gt;max-instrs, identical)
+    -&gt; RICOVER check-equiv в .smt2
+    -&gt; z3 -T:300 в sat/unsat/timeout
+</code></pre></div>
+<p>Флаг <code>-Xclang -disable-O0-optnone</code> необходим, чтобы <code>opt</code> проходы фактически срабатывали на O0 IR. Флаг <code>--no-global-variables</code> позволяет избежать PC-relative relocations (<code>auipc</code>/<code>%pcrel</code>), которые RICOVER пока не поддерживает.</p>
+<p><strong>Тестируемые проходы LLVM:</strong> instcombine, simplifycfg, gvn, dse, licm, indvars, loop-rotate, loop-unroll, loop-deletion - всего 9 конвейеров.</p>
+<p><strong>Воронка отбора функций.</strong> Из 185 функций с различиями между базовым и оптимизированным вариантами (20 программ, проход instcombine):</p>
+<table>
+<thead>
+<tr>
+<th>Стадия фильтрации</th>
+<th>Количество</th>
+<th>Доля от различающихся</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Функции с различиями</td>
+<td>185</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>Заблокированы инструкцией <code>call</code></td>
+<td>152</td>
+<td>82%</td>
+</tr>
+<tr>
+<td>Заблокированы PC-relative relocation</td>
+<td>136</td>
+<td>73%</td>
+</tr>
+<tr>
+<td>Без вызовов и relocations</td>
+<td>20</td>
+<td>11%</td>
+</tr>
+<tr>
+<td>В пределах размера + поддерживаемые инструкции</td>
+<td>11</td>
+<td>6%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Результаты с упрощёнными флагами Csmith.</strong> При использовании флагов <code>--no-arrays --no-structs --no-pointers</code> за серию из 100 программ (seeds 300–399, проход instcombine) было получено 153 пригодных функции. Из 10 функций с наименьшим числом инструкций:</p>
+<table>
+<thead>
+<tr>
+<th>Функция</th>
+<th>src / tgt инструкций</th>
+<th>Результат Z3</th>
+<th>Время</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>func_36</td>
+<td>10 / 8</td>
+<td><strong>unsat</strong></td>
+<td>27 с</td>
+</tr>
+<tr>
+<td>func_38</td>
+<td>11 / 9</td>
+<td><strong>unsat</strong></td>
+<td>28 с</td>
+</tr>
+<tr>
+<td>func_29</td>
+<td>11 / 9</td>
+<td><strong>unsat</strong></td>
+<td>29 с</td>
+</tr>
+<tr>
+<td>func_43</td>
+<td>11 / 9</td>
+<td><strong>unsat</strong></td>
+<td>31 с</td>
+</tr>
+<tr>
+<td>func_88</td>
+<td>11 / 9</td>
+<td><strong>unsat</strong></td>
+<td>42 с</td>
+</tr>
+<tr>
+<td>func_12</td>
+<td>13 / 9</td>
+<td><strong>unsat</strong></td>
+<td>77 с</td>
+</tr>
+<tr>
+<td>func_39</td>
+<td>11 / 9</td>
+<td><strong>unsat</strong></td>
+<td>160 с</td>
+</tr>
+<tr>
+<td>func_46</td>
+<td>10 / 8</td>
+<td><strong>unsat</strong></td>
+<td>276 с</td>
+</tr>
+<tr>
+<td>func_17</td>
+<td>13 / 9</td>
+<td>timeout</td>
+<td>300 с</td>
+</tr>
+<tr>
+<td>func_153</td>
+<td>12 / 8</td>
+<td>timeout</td>
+<td>300 с</td>
+</tr>
+</tbody>
+</table>
+<p><strong>7 из 10 функций подтверждены как эквивалентные</strong> (<code>unsat</code>) в пределах 300-секундного тайм-аута; 2 функции превысили тайм-аут. Это существенное улучшение по сравнению с базовой конфигурацией без оптимизаций переменных памяти (2 из 10 при том же тайм-ауте).</p>
+<p><strong>Результаты прогона по всем 9 проходам</strong> (4 программы):</p>
+<table>
+<thead>
+<tr>
+<th>Программа</th>
+<th>Функция</th>
+<th>src / tgt инструкций</th>
+<th>Проходов</th>
+<th>Результат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prog_1</td>
+<td>func_1</td>
+<td>15 / 9</td>
+<td>9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>prog_2</td>
+<td>func_1</td>
+<td>30 / 9</td>
+<td>9</td>
+<td><strong>9/9 EQUIV</strong></td>
+</tr>
+<tr>
+<td>prog_3</td>
+<td>func_16</td>
+<td>15 / 9</td>
+<td>6</td>
+<td><strong>6/6 EQUIV</strong></td>
+</tr>
+</tbody>
+</table>
+<p>24 из 24 тестируемых случаев подтверждены как эквивалентные. Ни одного тайм-аута и ни одного <code>sat</code> - все 9 проходов LLVM производят семантически корректные оптимизации на простых регистровых функциях.</p>
+<h3 id="45">4.5 Ограничения и направления развития<a class="headerlink" href="#45" title="Permanent link">&para;</a></h3>
+<p><strong>Известные ограничения прототипа:</strong></p>
+<ol>
+<li>
+<p><strong>Масштабируемость решателя.</strong> Граница сложности - около 15 базовых инструкций: функции выше этого предела стабильно укладываются в тайм-аут 300 секунд. Направление развития: применение Eldarica [13] как альтернативного CHC-решателя с иной стратегией поиска инварианта.</p>
+</li>
+<li>
+<p><strong>Функции с вызовами (call).</strong> Csmith генерирует функции, вызывающие другие функции программы. RICOVER верифицирует одиночные функции и не поддерживает межпроцедурный анализ. Направление: compositional verification, верификация пре-/постусловий вызываемых функций.</p>
+</li>
+<li>
+<p><strong>PC-relative relocations.</strong> Функции, использующие <code>auipc</code>/<code>%pcrel</code> для загрузки глобальных переменных, не поддерживаются. Направление: расширение модели состояния на сегмент глобальных данных.</p>
+</li>
+<li>
+<p><strong>Ложные срабатывания (false positives).</strong> Идентифицировано два класса:</p>
+</li>
+<li><em>Предусловия ABI</em>: RICOVER не ограничивает начальные значения регистров вызывным соглашением. Функции с узкими типами параметров (<code>uint8_t</code>, <code>int16_t</code>) могут давать <code>sat</code>, потому что O0 явно расширяет знак, а оптимизированная версия предполагает гарантию ABI.</li>
+<li><em>Мёртвые записи в стек по значению</em>: при передаче структуры по значению DSE корректно удаляет мёртвую запись в локальную копию структуры, но эта копия находится за пределами приватного фрейма (на стеке вызывающей функции), и RICOVER считает её наблюдаемой.</li>
+</ol>
+<hr />
+<h2 id="_5">Заключение<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p>В данной работе разработана методология и реализован прототип инструмента RICOVER для автоматической формальной верификации семантической эквивалентности RISC-V ассемблерного кода до и после применения оптимизаций компилятора.</p>
+<p>Достигнуты следующие результаты:</p>
+<ol>
+<li>
+<p>Разработан и обоснован метод автоматической генерации CHC-правил для инструкций RISC-V непосредственно из официальной спецификации Sail [11] через промежуточное представление Isla IR [7]. Метод устраняет необходимость ручного описания семантики и обеспечивает соответствие правил официальному стандарту архитектуры. Транслированы 199 из 746 вариантов инструкций, покрывающих полный профиль RV64IM.</p>
+</li>
+<li>
+<p>Определена и обоснована нотация проекционной семантической эквивалентности (<span class="arithmatex">\(\simeq_{\text{proj}}\)</span>), разграничивающая наблюдаемое состояние (ABI-видимые регистры, внешняя память) и приватное (стековый фрейм функции). Нотация принята как стандарт для всех экспериментов и позволяет корректно верифицировать типичные оптимизации компилятора - в частности, константную свёртку, устранение мёртвого кода, упрощение управляющего потока - без ложных отказов из-за различий в стековом layout.</p>
+</li>
+<li>
+<p>Реализован сквозной конвейер формальной верификации: от архитектурной спецификации и пары ассемблерных файлов - к SMT-LIB2 запросу в формате <code>set-logic HORN</code>, совместимому с решателями Z3/Spacer [14] и Eldarica [13].</p>
+</li>
+<li>
+<p>Верифицирован инструмент на тестовой базе из подтверждённых ошибок мисоптимизации LLVM [1] (bench1, PR44306 и другие): инструмент корректно возвращает <code>sat</code> для ошибочных оптимизаций и <code>unsat</code> для исправленных версий.</p>
+</li>
+<li>
+<p>Проведена масштабная экспериментальная оценка с применением генератора случайных программ Csmith [3] и 9 конвейеров оптимизаций LLVM. Показано, что 7 из 10 малых функций (10–13 инструкций) подтверждаются как эквивалентные в пределах 300-секундного тайм-аута. Оптимизация устранения переменных памяти сократила число array-ограничений с 43 до 10 для функции из 20 инструкций, что кратно ускорило решение.</p>
+</li>
+</ol>
+<p>Основным практическим вкладом является демонстрация того, что подход «спецификация в CHC в SMT-решатель» применим к реальным RISC-V программам, произведённым промышленным компилятором, без ручного описания семантики инструкций.</p>
+<p>Направления дальнейших исследований:
+- расширение CHC-кодирования на межпроцедурную верификацию с использованием пресуммари (compositional CHC);
+- интеграция ограничений предусловий ABI для устранения ложных срабатываний на функциях с узкими типами параметров;
+- перенос подхода на архитектуру AArch64, для которой существует аналогичная Sail-спецификация [7];
+- исследование применения Eldarica [13] и других нелинейных CHC-решателей для улучшения масштабируемости.</p>
+<hr />
+<h2 id="_6">Список литературы<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Lopes N. P., Lee J., Hur C.-K., Liu Z., Regehr J. Alive2: Bounded Translation Validation for LLVM // Proceedings of the 42nd ACM SIGPLAN International Conference on Programming Language Design and Implementation (PLDI 2021). - ACM, 2021.</p>
+</li>
+<li>
+<p>Bjørner N., Gurfinkel A., McMillan K., Rybalchenko A. Horn Clause Solvers for Program Verification // Fields of Logic and Computation II. - LNCS 9300. - Springer, 2015. - P. 24–51.</p>
+</li>
+<li>
+<p>Yang X., Chen Y., Eide E., Regehr J. Finding and Understanding Bugs in C Compilers // Proceedings of the 32nd ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2011). - ACM, 2011.</p>
+</li>
+<li>
+<p>Menendez D., Nagarakatte S. Formal Verification of SSA-Based Optimizations for LLVM // Proceedings of the 36th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2015). - ACM, 2015.</p>
+</li>
+<li>
+<p>Liu Z., Vafeiadis V. Verifying Optimizations using SMT Solvers // Proceedings of the 29th ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL 2022). - ACM, 2022.</p>
+</li>
+<li>
+<p>Dasgupta S., Park D., Kasampalis T., Adve V. S., Roșu G. A Complete Formal Semantics of x86-64 User-Level Instruction Set Architecture // Proceedings of the 40th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2019). - ACM, 2019.</p>
+</li>
+<li>
+<p>Armstrong A., Bauereiss T., Campbell B., Reid A., Gray K. E., Norton R. M., Mundkur P., Wassell M., French J., Pulte C., Flur S., Stark I., Krishnaswami N., Sewell P. ISA Semantics for ARMv8-A, RISC-V, and CHERI-MIPS // Proceedings of the 46th Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL 2019). - ACM, 2019.</p>
+</li>
+<li>
+<p>Reid A., Chen R., Deligiannis A., Gilday D., Hoyes D., Keen W., Pathirane A., Sheridan O., Sheridan P., Tripp A. Towards Making Formal Methods Normal: Meeting Developers where They Are // Proceedings of the 28th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering (ESEC/FSE 2020). - ACM, 2020.</p>
+</li>
+<li>
+<p>Leroy X. Formal Verification of a Realistic Compiler // Communications of the ACM. - 2009. - Vol. 52, No. 7. - P. 107–115.</p>
+</li>
+<li>
+<p>Tan G., Appel A. W. A Compositional Logic for Control Flow // Proceedings of the 7th International Conference on Verification, Model Checking, and Abstract Interpretation (VMCAI 2006). - LNCS 3855. - Springer, 2006. - P. 80–94.</p>
+</li>
+<li>
+<p>RISC-V International. The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA. - Version 20191213. - 2019.</p>
+</li>
+<li>
+<p>De Angelis E., Fioravanti F., Pettorossi A., Proietti M. Semantics-Based Program Manipulation for Program Verification // Science of Computer Programming. - 2016. - Vol. 132. - P. 60–82.</p>
+</li>
+<li>
+<p>Griggio A., Hyvärinen A. E. J., Junttila T., Shaik I., Tonetta S. Eldarica: A Horn Clause Solver // Proceedings of the 20th Formal Methods in Computer-Aided Design (FMCAD 2022). - IEEE, 2022.</p>
+</li>
+<li>
+<p>Hoder K., Bjørner N. Generalized Property Directed Reachability // Proceedings of the 14th International Symposium on Theory and Applications of Satisfiability Testing (SAT 2012). - LNCS 7317. - Springer, 2012. - P. 157–171.</p>
+</li>
+<li>
+<p>Nötzli A., Barbosa H., Barrett C., Nötzli A., Preiner M., Reynolds A., Tinelli C. Reconstructing Fine-Grained Proofs of Taint Analyses in the SMT-LIB Proof Framework // Proceedings of the 23rd International Conference on Logic for Programming, Artificial Intelligence and Reasoning (LPAR 2020). - 2020.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

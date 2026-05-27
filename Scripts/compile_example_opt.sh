@@ -1,0 +1,1 @@
+python3 riscv_opt_diff.py ../TestSuite/randprog/program_01.c  --opt-levels 0,1,3 --keep-files --ricover --ricover-dir ../TestSuite/randprog/ricover_format/ -o ../TestSuite/randprog/diff/ --cc ~/Tools/llvm-project/build/bin/clang --arch riscv64-linux-gnu

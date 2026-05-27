@@ -1,0 +1,2 @@
+found ADDIW: jump Kind(Name { id: 1667 }, Id(Name { id: 2854 })) to 825 ` SourceLoc { file: 68, line1: 340, char1: 24, line2: 340, char2: 43 }
+Wrote CHC instruction definitions to /tmp/ricover_instr.smt2
