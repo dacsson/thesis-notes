@@ -4,6 +4,11 @@
 
 #show: codly-init.with()
 #codly(languages: codly-languages, breakable: true)
+#import "@preview/codly:1.3.0": *
+#import "@preview/codly-languages:0.1.1": *
+
+#show: codly-init.with()
+#codly(languages: codly-languages, breakable: true)
 
 #chapter(2, "Теоретические основы")
 
@@ -47,10 +52,14 @@ $ sigma = chevron.l "pc", "regs", "mem" chevron.r $
 
 _Sail_ --- это специализированный язык для описания семантики архитектур набора инструкций (ISA) @cite7. Формальная спецификация RISC-V на языке Sail, разработанная и принятая организацией RISC-V International @cite11, является официальным машиночитаемым описанием архитектуры.
 
-Спецификация определяет функцию `execute` для каждой инструкции. Например, для класса целочисленных инструкций с непосредственным операндом (ITYPE) спецификация содержит:
+Спецификация определяет функцию `execute` для каждой инструкции. Например, для класса целочисленных инструкций с непосредственным операндом (ITYPE) спецификация содержит определение, показанное в листинге @listing-sail-itype.
 
-```
-function clause execute ITYPE(imm, rs1, rd, op) = {
+#figure(
+  caption: [Функция execute ITYPE в спецификации Sail],
+  raw(
+    block: true,
+    lang: none,
+    "function clause execute ITYPE(imm, rs1, rd, op) = {
   let immext : xlenbits = sign_extend(imm);
   X(rd) = match op {
     ADDI  => X(rs1) + immext,
@@ -60,8 +69,9 @@ function clause execute ITYPE(imm, rs1, rd, op) = {
     XORI  => X(rs1) ^ immext
   };
   RETIRE_SUCCESS
-}
-```
+}",
+  ),
+) <listing-sail-itype>
 
 Это описание однозначно задаёт семантику инструкций ADDI, SLTI, ANDI, ORI, XORI: какой регистр модифицируется, каким образом, что происходит с памятью и счётчиком команд.
 
@@ -169,30 +179,38 @@ $ "bad" <- P(sigma_0, sigma_1), Q(sigma_0, sigma_2), a in "ObsMem"(sigma_0), "me
 
 === Мотивирующий пример
 
-Рассмотрим функцию, реализующую вычисление $y = x + 2$ при $x = 1$:
+Рассмотрим функцию, реализующую вычисление $y = x + 2$ при $x = 1$ (листинги @listing-foo1 и @listing-foo2).
 
-```
-foo1 (не оптимизирована):
-  addi sp, sp, -32
-  sd   ra, 24(sp)
-  sd   s0, 16(sp)
-  addi s0, sp, 32
-  addi a0, zero, 1
-  sw   a0, -20(s0)
-  lw   a0, -20(s0)
-  addiw a0, a0, 2
-  sw   a0, -24(s0)
-  lw   a0, -24(s0)
-  ld   ra, 24(sp)
-  ld   s0, 16(sp)
-  addi sp, sp, 32
-  ret
-```
+#figure(
+  caption: [Функция foo1 --- неоптимизированный вариант (RISC-V ассемблер)],
+  raw(
+    block: true,
+    lang: "asm",
+    "addi  sp, sp, -32
+sd    ra, 24(sp)
+sd    s0, 16(sp)
+addi  s0, sp, 32
+addi  a0, zero, 1
+sw    a0, -20(s0)
+lw    a0, -20(s0)
+addiw a0, a0, 2
+sw    a0, -24(s0)
+lw    a0, -24(s0)
+ld    ra, 24(sp)
+ld    s0, 16(sp)
+addi  sp, sp, 32
+ret",
+  ),
+) <listing-foo1>
 
-```
-foo2 (оптимизирована):
-  addi a0, zero, 3
-  ret
-```
+#figure(
+  caption: [Функция foo2 --- оптимизированный вариант (RISC-V ассемблер)],
+  raw(
+    block: true,
+    lang: "asm",
+    "addi a0, zero, 3
+ret",
+  ),
+) <listing-foo2>
 
 Запрос $"bad"_"full"$ для этих двух функций *выполним* (`sat`): финальная память отличается, поскольку `foo1` записала временные значения на стек. Запрос по формулам выше *невыполним* (`unsat`): записи выполнены только в приватный фрейм $["sp"_0 - 32, "sp"_0)$, который исключён из $"ObsMem"$, а регистр `a0` в обоих случаях равен 3. Это и есть правильный ответ: константная свёртка семантически корректна.

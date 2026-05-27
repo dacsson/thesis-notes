@@ -393,37 +393,52 @@ $
 
 При разборе функции `check-equiv` ищет первую инструкцию вида `addi sp, sp, -N` (или `c.addi sp, -N`). Число $N$ является размером стекового фрейма функции. Приватный фрейм определяется как интервал $["sp"_0 - N, "sp"_0)$, где $"sp"_0$ --- значение указателя стека в начальном состоянии.
 
-CHC-запрос `bad` эмитируется как два правила, реализующих формулы из раздела 2.4, показанные в листинге @listing-bad.
+CHC-запрос `bad` эмитируется как набор правил, реализующих формулы из раздела 2.4. Для каждого ABI-видимого регистра (`a0`, `ra`, `sp`, `s0`) и счётчика команд (`pc`) генерируется отдельное правило, проверяющее расхождение; дополнительное правило проверяет наблюдаемую память. Листинг @listing-bad показывает фрагмент сгенерированного RICOVER запроса для бенчмарка bench1.
 
 #figure(
-  caption: [Bad-state запрос на эквивалентность (SMT-LIB2)],
+  caption: [Сгенерированный запрос bad для бенчмарка bench1 (SMT-LIB2, вывод RICOVER)],
   raw(
     block: true,
     lang: none,
-    "; Компонент 1: расхождение ABI-видимых регистров
-(rule (=> (and (P regs0 mem0 pc0 regsP memP pcP)
-               (Q regs0 mem0 pc0 regsQ memQ pcQ)
-               (or (distinct (get_reg regsP reg_a0)
-                             (get_reg regsQ reg_a0))
-                   (distinct (get_reg regsP reg_ra)
-                             (get_reg regsQ reg_ra))
-                   (distinct (get_reg regsP reg_sp)
-                             (get_reg regsQ reg_sp))))
-         (bad)))
+    "(declare-rel bad ())
 
-; Компонент 2: расхождение памяти вне приватного фрейма
-(rule (=> (and (P regs0 mem0 pc0 regsP memP pcP)
-               (Q regs0 mem0 pc0 regsQ memQ pcQ)
-               (obs-addr addr regs0)
-               (distinct (select memP addr)
-                         (select memQ addr)))
-         (bad)))
+; Расхождение ABI-регистра a0
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...)
+           (sp0 (_ BitVec 64)))
+    (=> (and
+          (= sp0 (get_reg regs0 reg_sp))
+          (bvuge sp0 (_ bv0 64))
+          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (not (= (get_reg regs1 reg_a0)
+                  (get_reg regs2 reg_a0))))
+        bad)))
+
+; ... аналогичные правила для ra, sp, s0, pc ...
+
+; Расхождение наблюдаемой памяти
+(rule
+  (forall ((regs0 ...) (mem0 ...) (pc0 ...)
+           (regs1 ...) (mem1 ...) (pc1 ...)
+           (regs2 ...) (mem2 ...) (pc2 ...)
+           (sp0 (_ BitVec 64)) (a (_ BitVec 64)))
+    (=> (and
+          (= sp0 (get_reg regs0 reg_sp))
+          (bvuge sp0 (_ bv0 64))
+          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (obs_addr sp0 a)
+          (not (= (select mem1 a) (select mem2 a))))
+        bad)))
 
 (query bad)",
   ),
 ) <listing-bad>
 
-Предикат `obs-addr` выводим тогда и только тогда, когда адрес `addr` находится вне приватного фрейма `[sp0 - N, sp0)`, то есть является наблюдаемым. Если `bad` выводимо --- найден контрпример; если нет --- обе программы семантически эквивалентны относительно $tilde.eq_"proj"$.
+Предикат `obs_addr` выводим тогда и только тогда, когда адрес `a` находится вне приватного фрейма `[sp0 - N, sp0)`, то есть является наблюдаемым. Если `bad` выводимо --- найден контрпример; если нет --- обе программы семантически эквивалентны относительно $tilde.eq_"proj"$.
 
 == Кодирование ветвлений и граф потока управления
 
@@ -438,10 +453,14 @@ CHC-запрос `bad` эмитируется как два правила, ре
 
 Такая структура позволяет естественно моделировать обратные рёбра (циклы) через рекурсивные CHC-правила: цикл-заголовок получает рекурсивное правило для `f_from_bb<N>`, а CHC-решатель находит индуктивный инвариант через фиксированную точку.
 
-Рассмотрим функцию `src`:
+Рассмотрим функцию `src` (листинг @listing-src-cfg).
 
-```
-src:
+#figure(
+  caption: [Функция src из бенчмарка PR44306 с аннотацией базовых блоков (RISC-V ассемблер)],
+  raw(
+    block: true,
+    lang: "asm",
+    "src:
     lw   a3, 0(a2)       ; bb0: загрузка из памяти
     lw   a4, 0(a1)       ; bb0: загрузка из памяти
     blt  a3, a4, .LBB0_2 ; bb0: терминатор - условный переход
@@ -449,8 +468,9 @@ src:
 .LBB0_2:
     ld   a1, 0(a1)       ; bb2: загрузка двойного слова
     sd   a1, 0(a0)       ; bb2: сохранение в память
-    ret                  ; bb2: выход
-```
+    ret                  ; bb2: выход",
+  ),
+) <listing-src-cfg>
 
 CFG: `bb0 в (blt взята) в bb2 [exit]`; `bb0 в (blt не взята) в bb1 в bb2 [exit]`.
 
