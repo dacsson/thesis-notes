@@ -53,7 +53,7 @@
 
   show figure.where(kind: image): set figure(
     supplement: "Рисунок",
-    )
+  )
 
   show figure.where(kind: table): set figure(supplement: "Таблица")
   show figure.where(kind: raw): set figure(supplement: "Листинг")
@@ -61,26 +61,21 @@
   show figure.caption.where(kind: table): it => [
     #align(left)[#it]
   ]
-  show figure.where(kind: table): set figure(numbering: num => 
-    numbering("1", num)
-  )
+  show figure.where(kind: table): set figure(numbering: num => numbering("1", num))
   show table.cell: c => {
     return align(left + top, text(12pt, c, hyphenate: true))
   }
-  
-  show figure.where(kind: image): set figure(numbering: num =>
-    numbering("1.1", chapter_counter.get().at(0), num))
-  
-  show figure.where(kind: raw): set figure(numbering: num =>
-    numbering("1.1", chapter_counter.get().at(0), num))
+
+  show figure.where(kind: image): set figure(numbering: num => numbering("1.1", chapter_counter.get().at(0), num))
+
+  show figure.where(kind: raw): set figure(numbering: num => numbering("1.1", chapter_counter.get().at(0), num))
 
   // a special case for svg images
-  show figure.where(kind: "image"): set figure(numbering: num =>
-    numbering("1.1", chapter_counter.get().at(0), num))
+  show figure.where(kind: "image"): set figure(numbering: num => numbering("1.1", chapter_counter.get().at(0), num))
 
 
-  show figure: set block(breakable: true) 
-  
+  show figure: set block(breakable: true)
+
   set math.equation(
     block: true,
     numbering: num => "(" + str(chapter_counter.get().at(0)) + "." + str(num) + ")",
@@ -129,7 +124,7 @@
   if break_page {
     pagebreak()
   }
-  
+
   align(center)[
     #heading(
       numbering: none,
@@ -153,30 +148,30 @@
   chapter_counter.step()
   counter(math.equation).update(0)
   align(center)[#structural-element(
-    "Глава " + str(n) + ". " + name
+    "Глава " + str(n) + ". " + name,
   )]
 }
 
 #let syntax-rule(caption, labelName, body) = {
   show figure: set align(left)
-  show figure: set block(breakable: false) 
+  show figure: set block(breakable: false)
   show raw: set text(font: "Courier New", spacing: 100%)
-  
+
   no-codly[
-  #figure(
+    #figure(
       caption: caption,
       kind: "image",
       supplement: "Рисунок",
-      body
+      body,
     ) #label(labelName)
   ]
 }
 
 #let type-rule(caption, labelName, body) = [
-    #figure(
-      caption: caption,
-      kind: "image",
-      supplement: "Рисунок",
-      body
-    ) #label(labelName)
-  ]
+  #figure(
+    caption: caption,
+    kind: "image",
+    supplement: "Рисунок",
+    body,
+  ) #label(labelName)
+]
