@@ -163,61 +163,118 @@
 ; Programs (instruction semantics inlined)
 ; ======================================================================
 
-;; ── bench1_BAD1 (1 blocks) ──
+;; ── PR44306_BAD1 (3 blocks) ──
 
-(declare-rel bench1_BAD1_bb0
+(declare-rel PR44306_BAD1_bb0
   ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
    (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
 
 (rule
   (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
            (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (pc1 (_ BitVec 64))
-           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (pc2 (_ BitVec 64))
-           (regs3 (Array (_ BitVec 5) (_ BitVec 64))) (pc3 (_ BitVec 64))
-           (regs4 (Array (_ BitVec 5) (_ BitVec 64))) (pc4 (_ BitVec 64))
-           (regs5 (Array (_ BitVec 5) (_ BitVec 64))) (pc5 (_ BitVec 64))
-           (regs6 (Array (_ BitVec 5) (_ BitVec 64))) (pc6 (_ BitVec 64))
-           (regs7 (Array (_ BitVec 5) (_ BitVec 64))) (pc7 (_ BitVec 64))
-           (regs8 (Array (_ BitVec 5) (_ BitVec 64))) (pc8 (_ BitVec 64))
-           (regs9 (Array (_ BitVec 5) (_ BitVec 64))) (pc9 (_ BitVec 64))
-           (regs10 (Array (_ BitVec 5) (_ BitVec 64))) (pc10 (_ BitVec 64)))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (pc2 (_ BitVec 64)))
     (=> (and
-          ; slli a2, a0, 56
-          (= regs1 (set_reg regs0 (_ bv12 5) (bvshl (get_reg regs0 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
+          ; lw a3, 0(a2)
+          (= regs1 (set_reg regs0 (_ bv13 5) ((_ sign_extend 32) (mem_read_4 mem0 (bvadd (get_reg regs0 (_ bv12 5)) ((_ sign_extend 52) (_ bv0 12)))))))
           (= pc1 (bvadd pc0 (_ bv4 64)))
-          ; sll a0, a0, a1
-          (= regs2 (set_reg regs1 reg_a0 (bvshl (get_reg regs1 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (get_reg regs1 (_ bv11 5)))))))
+          ; lw a4, 0(a1)
+          (= regs2 (set_reg regs1 (_ bv14 5) ((_ sign_extend 32) (mem_read_4 mem0 (bvadd (get_reg regs1 (_ bv11 5)) ((_ sign_extend 52) (_ bv0 12)))))))
           (= pc2 (bvadd pc1 (_ bv4 64)))
-          ; srai a2, a2, 56
-          (= regs3 (set_reg regs2 (_ bv12 5) (bvashr (get_reg regs2 (_ bv12 5)) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc3 (bvadd pc2 (_ bv4 64)))
-          ; zext.b a0, a0
-          (= regs4 (set_reg regs3 reg_a0 (bvand (get_reg regs3 reg_a0) ((_ sign_extend 52) (_ bv255 12)))))
-          (= pc4 (bvadd pc3 (_ bv4 64)))
-          ; srl a0, a0, a1
-          (= regs5 (set_reg regs4 reg_a0 (bvlshr (get_reg regs4 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (get_reg regs4 (_ bv11 5)))))))
-          (= pc5 (bvadd pc4 (_ bv4 64)))
-          ; slli a0, a0, 56
-          (= regs6 (set_reg regs5 reg_a0 (bvshl (get_reg regs5 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc6 (bvadd pc5 (_ bv4 64)))
-          ; srai a0, a0, 56
-          (= regs7 (set_reg regs6 reg_a0 (bvashr (get_reg regs6 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc7 (bvadd pc6 (_ bv4 64)))
-          ; slt a0, a0, a2
-          (= regs8 (set_reg regs7 reg_a0 ((_ zero_extend 63) (ite (bvslt (get_reg regs7 reg_a0) (get_reg regs7 (_ bv12 5))) (_ bv1 1) (_ bv0 1)))))
-          (= pc8 (bvadd pc7 (_ bv4 64)))
-          ; xori a0, a0, 1
-          (= regs9 (set_reg regs8 reg_a0 (bvxor (get_reg regs8 reg_a0) ((_ sign_extend 52) (_ bv1 12)))))
-          (= pc9 (bvadd pc8 (_ bv4 64)))
-          ; ret
-          (= regs10 (set_reg regs9 reg_zero (bvadd pc9 (_ bv4 64))))
-          (= pc10 (concat ((_ extract 63 1) (bvadd (get_reg regs9 reg_ra) ((_ sign_extend 52) (_ bv0 12)))) (_ bv0 1)))
         )
-        (bench1_BAD1_bb0 regs0 mem0 pc0 regs10 mem0 pc10))))
+        (PR44306_BAD1_bb0 regs0 mem0 pc0 regs2 mem0 pc2))))
 
-(declare-rel bench1_BAD1
+(declare-rel PR44306_BAD1_bb1
   ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
    (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (pc1 (_ BitVec 64)))
+    (=> (and
+          ; mv a1, a2
+          (= regs1 (set_reg regs0 (_ bv11 5) (bvadd (get_reg regs0 (_ bv12 5)) ((_ sign_extend 52) (_ bv0 12)))))
+          (= pc1 (bvadd pc0 (_ bv4 64)))
+        )
+        (PR44306_BAD1_bb1 regs0 mem0 pc0 regs1 mem0 pc1))))
+
+(declare-rel PR44306_BAD1_bb2
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (mem1 (Array (_ BitVec 64) (_ BitVec 8))) (pc2 (_ BitVec 64))
+           (regs3 (Array (_ BitVec 5) (_ BitVec 64))) (pc3 (_ BitVec 64)))
+    (=> (and
+          ; ld a1, 0(a1)
+          (= regs1 (set_reg regs0 (_ bv11 5) ((_ sign_extend 0) (mem_read_8 mem0 (bvadd (get_reg regs0 (_ bv11 5)) ((_ sign_extend 52) (_ bv0 12)))))))
+          (= pc1 (bvadd pc0 (_ bv4 64)))
+          ; sd a1, 0(a0)
+          (= regs2 regs1)
+          (= mem1 (write_mem_dword mem0 (bvadd (get_reg regs1 reg_a0) ((_ sign_extend 52) (_ bv0 12))) ((_ extract 63 0) (get_reg regs1 (_ bv11 5)))))
+          (= pc2 (bvadd pc1 (_ bv4 64)))
+          ; ret
+          (= regs3 (set_reg regs2 reg_zero (bvadd pc2 (_ bv4 64))))
+          (= pc3 (concat ((_ extract 63 1) (bvadd (get_reg regs2 reg_ra) ((_ sign_extend 52) (_ bv0 12)))) (_ bv0 1)))
+        )
+        (PR44306_BAD1_bb2 regs0 mem0 pc0 regs3 mem1 pc3))))
+
+(declare-rel PR44306_BAD1
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+(declare-rel PR44306_BAD1_from_bb1
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+(declare-rel PR44306_BAD1_from_bb2
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+; taken: blt a3, a4, .LBB0_2 → bb2
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD1_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5)))
+             (PR44306_BAD1_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD1 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+; not-taken: fallthrough → bb1
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD1_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (not (bvslt (get_reg regs1 (_ bv13 5)) (get_reg regs1 (_ bv14 5))))
+             (PR44306_BAD1_from_bb1 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD1 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD1_bb1 regs0 mem0 pc0 regs1 mem1 pc1)
+             (PR44306_BAD1_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD1_from_bb1 regs0 mem0 pc0 regs2 mem2 pc2))))
 
 (rule
   (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
@@ -226,60 +283,117 @@
            (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
            (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
            (pc1 (_ BitVec 64)))
-    (=> (bench1_BAD1_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
-        (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1))))
+    (=> (PR44306_BAD1_bb2 regs0 mem0 pc0 regs1 mem1 pc1)
+        (PR44306_BAD1_from_bb2 regs0 mem0 pc0 regs1 mem1 pc1))))
 
-;; ── bench1_BAD2 (1 blocks) ──
+;; ── PR44306_BAD2 (3 blocks) ──
 
-(declare-rel bench1_BAD2_bb0
+(declare-rel PR44306_BAD2_bb0
   ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
    (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
 
 (rule
   (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
            (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (pc1 (_ BitVec 64))
-           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (pc2 (_ BitVec 64))
-           (regs3 (Array (_ BitVec 5) (_ BitVec 64))) (pc3 (_ BitVec 64))
-           (regs4 (Array (_ BitVec 5) (_ BitVec 64))) (pc4 (_ BitVec 64))
-           (regs5 (Array (_ BitVec 5) (_ BitVec 64))) (pc5 (_ BitVec 64))
-           (regs6 (Array (_ BitVec 5) (_ BitVec 64))) (pc6 (_ BitVec 64))
-           (regs7 (Array (_ BitVec 5) (_ BitVec 64))) (pc7 (_ BitVec 64))
-           (regs8 (Array (_ BitVec 5) (_ BitVec 64))) (pc8 (_ BitVec 64))
-           (regs9 (Array (_ BitVec 5) (_ BitVec 64))) (pc9 (_ BitVec 64)))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (pc2 (_ BitVec 64)))
     (=> (and
-          ; slli a0, a0, 56
-          (= regs1 (set_reg regs0 reg_a0 (bvshl (get_reg regs0 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
+          ; lw a2, 0(a2)
+          (= regs1 (set_reg regs0 (_ bv12 5) ((_ sign_extend 32) (mem_read_4 mem0 (bvadd (get_reg regs0 (_ bv12 5)) ((_ sign_extend 52) (_ bv0 12)))))))
           (= pc1 (bvadd pc0 (_ bv4 64)))
-          ; li a2, 255
-          (= regs2 (set_reg regs1 (_ bv12 5) (bvadd (get_reg regs1 reg_zero) ((_ sign_extend 52) (_ bv255 12)))))
+          ; lw a1, 0(a1)
+          (= regs2 (set_reg regs1 (_ bv11 5) ((_ sign_extend 32) (mem_read_4 mem0 (bvadd (get_reg regs1 (_ bv11 5)) ((_ sign_extend 52) (_ bv0 12)))))))
           (= pc2 (bvadd pc1 (_ bv4 64)))
-          ; srai a0, a0, 56
-          (= regs3 (set_reg regs2 reg_a0 (bvashr (get_reg regs2 reg_a0) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc3 (bvadd pc2 (_ bv4 64)))
-          ; srl a1, a2, a1
-          (= regs4 (set_reg regs3 (_ bv11 5) (bvlshr (get_reg regs3 (_ bv12 5)) ((_ zero_extend 58) ((_ extract 5 0) (get_reg regs3 (_ bv11 5)))))))
-          (= pc4 (bvadd pc3 (_ bv4 64)))
-          ; slli a1, a1, 56
-          (= regs5 (set_reg regs4 (_ bv11 5) (bvshl (get_reg regs4 (_ bv11 5)) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc5 (bvadd pc4 (_ bv4 64)))
-          ; srai a1, a1, 56
-          (= regs6 (set_reg regs5 (_ bv11 5) (bvashr (get_reg regs5 (_ bv11 5)) ((_ zero_extend 58) ((_ extract 5 0) (_ bv56 6))))))
-          (= pc6 (bvadd pc5 (_ bv4 64)))
-          ; slt a0, a1, a0
-          (= regs7 (set_reg regs6 reg_a0 ((_ zero_extend 63) (ite (bvslt (get_reg regs6 (_ bv11 5)) (get_reg regs6 reg_a0)) (_ bv1 1) (_ bv0 1)))))
-          (= pc7 (bvadd pc6 (_ bv4 64)))
-          ; xori a0, a0, 1
-          (= regs8 (set_reg regs7 reg_a0 (bvxor (get_reg regs7 reg_a0) ((_ sign_extend 52) (_ bv1 12)))))
-          (= pc8 (bvadd pc7 (_ bv4 64)))
-          ; ret
-          (= regs9 (set_reg regs8 reg_zero (bvadd pc8 (_ bv4 64))))
-          (= pc9 (concat ((_ extract 63 1) (bvadd (get_reg regs8 reg_ra) ((_ sign_extend 52) (_ bv0 12)))) (_ bv0 1)))
         )
-        (bench1_BAD2_bb0 regs0 mem0 pc0 regs9 mem0 pc9))))
+        (PR44306_BAD2_bb0 regs0 mem0 pc0 regs2 mem0 pc2))))
 
-(declare-rel bench1_BAD2
+(declare-rel PR44306_BAD2_bb1
   ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
    (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (pc1 (_ BitVec 64)))
+    (=> (and
+          ; mv a1, a2
+          (= regs1 (set_reg regs0 (_ bv11 5) (bvadd (get_reg regs0 (_ bv12 5)) ((_ sign_extend 52) (_ bv0 12)))))
+          (= pc1 (bvadd pc0 (_ bv4 64)))
+        )
+        (PR44306_BAD2_bb1 regs0 mem0 pc0 regs1 mem0 pc1))))
+
+(declare-rel PR44306_BAD2_bb2
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64))) (mem0 (Array (_ BitVec 64) (_ BitVec 8))) (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64))) (mem1 (Array (_ BitVec 64) (_ BitVec 8))) (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64))) (pc2 (_ BitVec 64)))
+    (=> (and
+          ; sw a1, 0(a0)
+          (= regs1 regs0)
+          (= mem1 (write_mem_word mem0 (bvadd (get_reg regs0 reg_a0) ((_ sign_extend 52) (_ bv0 12))) ((_ zero_extend 32) ((_ extract 31 0) (get_reg regs0 (_ bv11 5))))))
+          (= pc1 (bvadd pc0 (_ bv4 64)))
+          ; ret
+          (= regs2 (set_reg regs1 reg_zero (bvadd pc1 (_ bv4 64))))
+          (= pc2 (concat ((_ extract 63 1) (bvadd (get_reg regs1 reg_ra) ((_ sign_extend 52) (_ bv0 12)))) (_ bv0 1)))
+        )
+        (PR44306_BAD2_bb2 regs0 mem0 pc0 regs2 mem1 pc2))))
+
+(declare-rel PR44306_BAD2
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+(declare-rel PR44306_BAD2_from_bb1
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+(declare-rel PR44306_BAD2_from_bb2
+  ((Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)
+   (Array (_ BitVec 5) (_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 8)) (_ BitVec 64)))
+
+; taken: blt a2, a1, .LBB0_2 → bb2
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD2_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (bvslt (get_reg regs1 (_ bv12 5)) (get_reg regs1 (_ bv11 5)))
+             (PR44306_BAD2_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+; not-taken: fallthrough → bb1
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD2_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
+             (not (bvslt (get_reg regs1 (_ bv12 5)) (get_reg regs1 (_ bv11 5))))
+             (PR44306_BAD2_from_bb1 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2))))
+
+(rule
+  (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem0 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc0 (_ BitVec 64))
+           (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc1 (_ BitVec 64))
+           (regs2 (Array (_ BitVec 5) (_ BitVec 64)))
+           (mem2 (Array (_ BitVec 64) (_ BitVec 8)))
+           (pc2 (_ BitVec 64)))
+    (=> (and (PR44306_BAD2_bb1 regs0 mem0 pc0 regs1 mem1 pc1)
+             (PR44306_BAD2_from_bb2 regs1 mem1 pc1 regs2 mem2 pc2))
+        (PR44306_BAD2_from_bb1 regs0 mem0 pc0 regs2 mem2 pc2))))
 
 (rule
   (forall ((regs0 (Array (_ BitVec 5) (_ BitVec 64)))
@@ -288,8 +402,8 @@
            (regs1 (Array (_ BitVec 5) (_ BitVec 64)))
            (mem1 (Array (_ BitVec 64) (_ BitVec 8)))
            (pc1 (_ BitVec 64)))
-    (=> (bench1_BAD2_bb0 regs0 mem0 pc0 regs1 mem1 pc1)
-        (bench1_BAD2 regs0 mem0 pc0 regs1 mem1 pc1))))
+    (=> (PR44306_BAD2_bb2 regs0 mem0 pc0 regs1 mem1 pc1)
+        (PR44306_BAD2_from_bb2 regs0 mem0 pc0 regs1 mem1 pc1))))
 
 ; ======================================================================
 ; Observable-address predicate
@@ -330,8 +444,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (not (= (get_reg regs1 reg_a0) (get_reg regs2 reg_a0))))
         bad)))
 
@@ -350,8 +464,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (not (= (get_reg regs1 reg_ra) (get_reg regs2 reg_ra))))
         bad)))
 
@@ -370,8 +484,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (not (= (get_reg regs1 reg_sp) (get_reg regs2 reg_sp))))
         bad)))
 
@@ -390,8 +504,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (not (= (get_reg regs1 reg_s0) (get_reg regs2 reg_s0))))
         bad)))
 
@@ -410,8 +524,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (not (= pc1 pc2)))
         bad)))
 
@@ -431,8 +545,8 @@
     (=> (and
           (= sp0 (get_reg regs0 reg_sp))
           (bvuge sp0 (_ bv0 64))
-          (bench1_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
-          (bench1_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
+          (PR44306_BAD1 regs0 mem0 pc0 regs1 mem1 pc1)
+          (PR44306_BAD2 regs0 mem0 pc0 regs2 mem2 pc2)
           (obs_addr sp0 a)
           (not (= (select mem1 a) (select mem2 a))))
         bad)))

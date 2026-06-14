@@ -405,11 +405,19 @@ def print_summary(all_results: List[dict]):
         by_pipeline.setdefault(r["pipeline"], []).append(r)
     if len(by_pipeline) > 1:
         print(f"\n--- Per-pipeline breakdown ---")
+        print(f"  {'pipeline':20s}  {'tested':>6s} {'unsat':>5s} {'sat':>3s} {'t/o':>3s}  "
+              f"{'sum_s':>8s} {'mean_s':>7s} {'median_s':>8s} {'max_s':>7s}")
         for pipe, rs in sorted(by_pipeline.items()):
             n_unsat = sum(1 for r in rs if r["z3"] == "unsat")
             n_sat = sum(1 for r in rs if r["z3"] == "sat")
             n_to = sum(1 for r in rs if r["z3"] == "timeout")
-            print(f"  {pipe:20s}: {len(rs)} tested, {n_unsat} unsat, {n_sat} sat, {n_to} timeout")
+            times = sorted(r["z3_time"] for r in rs)
+            tsum = sum(times)
+            tmean = tsum / len(times) if times else 0.0
+            tmed = times[len(times) // 2] if times else 0.0
+            tmax = times[-1] if times else 0.0
+            print(f"  {pipe:20s}  {len(rs):6d} {n_unsat:5d} {n_sat:3d} {n_to:3d}  "
+                  f"{tsum:8.1f} {tmean:7.1f} {tmed:8.1f} {tmax:7.1f}")
 
     tested = [r for r in all_results if r["z3"] != "skipped"]
     if tested:
@@ -488,15 +496,38 @@ def main():
         print(f"Z3 flags: {' '.join(args.z3_flags)}")
 
     all_results = []
+    wall_t0 = time.time()
     for i in range(args.num_programs):
         results = process_one_program(i, args, pipelines, args.output_dir)
         all_results.extend(results)
+    wall_elapsed = time.time() - wall_t0
 
     print_summary(all_results)
 
+    z3_total = sum(r["z3_time"] for r in all_results)
+    print(f"\n--- Wall-clock ---")
+    print(f"  Total run time (all programs+passes): {wall_elapsed:.1f}s ({wall_elapsed/60:.1f} min)")
+    print(f"  Z3 solve time (sum over queries):     {z3_total:.1f}s ({z3_total/60:.1f} min)")
+    print(f"  Other (csmith/clang/opt/llc/ricover): {wall_elapsed - z3_total:.1f}s")
+
     results_file = args.output_dir / "results.json"
     with open(results_file, "w") as f:
-        json.dump(all_results, f, indent=2)
+        json.dump({
+            "params": {
+                "num_programs": args.num_programs,
+                "pipelines": pipelines,
+                "z3_timeout": args.z3_timeout,
+                "z3_flags": args.z3_flags,
+                "llc_opt": args.llc_opt,
+                "max_instrs": args.max_instrs,
+                "max_mem_ops": args.max_mem_ops,
+                "relaxed": args.relaxed,
+                "seed": args.seed,
+            },
+            "wall_clock_s": round(wall_elapsed, 1),
+            "z3_total_s": round(z3_total, 1),
+            "results": all_results,
+        }, f, indent=2)
     print(f"\nFull results saved to {results_file}")
 
 
