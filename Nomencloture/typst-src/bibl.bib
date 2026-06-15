@@ -1,0 +1,246 @@
+@inproceedings{cite1,
+    author = {Lopes, Nuno P. and Lee, Juneyoung and Hur, Chung-Kil and Liu, Zhengyang and Regehr, John},
+    title = {Alive2: bounded translation validation for LLVM},
+    year = {2021},
+    isbn = {9781450383912},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3453483.3454030},
+    doi = {10.1145/3453483.3454030},
+    abstract = {We designed, implemented, and deployed Alive2: a bounded translation validation tool for the LLVM compiler’s intermediate representation (IR). It limits resource consumption by, for example, unrolling loops up to some bound, which means there are circumstances in which it misses bugs. Alive2 is designed to avoid false alarms, is fully automatic through the use of an SMT solver, and requires no changes to LLVM. By running Alive2 over LLVM’s unit test suite, we discovered and reported 47 new bugs, 28 of which have been fixed already. Moreover, our work has led to eight patches to the LLVM Language Reference—the definitive description of the semantics of its IR—and we have participated in numerous discussions with the goal of clarifying ambiguities and fixing errors in these semantics. Alive2 is open source and we also made it available on the web, where it has active users from the LLVM community.},
+    booktitle = {Proceedings of the 42nd ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+    pages = {65–79},
+    numpages = {15},
+    keywords = {Automatic Software Verification, Compilers, IR Semantics, Translation Validation},
+    location = {Virtual, Canada},
+    series = {PLDI 2021}
+}
+
+@Inbook{cite2,
+    author="Bj{\o}rner, Nikolaj
+    and Gurfinkel, Arie
+    and McMillan, Ken
+    and Rybalchenko, Andrey",
+    editor="Beklemishev, Lev D.
+    and Blass, Andreas
+    and Dershowitz, Nachum
+    and Finkbeiner, Bernd
+    and Schulte, Wolfram",
+    title="Horn Clause Solvers for Program Verification",
+    bookTitle="Fields of Logic and Computation II: Essays Dedicated to Yuri Gurevich on the Occasion of His 75th Birthday",
+    year="2015",
+    publisher="Springer International Publishing",
+    address="Cham",
+    pages="24--51",
+    abstract="Automatic program verification and symbolic model checking tools interface with theorem proving technologies that check satisfiability of formulas. A theme pursued in the past years by the authors of this paper has been to encode symbolic model problems directly as Horn clauses and develop dedicated solvers for Horn clauses. Our solvers are called Duality, HSF, SeaHorn, and {\$}{\$}{\backslash}mu {\{}Z{\}}{\$}{\$}and we have devoted considerable attention in recent papers to algorithms for solving Horn clauses. This paper complements these strides as we summarize main useful properties of Horn clauses, illustrate encodings of procedural program verification into Horn clauses and then highlight a number of useful simplification strategies at the level of Horn clauses. Solving Horn clauses amounts to establishing Existential positive Fixed-point Logic formulas, a perspective that was promoted by Blass and Gurevich.",
+    isbn="978-3-319-23534-9",
+    doi="10.1007/978-3-319-23534-9_2",
+    url="https://doi.org/10.1007/978-3-319-23534-9_2"
+}
+
+@article{cite3,
+author = {Yang, Xuejun and Chen, Yang and Eide, Eric and Regehr, John},
+title = {Finding and understanding bugs in C compilers},
+year = {2011},
+issue_date = {June 2011},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {46},
+number = {6},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/1993316.1993532},
+doi = {10.1145/1993316.1993532},
+abstract = {Compilers should be correct. To improve the quality of C compilers, we created Csmith, a randomized test-case generation tool, and spent three years using it to find compiler bugs. During this period we reported more than 325 previously unknown bugs to compiler developers. Every compiler we tested was found to crash and also to silently generate wrong code when presented with valid input. In this paper we present our compiler-testing tool and the results of our bug-hunting study. Our first contribution is to advance the state of the art in compiler testing. Unlike previous tools, Csmith generates programs that cover a large subset of C while avoiding the undefined and unspecified behaviors that would destroy its ability to automatically find wrong-code bugs. Our second contribution is a collection of qualitative and quantitative results about the bugs we have found in open-source C compilers.},
+journal = {SIGPLAN Not.},
+month = jun,
+pages = {283–294},
+numpages = {12},
+keywords = {random testing, random program generation, compiler testing, compiler defect, automated testing}
+}
+
+@article{cite4,
+    author = {Zhao, Jianzhou and Nagarakatte, Santosh and Martin, Milo M.K. and Zdancewic, Steve},
+    title = {Formal verification of SSA-based optimizations for LLVM},
+    year = {2013},
+    issue_date = {June 2013},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {48},
+    number = {6},
+    issn = {0362-1340},
+    url = {https://doi.org/10.1145/2499370.2462164},
+    doi = {10.1145/2499370.2462164},
+    abstract = {Modern compilers, such as LLVM and GCC, use a static single assignment(SSA) intermediate representation (IR) to simplify and enable many advanced optimizations. However, formally verifying the correctness of SSA-based optimizations is challenging because SSA properties depend on a function's entire control-flow graph.This paper addresses this challenge by developing a proof technique for proving SSA-based program invariants and compiler optimizations. We use this technique in the Coq proof assistant to create mechanized correctness proofs of several "micro" transformations that form the building blocks for larger SSA optimizations. To demonstrate the utility of this approach, we formally verify a variant of LLVM's mem2reg transformation in Vellvm, a Coq-based formal semantics of the LLVM IR. The extracted implementation generates code with performance comparable to that of LLVM's unverified implementation.},
+    journal = {SIGPLAN Not.},
+    month = jun,
+    pages = {175–186},
+    numpages = {12},
+    keywords = {single static assignment, llvm, coq}
+}
+
+@article{cite7,
+    author = {Armstrong, Alasdair and Bauereiss, Thomas and Campbell, Brian and Reid, Alastair and Gray, Kathryn E. and Norton, Robert M. and Mundkur, Prashanth and Wassell, Mark and French, Jon and Pulte, Christopher and Flur, Shaked and Stark, Ian and Krishnaswami, Neel and Sewell, Peter},
+    title = {ISA semantics for ARMv8-a, RISC-v, and CHERI-MIPS},
+    year = {2019},
+    issue_date = {January 2019},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {3},
+    number = {POPL},
+    url = {https://doi.org/10.1145/3290384},
+    doi = {10.1145/3290384},
+    abstract = {Architecture specifications notionally define the fundamental interface between hardware and software: the envelope of allowed behaviour for processor implementations, and the basic assumptions for software development and verification. But in practice, they are typically prose and pseudocode documents, not rigorous or executable artifacts, leaving software and verification on shaky ground.  In this paper, we present rigorous semantic models for the sequential behaviour of large parts of the mainstream ARMv8-A, RISC-V, and MIPS architectures, and the research CHERI-MIPS architecture, that are complete enough to boot operating systems, variously Linux, FreeBSD, or seL4. Our ARMv8-A models are automatically translated from authoritative ARM-internal definitions, and (in one variant) tested against the ARM Architecture Validation Suite.  We do this using a custom language for ISA semantics, Sail, with a lightweight dependent type system, that supports automatic generation of emulator code in C and OCaml, and automatic generation of proof-assistant definitions for Isabelle, HOL4, and (currently only for MIPS) Coq. We use the former for validation, and to assess specification coverage. To demonstrate the usability of the latter, we prove (in Isabelle) correctness of a purely functional characterisation of ARMv8-A address translation. We moreover integrate the RISC-V model into the RMEM tool for (user-mode) relaxed-memory concurrency exploration. We prove (on paper) the soundness of the core Sail type system.  We thereby take a big step towards making the architectural abstraction actually well-defined, establishing foundations for verification and reasoning.},
+    journal = {Proc. ACM Program. Lang.},
+    month = jan,
+    articleno = {71},
+    numpages = {31},
+    keywords = {Instruction Set Architectures, Semantics, Theorem Proving}
+}
+
+@inproceedings{cite8,
+  author = {Reid, Alastair and Chen, Rick and Deligiannis, Anastasios and Gilday, David and Hoyes, David and Keen, Will and Pathirane, Ashan and Sheridan, Owen and Sheridan, Peter and Tripp, Alison},
+  title = {Towards Making Formal Methods Normal: Meeting Developers where They Are},
+  booktitle = {Proceedings of the 28th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+  series = {ESEC/FSE 2020},
+  year = {2020},
+  publisher = {ACM},
+}
+
+@article{cite9,
+    author = {Leroy, Xavier},
+    title = {Formal verification of a realistic compiler},
+    year = {2009},
+    issue_date = {July 2009},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {52},
+    number = {7},
+    issn = {0001-0782},
+    url = {https://doi.org/10.1145/1538788.1538814},
+    doi = {10.1145/1538788.1538814},
+    abstract = {This paper reports on the development and formal verification (proof of semantic preservation) of CompCert, a compiler from Clight (a large subset of the C programming language) to PowerPC assembly code, using the Coq proof assistant both for programming the compiler and for proving its correctness. Such a verified compiler is useful in the context of critical software and its formal verification: the verification of the compiler guarantees that the safety properties proved on the source code hold for the executable compiled code as well.},
+    journal = {Commun. ACM},
+    month = jul,
+    pages = {107–115},
+    numpages = {9}
+}
+
+@inproceedings{cite10,
+    author = {Tan, Gang and Appel, Andrew W.},
+    title = {A compositional logic for control flow},
+    year = {2006},
+    isbn = {3540311394},
+    publisher = {Springer-Verlag},
+    address = {Berlin, Heidelberg},
+    url = {https://doi.org/10.1007/11609773_6},
+    doi = {10.1007/11609773_6},
+    abstract = {We present a program logic, $mathcal{L}_{c}$, which modularly reasons about unstructured control flow in machine-language programs. Unlike previous program logics, the basic reasoning units in $mathcal{L}_{c}$ are multiple-entry and multiple-exit program fragments. $mathcal{L}_{c}$ provides fine-grained composition rules to compose program fragments. It is not only useful for reasoning about unstructured control flow in machine languages, but also useful for deriving rules for common control-flow structures such as while-loops, repeat-until-loops, and many others. We also present a semantics for $mathcal{L}_{c}$ and prove that the logic is both sound and complete with respect to the semantics. As an application, $mathcal{L}_{c}$ and its semantics have been implemented on top of the $mathcal{L}_{c}$ machine language, and are embedded in the Foundational Proof-Carrying Code project to produce memory-safety proofs for machine-language programs.},
+    booktitle = {Proceedings of the 7th International Conference on Verification, Model Checking, and Abstract Interpretation},
+    pages = {80–94},
+    numpages = {15},
+    location = {Charleston, SC},
+    series = {VMCAI'06}
+}
+
+@manual{cite11,
+  author = {{RISC-V International}},
+  title = {The {RISC-V} Instruction Set Manual, Volume {I}: Unprivileged {ISA}},
+  year = {2019},
+  note = {Version 20191213},
+}
+
+@inproceedings{cite12,
+    author = {De Angelis, E. and Fioravanti, F. and Pettorossi, A. and Proietti, M.},
+    title = {Semantics-based generation of verification conditions by program specialization},
+    year = {2015},
+    isbn = {9781450335164},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/2790449.2790529},
+    doi = {10.1145/2790449.2790529},
+    abstract = {We present a method for automatically generating verification conditions for a class of imperative programs and safety properties. Our method is parametric with respect to the semantics of the imperative programming language, as it specializes, by using unfold/fold transformation rules, a Horn clause interpreter that encodes that semantics.We define a multi-step operational semantics for a fragment of the C language and compare the verification conditions obtained by using this semantics with those obtained by using a more traditional small-step semantics. The flexibility of the approach is further demonstrated by showing that it is possible to easily take into account alternative operational semantics definitions for modeling new language features. Finally, we provide an experimental evaluation of the method by generating verification conditions using the multi-step and the small-step semantics for a few hundreds of programs taken from various publicly available benchmarks, and by checking the satisfiability of these verification conditions by using state-of-the-art Horn clause solvers. These experiments show that automated verification of programs from a formal definition of the operational semantics is indeed feasible in practice.},
+    booktitle = {Proceedings of the 17th International Symposium on Principles and Practice of Declarative Programming},
+    pages = {91–102},
+    numpages = {12},
+    keywords = {verification conditions, software model checking, semantics of programming languages, program verification, program specialization, constraint logic programming, Horn clauses},
+    location = {Siena, Italy},
+    series = {PPDP '15}
+}
+
+@inproceedings{cite13,
+ author={Hojjat, Hossein and Rümmer, Philipp},
+  booktitle={2018 Formal Methods in Computer Aided Design (FMCAD)},
+  title={The ELDARICA Horn Solver},
+  year={2018},
+  volume={},
+  number={},
+  pages={1-7},
+  keywords={Interpolation;Tools;Engines;Libraries;Acceleration;Software algorithms;Safety},
+  doi={10.23919/FMCAD.2018.8603013}
+}
+
+@inproceedings{cite14,
+author = {Hoder, Kry\v{s}tof and Bj\o{}rner, Nikolaj},
+title = {Generalized property directed reachability},
+year = {2012},
+isbn = {9783642316111},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/978-3-642-31612-8_13},
+doi = {10.1007/978-3-642-31612-8_13},
+abstract = {The IC3 algorithm was recently introduced for proving properties of finite state reactive systems. It has been applied very successfully to hardware model checking. We provide a specification of the algorithm using an abstract transition system and highlight its dual operation: model search and conflict resolution. We then generalize it along two dimensions. Along one dimension we address nonlinear fixed-point operators (push-down systems) and evaluate the algorithm on Boolean programs. In the second dimension we leverage proofs and models and generalize the method to Boolean constraints involving theories.},
+booktitle = {Proceedings of the 15th International Conference on Theory and Applications of Satisfiability Testing},
+pages = {157–171},
+numpages = {15},
+location = {Trento, Italy},
+series = {SAT'12}
+}
+
+@article{cite16,
+title = {A structural approach to operational semantics},
+journal = {The Journal of Logic and Algebraic Programming},
+volume = {60-61},
+pages = {17-139},
+year = {2004},
+note = {Structural Operational Semantics},
+issn = {1567-8326},
+doi = {https://doi.org/10.1016/j.jlap.2004.05.001},
+url = {https://www.sciencedirect.com/science/article/pii/S1567832604000402}
+}
+
+@inproceedings{cite17,
+author = {Sammler, Michael and Hammond, Angus and Lepigre, Rodolphe and Campbell, Brian and Pichon-Pharabod, Jean and Dreyer, Derek and Garg, Deepak and Sewell, Peter},
+title = {Islaris: verification of machine code against authoritative ISA semantics},
+year = {2022},
+isbn = {9781450392655},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3519939.3523434},
+doi = {10.1145/3519939.3523434},
+abstract = {Recent years have seen great advances towards verifying large-scale systems code. However, these verifications are usually based on hand-written assembly or machine-code semantics for the underlying architecture that only cover a small part of the instruction set architecture (ISA). In contrast, other recent work has used Sail to establish formal models for large real-world architectures, including Armv8-A and RISC-V, that are comprehensive (complete enough to boot an operating system or hypervisor) and authoritative (automatically derived from the Arm internal model and validated against the Arm validation suite, and adopted as the official formal specification by RISC-V International, respectively). But the scale and complexity of these models makes them challenging to use as a basis for verification. In this paper, we propose Islaris, the first system to support verification of machine code above these complete and authoritative real-world ISA specifications. Islaris uses a novel combination of SMT-solver-based symbolic execution (the Isla symbolic executor) and automated reasoning in a foundational program logic (a new separation logic we derive using Iris in Coq). We show that this approach can handle Armv8-A and RISC-V machine code exercising a wide range of systems features, including installing and calling exception vectors, code parametric on a relocation address offset (from the production pKVM hypervisor); unaligned access faults; memory-mapped IO; and compiled C code using inline assembly and function pointers.},
+booktitle = {Proceedings of the 43rd ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+pages = {825–840},
+numpages = {16},
+keywords = {Arm, Coq, Iris, Isla, RISC-V, Sail, assembly, proof automation, separation logic, verification},
+location = {San Diego, CA, USA},
+series = {PLDI 2022}
+}
+
+@inproceedings{cite18,
+author = {Berger, Ryan and Briles, Mitch and Boushehrinejad Moradi, Nader and Coughlin, Nicholas and Lam, Kait and Lopes, Nuno P. and Mada, Stefan and Tirpankar, Tanmay and Regehr, John},
+title = {Translation Validation for LLVM’s AArch64 Backend},
+year = {2025},
+issue_date = {October 2025},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {9},
+number = {OOPSLA2},
+url = {https://doi.org/10.1145/3763147},
+doi = {10.1145/3763147},
+abstract = {LLVM's backends translate its intermediate representation (IR) to   assembly or object code. Alongside register allocation and   instruction selection, these backends contain many analogues of   components traditionally associated with compiler middle ends:   dataflow analyses, common subexpression elimination, loop invariant   code motion, and a first-class IR -- MIR, the "machine IR." In   effect, this kind of compiler backend is a highly optimizing compiler   in its own right, with all of the correctness hazards entailed by a   million lines of intricate C++. As a step towards gaining confidence   in the correctness of work done by LLVM backends, we have created   arm-tv, which formally verifies translations between LLVM IR and   AArch64 (64-bit ARM) code. Ours is not the first translation   validation work for LLVM, but we have advanced the state of the art   along multiple fronts: arm-tv is a checking validator that enforces   numerous ABI rules; we have extended Alive2 (which we reuse as a   verification backend) to deal with unstructured mixes of pointers and   integers that are typical of assembly code; we investigate the   tradeoffs between hand-written AArch64 semantics and those derived   mechanically from ARM's published formal semantics; and, we have used   arm-tv to discover 45 previously unknown miscompilation bugs in this   LLVM backend, most of which are now fixed in upstream LLVM.},
+journal = {Proc. ACM Program. Lang.},
+month = oct,
+articleno = {369},
+numpages = {26},
+keywords = {application binary interface, lifting, semantics, translation validation}
+}

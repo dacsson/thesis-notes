@@ -1,0 +1,477 @@
+val zz5izDzKz5i64 = "%i->%i64" : (%i) ->  %i64
+
+val zz5i64zDzKz5i = "%i64->%i" : (%i64) ->  %i
+
+
+
+
+
+enum ziop {
+  zRISCV_ADDI,
+  zRISCV_SLTI,
+  zRISCV_SLTIU,
+  zRISCV_XORI,
+  zRISCV_ORI,
+  zRISCV_ANDI
+}
+
+union zexception {
+  z__dummy_exnz3: %unit
+}
+
+#tuplestruct ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop0 ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop1 ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop2 ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop3
+
+struct ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop {
+  ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop0: %bv12,
+  ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop1: %bv5,
+  ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop2: %bv5,
+  ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop3: %enum ziop
+}
+
+#tuplestruct ztuplez3z5bv12_z5bv5_z5bv5 ztuplez3z5bv12_z5bv5_z5bv50 ztuplez3z5bv12_z5bv5_z5bv51 ztuplez3z5bv12_z5bv5_z5bv52
+
+struct ztuplez3z5bv12_z5bv5_z5bv5 {
+  ztuplez3z5bv12_z5bv5_z5bv50: %bv12,
+  ztuplez3z5bv12_z5bv5_z5bv51: %bv5,
+  ztuplez3z5bv12_z5bv5_z5bv52: %bv5
+}
+
+union zast {
+  zITYPE: %struct ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop,
+  zLOAD: %struct ztuplez3z5bv12_z5bv5_z5bv5
+}
+
+union zoptionzIUastzK {
+  zNonezIUastzK: %unit,
+  zSomezIUastzK: %union zast
+}
+
+#mangled zSome zSomezIUastzK
+
+#mangled zNone zNonezIUastzK
+
+#mangled zoption zoptionzIUastzK
+
+val zundefined_vectorzIB64zK = "undefined_vector" : (%i, %bv64) ->  %vec(%bv64)
+
+val zundefined_bitvector = "undefined_bitvector" : (%i) ->  %bv
+
+val znot_bool = "not" : (%bool) ->  %bool
+
+val zand_bool = "and_bool" : (%bool, %bool) ->  %bool
+
+val zeq_bits = "eq_bits" : (%bv, %bv) ->  %bool
+
+val zneq_bits = "neq_bits" : (%bv, %bv) ->  %bool
+
+val zsail_sign_extend = "sign_extend" : (%bv, %i) ->  %bv
+
+val zsail_zzero_extend = "zero_extend" : (%bv, %i) ->  %bv
+
+val zappend_64 = "append_64" : (%bv, %bv64) ->  %bv
+
+val zplain_vector_accesszIB64zK = "vector_access" : (%vec(%bv64), %i) ->  %bv64
+
+val zplain_vector_updatezIB64zK = "vector_update" : (%vec(%bv64), %i, %bv64) ->  %vec(%bv64)
+
+val zadd_bits = "add_bits" : (%bv, %bv) ->  %bv
+
+val zsubrange_bits = "vector_subrange" : (%bv, %i, %i) ->  %bv
+
+val zunsigned = "sail_unsigned" : (%bv) ->  %i
+
+val zEXTS : (%i, %bv) ->  %bv
+
+val zEXTZ : (%i, %bv) ->  %bv
+
+fn zEXTS(zm, zv) {
+  return = zsail_sign_extend(zv, zm) `0 57:22-57:44;
+  end;
+}
+
+fn zEXTZ(zm, zv) {
+  return = zsail_zzero_extend(zv, zm) `0 58:22-58:44;
+  end;
+}
+
+register zPC : %bv64
+
+register znextPC : %bv64
+
+register zXs : %fvec(32, %bv64)
+
+val zrX : (%bv5) ->  %bv64
+
+fn zrX(zr) {
+  zz40 : %bv64 `0 80:2-83:3;
+  zz41 : %bv5 `0 81:4-81:11;
+  zz41 = zr `0 81:4-81:11;
+  zz42 : %bool `0 80:2-83:3;
+  zz43 : %bv `1;
+  zz43 = zz41 `2;
+  zz44 : %bv `3;
+  zz44 = 0b00000 `4;
+  zz42 = zeq_bits(zz43, zz44) `5;
+  jump @not(zz42) goto 11 `0 80:2-83:3;
+  goto 12;
+  goto 20;
+  zz45 : %i `0 81:15-81:24;
+  zz45 = zz5i64zDzKz5i(64) `0 81:15-81:24;
+  zz46 : %bv `0 81:15-81:24;
+  zz46 = 0x0 `0 81:15-81:24;
+  zz47 : %bv `0 81:15-81:24;
+  zz47 = zEXTZ(zz45, zz46) `0 81:15-81:24;
+  zz40 = zz47 `0 81:15-81:24;
+  goto 31;
+  zz48 : %i64 `0 82:9-82:24;
+  zz49 : %bv `0 82:12-82:23;
+  zz49 = zr `0 82:12-82:23;
+  zz410 : %i `0 82:12-82:23;
+  zz410 = zunsigned(zz49) `0 82:12-82:23;
+  zz48 = zz5izDzKz5i64(zz410) `0 82:12-82:23;
+  zz411 : %vec(%bv64) `0 82:9-82:24;
+  zz411 = zXs `0 82:9-82:24;
+  zz412 : %i `0 82:9-82:24;
+  zz412 = zz5i64zDzKz5i(zz48) `0 82:9-82:24;
+  zz40 = zplain_vector_accesszIB64zK(zz411, zz412) `0 82:9-82:24;
+  return = zz40 `0 80:2-83:3;
+  end;
+}
+
+val zwX : (%bv5, %bv64) ->  %unit
+
+fn zwX(zr, zv) {
+  zz40 : %bool `0 88:2-90:3;
+  zz41 : %bv `0 88:5-88:17;
+  zz41 = zr `0 88:5-88:17;
+  zz42 : %bv `0 88:5-88:17;
+  zz42 = 0b00000 `0 88:5-88:17;
+  zz40 = zneq_bits(zz41, zz42) `0 88:5-88:17;
+  jump zz40 goto 9 `0 88:2-90:3;
+  return = () `0 90:3-90:3;
+  goto 23;
+  zz43 : %i64 `0 89:5-89:20;
+  zz44 : %bv `0 89:8-89:19;
+  zz44 = zr `0 89:8-89:19;
+  zz45 : %i `0 89:8-89:19;
+  zz45 = zunsigned(zz44) `0 89:8-89:19;
+  zz43 = zz5izDzKz5i64(zz45) `0 89:8-89:19;
+  zz46 : %vec(%bv64) `0 89:5-89:20;
+  zz46 = zXs `0 89:5-89:20;
+  zz47 : %i `0 89:5-89:20;
+  zz47 = zz5i64zDzKz5i(zz43) `0 89:5-89:20;
+  zz48 : %vec(%bv64) `0 89:5-89:20;
+  zz48 = zplain_vector_updatezIB64zK(zz46, zz47, zv) `0 89:5-89:20;
+  zXs = zz48 `0 89:5-89:20;
+  return = () `6;
+  end;
+}
+
+val zMEMr = "read_ram" : (%i, %i, %bv, %bv) ->  %bv
+
+val zread_mem : (%bv64, %i) ->  %bv
+
+fn zread_mem(zaddr, zwidth) {
+  zz40 : %bv64 `0 102:4-102:46;
+  zz41 : %i `0 102:30-102:39;
+  zz41 = zz5i64zDzKz5i(64) `0 102:30-102:39;
+  zz42 : %bv `0 102:30-102:39;
+  zz42 = 0x0 `0 102:30-102:39;
+  zz43 : %bv `0 102:30-102:39;
+  zz43 = zEXTZ(zz41, zz42) `0 102:30-102:39;
+  zz40 = zz43 `0 102:30-102:39;
+  zz44 : %i `0 102:4-102:46;
+  zz44 = zz5i64zDzKz5i(64) `0 102:4-102:46;
+  zz45 : %bv `0 102:4-102:46;
+  zz45 = zz40 `0 102:4-102:46;
+  zz46 : %bv `0 102:4-102:46;
+  zz46 = zaddr `0 102:4-102:46;
+  return = zMEMr(zz44, zwidth, zz45, zz46) `0 102:4-102:46;
+  end;
+}
+
+val zdecode : (%bv32) ->  %union zoptionzIUastzK
+
+val zexecute : (%union zast) ->  %unit
+
+fn zdecode(zmergez3var) {
+  zz40 : %union zoptionzIUastzK `0 118:0-119:41;
+  zz41 : %bv32 `0 118:23-118:88;
+  zz41 = zmergez3var `0 118:23-118:88;
+  zz42 : %bool `7;
+  zz43 : %bv3 `8;
+  zz44 : %i `0 118:23-118:88;
+  zz44 = zz5i64zDzKz5i(14) `0 118:23-118:88;
+  zz45 : %i `0 118:23-118:88;
+  zz45 = zz5i64zDzKz5i(12) `0 118:23-118:88;
+  zz46 : %bv `0 118:23-118:88;
+  zz46 = zz41 `0 118:23-118:88;
+  zz47 : %bv `0 118:23-118:88;
+  zz47 = zsubrange_bits(zz46, zz44, zz45) `0 118:23-118:88;
+  zz43 = zz47 `0 118:23-118:88;
+  zz48 : %bv `9;
+  zz48 = zz43 `10;
+  zz49 : %bv `11;
+  zz49 = 0b000 `12;
+  zz42 = zeq_bits(zz48, zz49) `13;
+  zz410 : %bool `14;
+  jump zz42 goto 23 `15;
+  zz410 = false `16;
+  goto 38;
+  zz411 : %bv7 `17;
+  zz412 : %i `0 118:23-118:88;
+  zz412 = zz5i64zDzKz5i(6) `0 118:23-118:88;
+  zz413 : %i `0 118:23-118:88;
+  zz413 = zz5i64zDzKz5i(0) `0 118:23-118:88;
+  zz414 : %bv `0 118:23-118:88;
+  zz414 = zz41 `0 118:23-118:88;
+  zz415 : %bv `0 118:23-118:88;
+  zz415 = zsubrange_bits(zz414, zz412, zz413) `0 118:23-118:88;
+  zz411 = zz415 `0 118:23-118:88;
+  zz416 : %bv `18;
+  zz416 = zz411 `19;
+  zz417 : %bv `20;
+  zz417 = 0b0010011 `21;
+  zz410 = zeq_bits(zz416, zz417) `22;
+  zz418 : %bool `0 118:0-119:41;
+  zz418 = zz410 `23;
+  jump @not(zz418) goto 42 `0 118:0-119:41;
+  goto 43;
+  goto 87;
+  zz419 : %bv12 `0 119:4-119:41;
+  zz420 : %i `0 118:23-118:26;
+  zz420 = zz5i64zDzKz5i(31) `0 118:23-118:26;
+  zz421 : %i `0 118:23-118:26;
+  zz421 = zz5i64zDzKz5i(20) `0 118:23-118:26;
+  zz422 : %bv `0 118:23-118:26;
+  zz422 = zz41 `0 118:23-118:26;
+  zz423 : %bv `0 118:23-118:26;
+  zz423 = zsubrange_bits(zz422, zz420, zz421) `0 118:23-118:26;
+  zz419 = zz423 `0 118:23-118:26;
+  zz424 : %bv5 `0 118:40-118:43;
+  zz425 : %i `0 118:40-118:43;
+  zz425 = zz5i64zDzKz5i(19) `0 118:40-118:43;
+  zz426 : %i `0 118:40-118:43;
+  zz426 = zz5i64zDzKz5i(15) `0 118:40-118:43;
+  zz427 : %bv `0 118:40-118:43;
+  zz427 = zz41 `0 118:40-118:43;
+  zz428 : %bv `0 118:40-118:43;
+  zz428 = zsubrange_bits(zz427, zz425, zz426) `0 118:40-118:43;
+  zz424 = zz428 `0 118:40-118:43;
+  zz429 : %bv5 `0 118:64-118:66;
+  zz430 : %i `0 118:64-118:66;
+  zz430 = zz5i64zDzKz5i(11) `0 118:64-118:66;
+  zz431 : %i `0 118:64-118:66;
+  zz431 = zz5i64zDzKz5i(7) `0 118:64-118:66;
+  zz432 : %bv `0 118:64-118:66;
+  zz432 = zz41 `0 118:64-118:66;
+  zz433 : %bv `0 118:64-118:66;
+  zz433 = zsubrange_bits(zz432, zz430, zz431) `0 118:64-118:66;
+  zz429 = zz433 `0 118:64-118:66;
+  zz434 : %bv12 `0 118:23-118:26;
+  zz435 : %i `0 118:23-118:26;
+  zz435 = zz5i64zDzKz5i(31) `0 118:23-118:26;
+  zz436 : %i `0 118:23-118:26;
+  zz436 = zz5i64zDzKz5i(20) `0 118:23-118:26;
+  zz437 : %bv `0 118:23-118:26;
+  zz437 = zz41 `0 118:23-118:26;
+  zz438 : %bv `0 118:23-118:26;
+  zz438 = zsubrange_bits(zz437, zz435, zz436) `0 118:23-118:26;
+  zz434 = zz438 `0 118:23-118:26;
+  zz439 : %union zast `0 119:4-119:41;
+  zz439 = zITYPE(struct ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop {ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop0 = zz434, ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop1 = zz424, ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop2 = zz429, ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop3 = zRISCV_ADDI}) `0 119:9-119:40;
+  zz40 = zSomezIUastzK(zz439) `0 119:4-119:41;
+  goto 174;
+  zz440 : %bv32 `0 133:23-133:88;
+  zz440 = zmergez3var `0 133:23-133:88;
+  zz441 : %bool `24;
+  zz442 : %bv3 `25;
+  zz443 : %i `0 133:23-133:88;
+  zz443 = zz5i64zDzKz5i(14) `0 133:23-133:88;
+  zz444 : %i `0 133:23-133:88;
+  zz444 = zz5i64zDzKz5i(12) `0 133:23-133:88;
+  zz445 : %bv `0 133:23-133:88;
+  zz445 = zz440 `0 133:23-133:88;
+  zz446 : %bv `0 133:23-133:88;
+  zz446 = zsubrange_bits(zz445, zz443, zz444) `0 133:23-133:88;
+  zz442 = zz446 `0 133:23-133:88;
+  zz447 : %bv `26;
+  zz447 = zz442 `27;
+  zz448 : %bv `28;
+  zz448 = 0b011 `29;
+  zz441 = zeq_bits(zz447, zz448) `30;
+  zz449 : %bool `31;
+  jump zz441 goto 109 `32;
+  zz449 = false `33;
+  goto 124;
+  zz450 : %bv7 `34;
+  zz451 : %i `0 133:23-133:88;
+  zz451 = zz5i64zDzKz5i(6) `0 133:23-133:88;
+  zz452 : %i `0 133:23-133:88;
+  zz452 = zz5i64zDzKz5i(0) `0 133:23-133:88;
+  zz453 : %bv `0 133:23-133:88;
+  zz453 = zz440 `0 133:23-133:88;
+  zz454 : %bv `0 133:23-133:88;
+  zz454 = zsubrange_bits(zz453, zz451, zz452) `0 133:23-133:88;
+  zz450 = zz454 `0 133:23-133:88;
+  zz455 : %bv `35;
+  zz455 = zz450 `36;
+  zz456 : %bv `37;
+  zz456 = 0b0000011 `38;
+  zz449 = zeq_bits(zz455, zz456) `39;
+  zz457 : %bool `0 118:0-119:41;
+  zz457 = zz449 `40;
+  jump @not(zz457) goto 128 `0 118:0-119:41;
+  goto 129;
+  goto 173;
+  zz458 : %bv12 `0 134:4-134:28;
+  zz459 : %i `0 133:23-133:26;
+  zz459 = zz5i64zDzKz5i(31) `0 133:23-133:26;
+  zz460 : %i `0 133:23-133:26;
+  zz460 = zz5i64zDzKz5i(20) `0 133:23-133:26;
+  zz461 : %bv `0 133:23-133:26;
+  zz461 = zz440 `0 133:23-133:26;
+  zz462 : %bv `0 133:23-133:26;
+  zz462 = zsubrange_bits(zz461, zz459, zz460) `0 133:23-133:26;
+  zz458 = zz462 `0 133:23-133:26;
+  zz463 : %bv5 `0 133:40-133:43;
+  zz464 : %i `0 133:40-133:43;
+  zz464 = zz5i64zDzKz5i(19) `0 133:40-133:43;
+  zz465 : %i `0 133:40-133:43;
+  zz465 = zz5i64zDzKz5i(15) `0 133:40-133:43;
+  zz466 : %bv `0 133:40-133:43;
+  zz466 = zz440 `0 133:40-133:43;
+  zz467 : %bv `0 133:40-133:43;
+  zz467 = zsubrange_bits(zz466, zz464, zz465) `0 133:40-133:43;
+  zz463 = zz467 `0 133:40-133:43;
+  zz468 : %bv5 `0 133:64-133:66;
+  zz469 : %i `0 133:64-133:66;
+  zz469 = zz5i64zDzKz5i(11) `0 133:64-133:66;
+  zz470 : %i `0 133:64-133:66;
+  zz470 = zz5i64zDzKz5i(7) `0 133:64-133:66;
+  zz471 : %bv `0 133:64-133:66;
+  zz471 = zz440 `0 133:64-133:66;
+  zz472 : %bv `0 133:64-133:66;
+  zz472 = zsubrange_bits(zz471, zz469, zz470) `0 133:64-133:66;
+  zz468 = zz472 `0 133:64-133:66;
+  zz473 : %bv12 `0 133:23-133:26;
+  zz474 : %i `0 133:23-133:26;
+  zz474 = zz5i64zDzKz5i(31) `0 133:23-133:26;
+  zz475 : %i `0 133:23-133:26;
+  zz475 = zz5i64zDzKz5i(20) `0 133:23-133:26;
+  zz476 : %bv `0 133:23-133:26;
+  zz476 = zz440 `0 133:23-133:26;
+  zz477 : %bv `0 133:23-133:26;
+  zz477 = zsubrange_bits(zz476, zz474, zz475) `0 133:23-133:26;
+  zz473 = zz477 `0 133:23-133:26;
+  zz478 : %union zast `0 134:4-134:28;
+  zz478 = zLOAD(struct ztuplez3z5bv12_z5bv5_z5bv5 {ztuplez3z5bv12_z5bv5_z5bv50 = zz473, ztuplez3z5bv12_z5bv5_z5bv51 = zz463, ztuplez3z5bv12_z5bv5_z5bv52 = zz468}) `0 134:9-134:27;
+  zz40 = zSomezIUastzK(zz478) `0 134:4-134:28;
+  goto 174;
+  zz40 = zNonezIUastzK(()) `0 144:27-144:33;
+  return = zz40 `0 118:0-119:41;
+  end;
+}
+
+fn zexecute(zmergez3var) {
+  zz40 : %unit `0 121:0-126:1;
+  jump zmergez3var is zITYPE goto 29 `0 121:25-121:57;
+  jump @neq(zRISCV_ADDI, zmergez3var as zITYPE.ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop3) goto 29 `0 121:46-121:56;
+  zz41 : %bv12 `0 121:32-121:35;
+  zz41 = zmergez3var as zITYPE.ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop0 `0 121:32-121:35;
+  zz42 : %bv5 `0 121:37-121:40;
+  zz42 = zmergez3var as zITYPE.ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop1 `0 121:37-121:40;
+  zz43 : %bv5 `0 121:42-121:44;
+  zz43 = zmergez3var as zITYPE.ztuplez3z5bv12_z5bv5_z5bv5_z5enumz0zziop2 `0 121:42-121:44;
+  zz44 : %bv64 `0 122:2-125:16;
+  zz44 = zrX(zz42) `0 122:16-122:22;
+  zz45 : %bv64 `0 123:2-125:16;
+  zz46 : %i `0 123:27-123:36;
+  zz46 = zz5i64zDzKz5i(64) `0 123:27-123:36;
+  zz47 : %bv `0 123:27-123:36;
+  zz47 = zz41 `0 123:27-123:36;
+  zz48 : %bv `0 123:27-123:36;
+  zz48 = zEXTS(zz46, zz47) `0 123:27-123:36;
+  zz45 = zz48 `0 123:27-123:36;
+  zz49 : %bv64 `0 124:2-125:16;
+  zz410 : %bv `0 124:15-124:32;
+  zz410 = zz44 `0 124:15-124:32;
+  zz411 : %bv `0 124:15-124:32;
+  zz411 = zz45 `0 124:15-124:32;
+  zz412 : %bv `0 124:15-124:32;
+  zz412 = zadd_bits(zz410, zz411) `0 124:15-124:32;
+  zz49 = zz412 `0 124:15-124:32;
+  zz40 = zwX(zz43, zz49) `0 125:2-125:16;
+  goto 63;
+  jump zmergez3var is zLOAD goto 62 `0 136:24-136:42;
+  zz413 : %bv12 `0 136:29-136:32;
+  zz413 = zmergez3var as zLOAD.ztuplez3z5bv12_z5bv5_z5bv50 `0 136:29-136:32;
+  zz414 : %bv5 `0 136:34-136:37;
+  zz414 = zmergez3var as zLOAD.ztuplez3z5bv12_z5bv5_z5bv51 `0 136:34-136:37;
+  zz415 : %bv5 `0 136:39-136:41;
+  zz415 = zmergez3var as zLOAD.ztuplez3z5bv12_z5bv5_z5bv52 `0 136:39-136:41;
+  zz416 : %bv64 `0 137:4-139:18;
+  zz417 : %bv64 `0 137:26-137:44;
+  zz417 = zrX(zz414) `0 137:26-137:32;
+  zz418 : %bv64 `0 137:26-137:44;
+  zz419 : %i `0 137:35-137:44;
+  zz419 = zz5i64zDzKz5i(64) `0 137:35-137:44;
+  zz420 : %bv `0 137:35-137:44;
+  zz420 = zz413 `0 137:35-137:44;
+  zz421 : %bv `0 137:35-137:44;
+  zz421 = zEXTS(zz419, zz420) `0 137:35-137:44;
+  zz418 = zz421 `0 137:35-137:44;
+  zz422 : %bv `0 137:26-137:44;
+  zz422 = zz417 `0 137:26-137:44;
+  zz423 : %bv `0 137:26-137:44;
+  zz423 = zz418 `0 137:26-137:44;
+  zz424 : %bv `0 137:26-137:44;
+  zz424 = zadd_bits(zz422, zz423) `0 137:26-137:44;
+  zz416 = zz424 `0 137:26-137:44;
+  zz425 : %bv64 `0 138:4-139:18;
+  zz426 : %i `0 138:28-138:62;
+  zz426 = zz5i64zDzKz5i(8) `0 138:28-138:62;
+  zz427 : %bv `0 138:28-138:62;
+  zz427 = zread_mem(zz416, zz426) `0 138:28-138:62;
+  zz425 = zz427 `0 138:28-138:62;
+  zz40 = zwX(zz415, zz425) `0 139:4-139:18;
+  goto 63;
+  zz40 = () `0 147:28-147:30;
+  return = zz40 `0 121:0-126:1;
+  end;
+}
+
+val zinitializze_registers : (%unit) ->  %unit
+
+fn zinitializze_registers(z3zE45) {
+  zz40 : %i `41;
+  zz40 = zz5i64zDzKz5i(64) `42;
+  zz41 : %bv `43;
+  zz41 = zundefined_bitvector(zz40) `44;
+  zPC = zz41 `45;
+  zz42 : %unit `46;
+  zz42 = () `47;
+  zz43 : %i `48;
+  zz43 = zz5i64zDzKz5i(64) `49;
+  zz44 : %bv `50;
+  zz44 = zundefined_bitvector(zz43) `51;
+  znextPC = zz44 `52;
+  zz45 : %unit `53;
+  zz45 = () `54;
+  zz46 : %bv64 `55;
+  zz47 : %i `56;
+  zz47 = zz5i64zDzKz5i(64) `57;
+  zz48 : %bv `58;
+  zz48 = zundefined_bitvector(zz47) `59;
+  zz46 = zz48 `60;
+  zz49 : %i `61;
+  zz49 = zz5i64zDzKz5i(32) `62;
+  zz410 : %vec(%bv64) `63;
+  zz410 = zundefined_vectorzIB64zK(zz49, zz46) `64;
+  zXs = zz410 `65;
+  return = () `66;
+  end;
+}
+
+files "riscv.sail"
+

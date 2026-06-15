@@ -1,0 +1,3206 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../Glossary/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Proving semantic equivalence of RISC V programs - Safonov ITMO Thesis Notes</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#semantic-equivalence" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-header__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Safonov ITMO Thesis Notes
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Proving semantic equivalence of RISC V programs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Safonov ITMO Thesis Notes" class="md-nav__button md-logo" aria-label="Safonov ITMO Thesis Notes" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Safonov ITMO Thesis Notes
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROJECT_MEMORY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Days
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Days
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/16%20April.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 April. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/16%20June.%20The%20D-day/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 June. The D day
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/23%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/24%20December.%20Prep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 December. Prep
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20February.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 February. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20January.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 January. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/26%20March.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 March. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20May.%20Pre-defense/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 May. Pre defense
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/27%20October.%20Meeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 October. Meeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/28%20November.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 November. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Days/31%20October.%20Presentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 October. Presentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    RICOVER
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER — RISC-V Compiler Optimization VERification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2" id="__nav_4_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Doc
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Doc
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/20_May_Status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 May Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_BUGLIST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ALIVE2 BUGLIST
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/ALIVE2_TESTABILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER vs Alive2 Bug Corpus — Testability Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/BRANCHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Block CHC Encoding for Branches and Loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/CSMITH_INITIAL_OVERVIEW_22_MAY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Benchmark Initial Overview — 22 May 2026
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RICOVER Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PLAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/TEST_SUITE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TEST SUITE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1_2_9" id="__nav_4_1_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_1_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Archive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/BENCH1_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BENCH1 IMPLEMENTATION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/LOAD_STORE_STRATEGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAD STORE STRATEGY
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/OPCODE_CHECK_12_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opcode translation audit — 2026-04-12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Implementation/RICOVER/doc/archive/REVIEW_10_04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review of Isla IR to CHC Transpiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nomencloture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Nomencloture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/THESIS_RULES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    THESIS RULES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/Thesis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Формальная проверка корректности оптимизаций RISC-V программ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Nomencloture/Thesis_Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thesis Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper Review
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper Review
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Alive2%20Bounded%20Translation%20Validation%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2 Bounded Translation Validation for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Compiler%20Optimization%20Testing%20Based%20on%20Optimization-Guided%20Equivalence%20Transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler Optimization Testing Based on Optimization Guided Equivalence Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Finding%20and%20Understanding%20Bugs%20in%20C%20Compilers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finding and Understanding Bugs in C Compilers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Formal%20Verification%20of%20SSA-Based%20Optimizations%20for%20LLVM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Verification of SSA Based Optimizations for LLVM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Horn Clause Solvers for Program Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Translation%20Validation%20for%20LLVM%E2%80%99s%20AArch64%20Backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translation Validation for LLVM’s AArch64 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Paper%20Review/Verifying%20Optimizations%20using%20SMTSolvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifying Optimizations using SMTSolvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/QUICK_START_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_CSMITH_RICOVER_E2E/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    csmith_ricover_e2e.py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_RISCV_OPT_DIFF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RISC-V Assembly Optimization Diff Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Scripts/README_SMALL_GENERATOR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Random C Program Generator Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TestSuite
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TestSuite
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLVM TEST RISCV OPTS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLVM TEST RISCV OPTS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/LLVM_TEST_RISCV_OPTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Csmith
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TestSuite/csmith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Csmith Random Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/ARM-TV/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Alive2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alive2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/CompCert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CompCert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Vellvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vellvm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sail
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sail
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Internal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tools/Sail/Isla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Isla
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Constrained%20Horn%20Clauses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constrained Horn Clauses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proving semantic equivalence of RISC V programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic equivalence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Semantic equivalence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defining-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#architectural-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural specification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equivalence-relation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equivalence relation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constrained-horn-clauses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constrained Horn Clauses
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-one-query-is-unsat-and-the-other-is-sat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why one query is unsat and the other is sat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapping-the-theory-to-chc-bad-state-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping the theory to CHC bad-state queries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mapping the theory to CHC bad-state queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-full-machine-state-equality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Full machine-state equality
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-abi-level-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ABI-level equivalence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-projected-memory-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Projected-memory equivalence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic equivalence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Semantic equivalence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defining-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#architectural-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural specification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equivalence-relation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equivalence relation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constrained-horn-clauses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constrained Horn Clauses
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-one-query-is-unsat-and-the-other-is-sat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why one query is unsat and the other is sat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapping-the-theory-to-chc-bad-state-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping the theory to CHC bad-state queries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mapping the theory to CHC bad-state queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-full-machine-state-equality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Full machine-state equality
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-abi-level-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ABI-level equivalence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-projected-memory-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Projected-memory equivalence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>Proving semantic equivalence of RISC V programs</h1>
+
+<h2 id="semantic-equivalence">Semantic equivalence<a class="headerlink" href="#semantic-equivalence" title="Permanent link">&para;</a></h2>
+<p><em>Semantic equivalence</em> is a specific kind if program equivalence under chosen semantics. We can define semantics in different ways: operational, small-step, big-step etc. But, because we are in a domain of assembly language we can greatly benefit from architectural specifications of processors, when defining and using operational semantics of such low-level code.</p>
+<h3 id="defining-semantics">Defining semantics<a class="headerlink" href="#defining-semantics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://arxiv.org/pdf/2108.00739">Reference</a></li>
+</ul>
+<p>An imperative program defines a relation <span class="arithmatex">\(\langle s, \sigma_0 \rangle \implies \sigma_1\)</span>, which means that if statement <span class="arithmatex">\(s\)</span>
+is executed in initial state <span class="arithmatex">\(\sigma_0\)</span>, then <span class="arithmatex">\(\sigma_1\)</span> is the state after execution of <span class="arithmatex">\(s\)</span>, <strong>assuming that</strong>
+<strong>the execution halts</strong>.  The relation <span class="arithmatex">\(\implies\)</span> can be specified by <em>Horn clauses</em>, using
+the operational semantics of the language of <span class="arithmatex">\(s\)</span>, in two main styles: <em>small-step</em> (structural
+operational semantics) or <em>big-step</em> (natural semantics). Let the predicate <span class="arithmatex">\(exec(S,St_0,St_1)\)</span> represent the relation, where <span class="arithmatex">\(S\)</span>, <span class="arithmatex">\(St_0\)</span> and <span class="arithmatex">\(St_1\)</span> are first-order terms representing <span class="arithmatex">\(s\)</span>, <span class="arithmatex">\(\sigma_0\)</span> and <span class="arithmatex">\(\sigma_1\)</span>, respectively.</p>
+<p>In the small-step style the exec relation is specified as a chain of steps. In a single step
+<span class="arithmatex">\(\langle s_0, \sigma_0 \rangle \implies \langle s_1,\sigma_1 \rangle\)</span>, <span class="arithmatex">\(s_0\)</span> is executed in state <span class="arithmatex">\(\sigma_0\)</span>, leaving the remaining statement <span class="arithmatex">\(s_1\)</span> to be
+executed in state <span class="arithmatex">\(\sigma_1\)</span>; this is represented by the relation <span class="arithmatex">\(step(S0,St0,S1,St1)\)</span> in which
+<span class="arithmatex">\(S0, St0, S1, St1 \equiv s_0, \sigma_0, s_1, \sigma_1\)</span>. </p>
+<p><strong>Definition 1.</strong> The chain of steps, or <em>run</em>, is defined by the recursively defined relation <span class="arithmatex">\(run(S0,St0,S1,St1)\)</span>, which specifies the reflexive, transitive closure <span class="arithmatex">\(\Rightarrow^\star\)</span>, encompassing many transitions specified by <span class="arithmatex">\(\Rightarrow\)</span>. </p>
+<div class="arithmatex">\[
+Run(P, \sigma_0): \langle s_o, \sigma_0 \rangle \Rightarrow^* \langle halt, \sigma_n \rangle
+\]</div>
+<p>A <span class="arithmatex">\(halt\)</span> is not a real statement/instruction, if, let's say, we are defined operational semantics for each instruction in RISC-V assembly language. Instead, we add this statement to our language to define program execution stop. For example, a <em>"halt instruction"</em> does not update the instruction pointer in operational semantics rules. As a result, the next instruction we will read upon ever encountering <span class="arithmatex">\(halt\)</span> is the same <span class="arithmatex">\(halt\)</span> instruction. This mechanism of representing normal program termination by trivially looping forever is standard in small-step operational semantics</p>
+<p>A complete execution is therefore:  <span class="arithmatex">\(\langle s, \sigma_0 \rangle \implies \sigma_1 \iff \langle s, \sigma_0 \rangle \Rightarrow^\star \langle halt, \sigma_n \rangle\)</span>, meaning that after <span class="arithmatex">\(n\)</span> transition we reach <span class="arithmatex">\(halt\)</span> statement.</p>
+<div class="arithmatex">\[
+exec(S,St0,St1) \leftarrow run(S,St0,halt,St1) 
+\]</div>
+<div class="arithmatex">\[
+run(S,St,S,St) \leftarrow \top 
+\]</div>
+<div class="arithmatex">\[
+run(S0,St0,S2,St2) \leftarrow step(S0,St0,S1,St1), run(S1,St1,S2,St2).
+\]</div>
+<p>Instead of defining <span class="arithmatex">\(step\)</span> for each construct in RISC-V assembly, we can instead take it from architectural specification.</p>
+<h3 id="architectural-specification">Architectural specification<a class="headerlink" href="#architectural-specification" title="Permanent link">&para;</a></h3>
+<p><em>Sail</em> is a language for expressing the instruction-set architecture (ISA) semantics of processors and RISC-V Sail is a formal specification of the RISC-V architecture, written in Sail, adopted by RISC-V International. </p>
+<p>Indeed, it defines a <span class="arithmatex">\(try\_step\)</span> function in it's model source code:
+<div class="highlight"><pre><span></span><code>// A &quot;step&quot; is a full execution of an instruction, resulting either
+// in its retirement or a trap.
+...
+function try_step(step_no : nat, exit_wait : bool) -&gt; bool = {
+</code></pre></div>
+As well as <span class="arithmatex">\(execute\)</span> function for each instruction:
+<div class="highlight"><pre><span></span><code>scattered union instruction
+
+union ExecutionResult = {
+  // Successfully retired.
+  Retire_Success                 : unit,
+  ...
+}
+
+val execute : instruction -&gt; ExecutionResult
+</code></pre></div>
+For example, here is the <span class="arithmatex">\(execute\)</span> function for integer arithemtic basic instructions:
+<div class="highlight"><pre><span></span><code>function clause execute ITYPE(imm, rs1, rd, op) = {
+  let immext : xlenbits = sign_extend(imm);
+  X(rd) = match op {
+    ADDI  =&gt; X(rs1) + immext,
+    SLTI  =&gt; zero_extend(bool_to_bit(X(rs1) &lt;_s immext)),
+    SLTIU =&gt; zero_extend(bool_to_bit(X(rs1) &lt;_u immext)),
+    ANDI  =&gt; X(rs1) &amp; immext,
+    ORI   =&gt; X(rs1) | immext,
+    XORI  =&gt; X(rs1) ^ immext
+  };
+  RETIRE_SUCCESS
+}
+</code></pre></div></p>
+<p>This RISC-V model description gives us information on registers, program counter, memory state, etc. during execution of each statement. </p>
+<p><strong>Definition 2.</strong>  A final state of execution is expressed as a tuple of program counter, current register assignments (a mapping from register name to value) and a memory state (a mapping from address to value).</p>
+<div class="arithmatex">\[
+\langle pc, regs, memory \rangle
+\]</div>
+<blockquote>
+<p>TODO: mention that we need to translate this to CHC to create a transition to CHC chapter</p>
+<p>PUT IN INTRODUCTION: In order to translate a relational program property into CHCs, first we need to specify the operational semantics of our imperative language by a set of CHCs. <a href="https://www.sci.unich.it/~deangelis/papers/DeAngelisFPP_SAS-16.pdf">3.2</a></p>
+</blockquote>
+<h3 id="equivalence-relation">Equivalence relation<a class="headerlink" href="#equivalence-relation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="http://profs.sci.univr.it/~merro/files/equality.pdf">Reference</a></li>
+</ul>
+<p>A semantic equivalence relation should have the following properties:
+1. Programs that results in observably-different values (starting from some initial store) must not be equivalent
+2. Programs that terminates must not be equivalent to programs that don’t
+3. <span class="arithmatex">\(\simeq\)</span> must be an equivalence relation:
+    - <span class="arithmatex">\(e \simeq e\)</span>, <span class="arithmatex">\(e_1 \simeq e_2 \implies e_2 \simeq e_1\)</span>, <span class="arithmatex">\(e_1 \simeq e_2 \simeq e_3 \implies e_1 \simeq e_3\)</span>, meaning the relation is reflexive, symmetric and transitive
+4. <span class="arithmatex">\(\simeq\)</span> must be a <strong>congruence</strong>, i.e. preserved by program contexts:
+    - if <span class="arithmatex">\(e_1 \simeq e_2\)</span> then for any context <span class="arithmatex">\(C [·]\)</span> we must have <span class="arithmatex">\(C [e_1] \simeq C [e_2]\)</span>
+    - if the equality <span class="arithmatex">\(\simeq\)</span> is a congruence then it suffices to prove that the two sub-programs are equivalent., the equality of the whole systems, follows for free!
+5. <span class="arithmatex">\(\simeq\)</span> should relate as many programs as possible</p>
+<p>We, however, define <em>partial equivalence</em> of programs, meaning we don't require proof of termination under the same input, nor do we uphold that <em>"Programs that terminates must not be equivalent to programs that don’t"</em>.</p>
+<p><strong>Definition 3.</strong> Two programs are said to be <em>semantically equivalent</em> iff they either both terminate and then the final states that they reach are similar, where final state is a final architectural configuration after executing <span class="arithmatex">\(n\)</span> statements and reaching a <span class="arithmatex">\(halt\)</span> statement.</p>
+<div class="arithmatex">\[
+P \simeq Q \iff \forall \sigma_0.(Run(P) \land Run(Q)) \implies \langle pc_P, regs_P, mem_P \rangle = \langle pc_Q, regs_Q, mem_Q \rangle
+\]</div>
+<h2 id="constrained-horn-clauses">Constrained Horn Clauses<a class="headerlink" href="#constrained-horn-clauses" title="Permanent link">&para;</a></h2>
+<p>Constrained Horn clauses are a class of first-order logic formulas where the Horn clause format is extended by the use of formulas of an arbitrary, possibly non-Horn, constraint theory <a href="../../Materials/TransformationOfCHC.pdf"> posted verbatim</a>.  CHCs provide a suitable intermediate form for expressing the semantics of a variety
+of programming languages (imperative, functional, concurrent, etc.) and computational
+models (state machines, transition systems, big- and small-step operational semantics,
+Petri nets, etc.). As a result it has been used as a target language for software verification <a href="../../Materials/Analysis%20and%20Transformation%20Tools%20for%20CHC.pdf">ref</a>.</p>
+<p>A CHC is a formula in first order logic in the form:</p>
+<p>$$
+\phi \land p_1(V) \space \land \space ... \space \land \space p_k(V) \implies H
+$$
+Where:
+- <span class="arithmatex">\(A\)</span> is a constraint language, i.e. our theory (arrays, bit-vectors, etc.)
+- <span class="arithmatex">\(\phi\)</span> is a <strong>constraint</strong> in <span class="arithmatex">\(A\)</span>
+- <span class="arithmatex">\(p_1...p_k\)</span> are <strong>uninterpreted relation symbols</strong>
+- each <span class="arithmatex">\(p_i(V)\)</span> is an <strong>application of the predicate to variables</strong> 
+- <span class="arithmatex">\(H\)</span> is either some application <span class="arithmatex">\(p_i(V)\)</span> or <span class="arithmatex">\(false\)</span></p>
+<p><em>Constrained Horn Clauses</em>  provide a suitable basis for automatic program verification <a href="../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/"> ref</a>.  Horn clauses naturally encode the set of reachable states of sequential programs, so satisfiable Horn clauses are program properties that hold. In contrast, unsatisfiable Horn clauses correspond to violated program properties <a href="../../Paper%20Review/Horn%20Clause%20Solvers%20for%20Program%20Verification/"> verbatim</a>. </p>
+<blockquote>
+<p>TODO: maybe put a default "sum_up_to" example?</p>
+</blockquote>
+<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
+<p>Here, let's try to prove partial equivalence of the following programs, generated from C source code, applying a <em>constant propagation</em> optimization in program (2) and disabling such optimization in program (1):
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">foo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">  </span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">  </span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">y</span><span class="p">;</span><span class="w">  </span>
+<span class="p">}</span><span class="w">  </span>
+</code></pre></div></p>
+<p>Programs:
+<div class="highlight"><pre><span></span><code>   &lt;foo1&gt;:                                 &lt;foo2&gt;:
+1  addi   sp,sp,-32                        addi    a0,zero,3
+2  sd ra,24(sp)                            jalr    zero,0(ra)
+3  sd s0,16(sp) 
+4  addi   s0,sp,32 
+5  addi   a0,zero,1 ; x = 1 
+6  sw a0,-20(s0) ; x = 1 
+7  lw a0,-20(s0) ; y = x + 2
+8  addiw  a0,a0,2 ; y = x + 2 
+9  sw a0,-24(s0) ; y = x + 2 
+10 lw a0,-24(s0) ; return y 
+11 ld ra,24(sp) ; return y 
+12 ld s0,16(sp) ; return y 
+13 addi   sp,sp,32 ; return y 
+14 jalr   zero,0(ra) ; return y
+</code></pre></div></p>
+<p>For each function we need to translate <code>execute</code> functions from Sail to CHC/CLP and then the function itself is just a sequence of executing each instruction function:</p>
+<p>Take <code>foo2()</code> since a tit bit easier, we have <code>addi</code> and <code>jalr</code>:</p>
+<div class="highlight"><pre><span></span><code>function clause execute ITYPE(imm, rs1, rd, op) = {
+  let immext : xlenbits = sign_extend(imm);
+  X(rd) = match op {
+    ADDI  =&gt; X(rs1) + immext,
+    SLTI  =&gt; zero_extend(bool_to_bit(X(rs1) &lt;_s immext)),
+    SLTIU =&gt; zero_extend(bool_to_bit(X(rs1) &lt;_u immext)),
+    ANDI  =&gt; X(rs1) &amp; immext,
+    ORI   =&gt; X(rs1) | immext,
+    XORI  =&gt; X(rs1) ^ immext
+  };
+  RETIRE_SUCCESS
+}
+
+=&gt;
+
+addi(state(PC0,REGS0,MEMORY0), state(PC1,REGS1,MEMORY1), imm, rs1, rd) :-
+    ; X(rs1)
+    get_reg_value(REGS0, Rs1, Rs1val),
+    ; X(rs1) + immext
+    Res is Rs1val + Imm,
+    ; X(rd) = ...
+    write_reg_value(REGS0, REGS1, Rd, Res),
+    PC1 is PC + 4.
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>// Jump execution to a specified target address. This can fail
+// due to the target not being 4-byte aligned, or due to extension checks.
+// Callers must ensure that the target address is 2-byte aligned.
+function jump_to(target : xlenbits) -&gt; ExecutionResult = {
+  // Extensions get the first checks on the prospective target address.
+  match ext_control_check_pc(target) {
+    Some(e) =&gt; return Ext_ControlAddr_Check_Failure(e),
+    None()  =&gt; (),
+  };
+
+  // Perform standard alignment check.
+  // Check target is at least 2-byte aligned (callers must ensure
+  // this so it can be an assertion).
+  assert(target[0] == 0b0);
+  // If it is not 4-byte aligned and compressed instructions are
+  // not enabled then raise an alignment exception.
+  if bit_to_bool(target[1]) &amp; not(currentlyEnabled(Ext_Zca))
+  then return Memory_Exception(Virtaddr(target), E_Fetch_Addr_Align());
+
+  set_next_pc(target);
+  RETIRE_SUCCESS
+}
+
+function clause execute JALR(imm, rs1, rd) = {
+  // For the sequential model, the memory-model definition doesn&#39;t work directly
+  // if rs1 = rd. We would effectively have to keep a regfile for reads and another for
+  // writes, and swap on instruction completion. This could perhaps be optimized in
+  // some manner, but for now, we just keep a reordered definition to improve simulator
+  // performance.
+
+  update_elp_state(rs1);
+
+  let link_address = get_next_pc();
+  let target = X(rs1) + sign_extend(imm);
+  match jump_to([target with 0 = 0b0]) {
+    Retire_Success() =&gt; { X(rd) = link_address; Retire_Success() },
+    failure =&gt; failure,
+  }
+}
+
+=&gt;
+
+jalr(state(PC0,REGS0,MEMORY0), state(PC1,REGS1,MEMORY1), imm, rs1, rd) :-
+    ; X(rs1)
+    get_reg_value(REGS0, Rs1, Rs1val),
+    ; link_address = get_next_pc()
+    ReturnAddr is PC0 + 4,
+    ; X(rs1) + sign_extend(imm)
+    Target is Rs1val + Imm,
+    ; jump_to()
+    PC1 is Target,
+    ; X(rd) = link_address
+    write_reg_value(REGS0, REGS1, Rd, ReturnAddr),
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>foo2(StateIn, StateOut) .
+foo2(StateIn, StateOut) :-
+    addi(StateIn, StateOut, 3, A0, 0),
+    jalr(StateIn, StateOut, 0, Ra)
+</code></pre></div>
+<h3 id="why-one-query-is-unsat-and-the-other-is-sat">Why one query is <code>unsat</code> and the other is <code>sat</code><a class="headerlink" href="#why-one-query-is-unsat-and-the-other-is-sat" title="Permanent link">&para;</a></h3>
+<p>The important subtlety in this example is that the answer depends on what we mean by "equivalent".</p>
+<p>If we encode equivalence as <strong>observable function-boundary equivalence</strong>, then <code>foo1</code> and <code>foo2</code> should be equivalent:</p>
+<ul>
+<li>both return <code>3</code> in <code>a0</code></li>
+<li>both preserve the relevant boundary registers after return</li>
+<li>from the caller's perspective, they have the same result</li>
+</ul>
+<p>In CHC form we can express a <strong>bad state</strong> saying:</p>
+<blockquote>
+<p>There exists an initial state such that both functions terminate, but their observable outcomes differ.</p>
+</blockquote>
+<p>Schematically:</p>
+<div class="arithmatex">\[
+bad_{obs} \leftarrow foo1(S_0, S_1), foo2(S_0, S_2), obs(S_1) \neq obs(S_2)
+\]</div>
+<p>If the solver answers:</p>
+<div class="arithmatex">\[
+query(bad_{obs}) = unsat
+\]</div>
+<p>then no such counterexample exists, so the two functions are equivalent under the chosen observable semantics.</p>
+<p>However, if we encode equivalence as <strong>full final-state equality</strong>, then the answer changes.<br />
+The unoptimized <code>foo1</code> writes temporary values to stack memory:</p>
+<ul>
+<li>it stores <code>x = 1</code></li>
+<li>it stores <code>y = 3</code></li>
+</ul>
+<p>The optimized <code>foo2</code> computes the same return value without performing those stack writes.</p>
+<p>So if we ask for:</p>
+<div class="arithmatex">\[
+\langle regs_1, mem_1 \rangle = \langle regs_2, mem_2 \rangle
+\]</div>
+<p>then the memory components may differ even though the returned result is the same.</p>
+<p>The corresponding bad state is:</p>
+<div class="arithmatex">\[
+bad_{full} \leftarrow foo1(S_0, S_1), foo2(S_0, S_2), S_1 \neq S_2
+\]</div>
+<p>and this query can be:</p>
+<div class="arithmatex">\[
+query(bad_{full}) = sat
+\]</div>
+<p>because the solver can exhibit a model in which the final memories differ.</p>
+<p>This is exactly why a formula that requires equality of the <strong>entire final machine state</strong> is too strong for optimization validation. It rejects optimizations that preserve externally visible behavior but change internal artifacts such as:</p>
+<ul>
+<li>stack layout</li>
+<li>temporary stores</li>
+<li>scratch-register usage</li>
+<li>precise control-flow shape</li>
+</ul>
+<p>For this reason, the right notion for the thesis is not raw full-state equality, but equality of a carefully defined <strong>observable projection</strong> of the final state.</p>
+<h3 id="mapping-the-theory-to-chc-bad-state-queries">Mapping the theory to CHC bad-state queries<a class="headerlink" href="#mapping-the-theory-to-chc-bad-state-queries" title="Permanent link">&para;</a></h3>
+<p>The runnable examples in:</p>
+<ul>
+<li><code>Implementation/RICOVER/examples/foo_constant_folding.smt2</code></li>
+<li><code>Implementation/RICOVER/examples/foo_equiv_notions.smt2</code></li>
+</ul>
+<p>use the standard CHC verification pattern:</p>
+<blockquote>
+<p>define a relation <code>bad</code> that becomes reachable exactly when the intended equivalence property is violated.</p>
+</blockquote>
+<p>Then:</p>
+<ul>
+<li><code>query(bad) = sat</code> means a counterexample exists</li>
+<li><code>query(bad) = unsat</code> means no counterexample exists</li>
+</ul>
+<p>For the three equivalence notions discussed above, the corresponding bad-state encodings are:</p>
+<h4 id="1-full-machine-state-equality">1. Full machine-state equality<a class="headerlink" href="#1-full-machine-state-equality" title="Permanent link">&para;</a></h4>
+<p>Theory:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{full}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+\sigma_1=\sigma_2
+\]</div>
+<p>CHC bad state:</p>
+<div class="arithmatex">\[
+bad_{\text{full}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), \sigma_1 \neq \sigma_2
+\]</div>
+<p>In the <code>foo1</code> / <code>foo2</code> example this query is <code>sat</code>, because the final memories differ.</p>
+<h4 id="2-abi-level-equivalence">2. ABI-level equivalence<a class="headerlink" href="#2-abi-level-equivalence" title="Permanent link">&para;</a></h4>
+<p>Theory:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{abi}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+Obs_{\text{abi}}(\sigma_1)=Obs_{\text{abi}}(\sigma_2)
+\]</div>
+<p>where <code>Obs_abi</code> includes only caller-visible outputs such as:</p>
+<ul>
+<li>return PC</li>
+<li>return registers</li>
+<li>callee-saved registers</li>
+</ul>
+<p>CHC bad state:</p>
+<div class="arithmatex">\[
+bad_{\text{abi}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), Obs_{\text{abi}}(\sigma_1) \neq Obs_{\text{abi}}(\sigma_2)
+\]</div>
+<p>In the <code>foo1</code> / <code>foo2</code> example this query is <code>unsat</code>, because the functions agree on the caller-visible boundary state.</p>
+<h4 id="3-projected-memory-equivalence">3. Projected-memory equivalence<a class="headerlink" href="#3-projected-memory-equivalence" title="Permanent link">&para;</a></h4>
+<p>Theory:</p>
+<div class="arithmatex">\[
+P \simeq_{\text{proj}} Q
+\iff
+\forall \sigma_0,\sigma_1,\sigma_2.\,
+(
+ret\_exec(P,\sigma_0,\sigma_1)\land
+ret\_exec(Q,\sigma_0,\sigma_2)
+)
+\rightarrow
+\Bigl(
+Obs_{\text{abi}}(\sigma_1)=Obs_{\text{abi}}(\sigma_2)
+\land
+\forall a \in ObsMem(\sigma_0).\ mem_1[a]=mem_2[a]
+\Bigr)
+\]</div>
+<p>Here <code>ObsMem(σ0)</code> is the set of addresses considered semantically observable.<br />
+In the example file we exclude the callee's private stack frame <code>[sp_0 - 32, sp_0)</code>.</p>
+<p>CHC bad state:</p>
+<div class="arithmatex">\[
+bad_{\text{proj}} \leftarrow exec_P(\sigma_0,\sigma_1), exec_Q(\sigma_0,\sigma_2), a \in ObsMem(\sigma_0), mem_1[a] \neq mem_2[a]
+\]</div>
+<p>In the <code>foo1</code> / <code>foo2</code> example this query is <code>unsat</code>, because the memory differences are confined to the private frame that is intentionally projected away.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

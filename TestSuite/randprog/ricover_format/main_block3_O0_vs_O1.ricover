@@ -1,0 +1,21 @@
+# ==================================================
+# Ricover Format File
+# ==================================================
+# Source file: ../TestSuite/randprog/program_01.c
+# Function: main_block3
+# Comparison: O0 vs O1
+# Instructions in src (O0): 3
+# Instructions in tgt (O1): 0
+# ==================================================
+
+# Function: src (O0 version)
+.globl src
+src:
+    ld a1, 0(a0)
+    auipc a0, %pcrel_hi(.L.str)
+    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
+
+
+# Function: tgt (O1 version)
+.globl tgt
+tgt:
